@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, LayoutDashboard, Activity, BarChart3, LineChart, Radio, BookOpen, Briefcase, Bell } from "lucide-react";
+import { Home, Newspaper, LayoutDashboard, Activity, BarChart3, LineChart, Radio, BookOpen, Briefcase, Bell } from "lucide-react";
 
 const TABS = [
   { label: "Home", href: "/", icon: Home },
+  { label: "News", href: "/news", icon: Newspaper },
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Indicators", href: "/indicators", icon: Activity },
   { label: "Market Maps", href: "/market-maps", icon: BarChart3 },

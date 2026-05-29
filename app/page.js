@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowRight, Lock } from "lucide-react";
+import { ArrowRight, Lock, Newspaper, ArrowUpRight } from "lucide-react";
 import { toneColor, Sparkline, StatusPill } from "@/components/ui";
 import SignalCard from "@/components/SignalCard";
 import {
-  COMPOSITE, DASH_STATS, LEADING_CARDS, TRAILING_CARDS, TOP_MARKETS, SIGNALS,
+  COMPOSITE, DASH_STATS, LEADING_CARDS, TRAILING_CARDS, TOP_MARKETS, SIGNALS, NEWS,
 } from "@/lib/data";
 
 function IndicatorCard({ c }) {
@@ -35,6 +35,17 @@ export default function Home() {
   const [tab, setTab] = useState("leading");
   const cards = tab === "leading" ? LEADING_CARDS : TRAILING_CARDS;
   const compColor = toneColor(COMPOSITE.tone);
+
+  // Featured signals rotate daily to entice sign-ups (stable within a day).
+  const [featured, setFeatured] = useState(SIGNALS.slice(0, 4));
+  useEffect(() => {
+    const day = Math.floor(Date.now() / 86400000);
+    const start = day % SIGNALS.length;
+    const rotated = [...SIGNALS.slice(start), ...SIGNALS.slice(0, start)].slice(0, 4);
+    setFeatured(rotated);
+  }, []);
+
+  const latestNews = NEWS.slice(0, 3);
 
   return (
     <div className="pb-10">
@@ -121,17 +132,25 @@ export default function Home() {
         </div>
       </section>
 
-      {/* LATEST SIGNALS (expanded) */}
+      {/* LATEST SIGNALS (rotates daily) */}
       <section className="mt-14">
         <div className="mb-6 flex items-end justify-between">
           <div>
-            <p className="kicker mb-3">Live feed</p>
+            <p className="kicker mb-3 flex items-center gap-2">
+              <span className="h-1.5 w-1.5 animate-flicker rounded-full bg-signal" /> Today&apos;s featured signals
+            </p>
             <h2 className="headline text-3xl text-ink md:text-4xl">Latest Signals</h2>
           </div>
           <Link href="/signals" className="hover-line mono text-[12px] tracking-[0.08em] text-muted hover:text-ink">VIEW ALL →</Link>
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
-          {SIGNALS.map((s) => <SignalCard key={s.title} s={s} />)}
+          {featured.map((s) => <SignalCard key={s.title} s={s} />)}
+        </div>
+        <div className="mt-4 flex flex-col items-center gap-3 rounded-lg border border-dashed border-[var(--line-strong)] p-5 text-center sm:flex-row sm:justify-between sm:text-left">
+          <p className="text-sm text-muted">
+            These rotate daily. <span className="text-ink">Sign up to unlock the full signal feed</span> and set custom alerts.
+          </p>
+          <Link href="/dashboard" className="mono shrink-0 rounded-sm bg-signal px-5 py-2.5 text-[12px] tracking-[0.08em] text-bg hover:opacity-90">UNLOCK ALL SIGNALS →</Link>
         </div>
       </section>
 
@@ -166,6 +185,30 @@ export default function Home() {
             <Link href="/signals" className="mono flex items-center gap-2 rounded-sm bg-signal px-5 py-3 text-[12px] tracking-[0.08em] text-bg hover:opacity-90">View Live Signals <ArrowRight size={14} /></Link>
             <Link href="/forecasts" className="mono rounded-sm border border-[var(--line-strong)] px-5 py-3 text-[12px] tracking-[0.08em] text-ink hover:bg-white/[0.04]">See Forecasts</Link>
           </div>
+        </div>
+      </section>
+
+      {/* FEATURED INDUSTRY NEWS */}
+      <section className="mt-14">
+        <div className="mb-6 flex items-end justify-between">
+          <div>
+            <p className="kicker mb-3 flex items-center gap-2"><Newspaper size={12} className="text-signal" /> Industry News</p>
+            <h2 className="headline text-3xl text-ink md:text-4xl">Latest Headlines</h2>
+          </div>
+          <Link href="/news" className="hover-line mono text-[12px] tracking-[0.08em] text-muted hover:text-ink">VIEW ALL NEWS →</Link>
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          {latestNews.map((a) => (
+            <Link key={a.id} href="/news" className="card group flex flex-col p-6 transition-colors hover:border-[var(--line-strong)]">
+              <div className="mb-3 flex items-center gap-2">
+                <span className="mono rounded bg-white/[0.04] px-2 py-1 text-[10px] tracking-wide text-muted">{a.cat}</span>
+                <span className="mono text-[11px] tracking-wide text-muted">{a.date}</span>
+              </div>
+              <h3 className="text-[15px] font-semibold leading-snug text-ink transition-colors group-hover:text-signal">{a.title}</h3>
+              <p className="mt-2 text-[13px] leading-relaxed text-muted">{a.excerpt}</p>
+              <span className="mono mt-4 inline-flex items-center gap-1 text-[11px] tracking-[0.06em] text-signal">READ <ArrowUpRight size={12} /></span>
+            </Link>
+          ))}
         </div>
       </section>
     </div>
