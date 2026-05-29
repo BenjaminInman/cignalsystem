@@ -18,6 +18,7 @@ module.exports = {
         signal: "#F5B544",
         up: "#5FB97C",
         down: "#E5634D",
+        neutral: "#E8B04B",
       },
       keyframes: {
         ticker: {
