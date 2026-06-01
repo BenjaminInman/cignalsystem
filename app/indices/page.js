@@ -1,4 +1,7 @@
-import { TrendingUp, TrendingDown, Hammer, Wrench, Landmark, Handshake } from "lucide-react";
+"use client";
+
+import { useState, useEffect } from "react";
+import { TrendingUp, Hammer, Wrench, Landmark, Handshake } from "lucide-react";
 import { INDICES } from "@/lib/data";
 
 const ICONS = {
@@ -8,13 +11,32 @@ const ICONS = {
   "Brokerages": Handshake,
 };
 
-function summarize(members) {
-  const avg = members.reduce((s, m) => s + m.chg, 0) / members.length;
-  const up = members.filter((m) => m.chg > 0).length;
-  return { avg, up, total: members.length };
-}
+// Stable list of every symbol on the page (INDICES is static).
+const SYMBOLS = INDICES.flatMap((c) => c.members.map((m) => m.ticker));
 
 export default function IndicesPage() {
+  const [quotes, setQuotes] = useState({});
+  const [live, setLive] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/quotes?symbols=${SYMBOLS.join(",")}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.quotes && Object.keys(d.quotes).length) {
+          setQuotes(d.quotes);
+          setLive(true);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Merge live quotes over fallback values.
+  const merged = (m) => ({
+    ...m,
+    price: quotes[m.ticker]?.price ?? m.price,
+    chg: quotes[m.ticker]?.chg ?? m.chg,
+  });
+
   return (
     <div className="pt-12 pb-10">
       <p className="kicker mb-3 flex items-center gap-2"><TrendingUp size={12} className="text-signal" /> Market Indices</p>
@@ -26,7 +48,9 @@ export default function IndicesPage() {
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         {INDICES.map((cat) => {
           const Icon = ICONS[cat.category] || TrendingUp;
-          const { avg, up, total } = summarize(cat.members);
+          const members = cat.members.map(merged);
+          const avg = members.reduce((s, m) => s + m.chg, 0) / members.length;
+          const up = members.filter((m) => m.chg > 0).length;
           const positive = avg >= 0;
           const color = positive ? "#5FB97C" : "#E5634D";
           return (
@@ -38,7 +62,7 @@ export default function IndicesPage() {
                   </span>
                   <div>
                     <h2 className="font-semibold text-ink">{cat.category}</h2>
-                    <p className="mono text-[11px] tracking-wide text-muted">{up}/{total} advancing</p>
+                    <p className="mono text-[11px] tracking-wide text-muted">{up}/{members.length} advancing</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -53,7 +77,7 @@ export default function IndicesPage() {
                 <div className="grid grid-cols-[1fr_auto_auto] gap-4 bg-white/[0.02] px-4 py-2 mono text-[10px] tracking-[0.12em] text-muted">
                   <span>SYMBOL</span><span className="text-right">PRICE</span><span className="text-right">CHG</span>
                 </div>
-                {cat.members.map((m, i) => {
+                {members.map((m, i) => {
                   const u = m.chg >= 0;
                   return (
                     <div key={m.ticker} className={`grid grid-cols-[1fr_auto_auto] items-center gap-4 px-4 py-3 ${i ? "border-t border-[var(--line)]" : ""}`}>
@@ -74,8 +98,11 @@ export default function IndicesPage() {
         })}
       </div>
 
-      <p className="mono mt-6 text-[11px] tracking-[0.06em] text-muted">
-        Placeholder constituents & values — awaiting your ticker lists and a live quote feed.
+      <p className="mono mt-6 flex items-center gap-2 text-[11px] tracking-[0.06em] text-muted">
+        <span className={`h-1.5 w-1.5 rounded-full ${live ? "animate-flicker bg-signal" : "bg-muted"}`} />
+        {live
+          ? "Live quotes · delayed, via public market data"
+          : "Showing reference values — live quotes resume when the data feed is reachable"}
       </p>
     </div>
   );
