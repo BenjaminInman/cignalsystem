@@ -45,7 +45,13 @@ export default function Home() {
     setFeatured(rotated);
   }, []);
 
-  const latestNews = NEWS.slice(0, 3);
+  const [latestNews, setLatestNews] = useState(NEWS.slice(0, 3));
+  useEffect(() => {
+    fetch("/api/news")
+      .then((r) => r.json())
+      .then((d) => { if (d.items && d.items.length) setLatestNews(d.items.slice(0, 3)); })
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="pb-10">
@@ -198,17 +204,22 @@ export default function Home() {
           <Link href="/news" className="hover-line mono text-[12px] tracking-[0.08em] text-muted hover:text-ink">VIEW ALL NEWS →</Link>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
-          {latestNews.map((a) => (
-            <Link key={a.id} href="/news" className="card group flex flex-col p-6 transition-colors hover:border-[var(--line-strong)]">
-              <div className="mb-3 flex items-center gap-2">
-                <span className="mono rounded bg-white/[0.04] px-2 py-1 text-[10px] tracking-wide text-muted">{a.cat}</span>
-                <span className="mono text-[11px] tracking-wide text-muted">{a.date}</span>
-              </div>
-              <h3 className="text-[15px] font-semibold leading-snug text-ink transition-colors group-hover:text-signal">{a.title}</h3>
-              <p className="mt-2 text-[13px] leading-relaxed text-muted">{a.excerpt}</p>
-              <span className="mono mt-4 inline-flex items-center gap-1 text-[11px] tracking-[0.06em] text-signal">READ <ArrowUpRight size={12} /></span>
-            </Link>
-          ))}
+          {latestNews.map((a, i) => {
+            const external = a.link && a.link.startsWith("http");
+            const Wrap = external ? "a" : Link;
+            const wp = external ? { href: a.link, target: "_blank", rel: "noopener noreferrer" } : { href: "/news" };
+            return (
+              <Wrap key={i} {...wp} className="card group flex flex-col p-6 transition-colors hover:border-[var(--line-strong)]">
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="mono rounded bg-white/[0.04] px-2 py-1 text-[10px] tracking-wide text-muted">{a.source || a.cat}</span>
+                  <span className="mono text-[11px] tracking-wide text-muted">{a.date}</span>
+                </div>
+                <h3 className="text-[15px] font-semibold leading-snug text-ink transition-colors group-hover:text-signal">{a.title}</h3>
+                {a.excerpt && <p className="mt-2 text-[13px] leading-relaxed text-muted">{a.excerpt}</p>}
+                <span className="mono mt-4 inline-flex items-center gap-1 text-[11px] tracking-[0.06em] text-signal">READ <ArrowUpRight size={12} /></span>
+              </Wrap>
+            );
+          })}
         </div>
       </section>
     </div>
