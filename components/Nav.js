@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
-import { Home, Newspaper, Radio, LayoutDashboard, Activity, BarChart3, LineChart, TrendingUp, BookOpen, Briefcase, Bell, ChevronDown, Terminal } from "lucide-react";
+import { Home, Newspaper, Radio, Info, LayoutDashboard, Activity, BarChart3, LineChart, TrendingUp, BookOpen, Briefcase, Bell, ChevronDown, Terminal } from "lucide-react";
 
 const PRIMARY = [
   { label: "Home", href: "/", icon: Home },
   { label: "News", href: "/news", icon: Newspaper },
   { label: "Signals", href: "/signals", icon: Radio },
+  { label: "About", href: "/about", icon: Info },
 ];
 
 const SUITE = [

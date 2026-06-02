@@ -3,7 +3,7 @@ import Link from "next/link";
 const COLS = [
   { title: "PLATFORM", links: [["Dashboard", "/"], ["Indicators", "/indicators"], ["Market Maps", "/market-maps"], ["Signals", "/signals"]] },
   { title: "ANALYSIS", links: [["Forecasts", "/forecasts"], ["Research", "/research"], ["Portfolio Tracker", "/portfolio"], ["Benchmarks", "/market-maps"]] },
-  { title: "COMPANY", links: [["About", "#"], ["Methodology", "#"], ["Data Sources", "#"], ["Contact", "#"]] },
+  { title: "COMPANY", links: [["About", "/about"], ["Methodology", "/about"], ["Data Sources", "#"], ["Contact", "#"]] },
 ];
 
 export default function Footer() {
