@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { TrendingUp, Hammer, Wrench, Landmark, Handshake } from "lucide-react";
 import { INDICES } from "@/lib/data";
+import BuffettIndicator from "@/components/BuffettIndicator";
 
 const ICONS = {
   "Home Builders": Hammer,
@@ -104,6 +105,8 @@ export default function IndicesPage() {
           ? "Live quotes · delayed, via public market data"
           : "Showing reference values — live quotes resume when the data feed is reachable"}
       </p>
+
+      <BuffettIndicator />
     </div>
   );
 }
