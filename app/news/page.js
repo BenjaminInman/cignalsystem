@@ -27,18 +27,25 @@ export default function NewsPage() {
         Headlines aggregated from The Real Deal, Multifamily Dive, Multi-Housing News, and MultifamilyBiz — refreshed throughout the day.
       </p>
 
-      {items === null ? (
-        <div className="mt-10 space-y-4">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="card animate-pulse p-7"><div className="h-4 w-1/3 rounded bg-white/[0.05]" /><div className="mt-4 h-5 w-3/4 rounded bg-white/[0.06]" /></div>
-          ))}
-          <p className="mono text-[11px] tracking-[0.06em] text-muted">Pulling the latest headlines…</p>
+      <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_300px]">
+        <div>
+          {items === null ? (
+            <div className="space-y-4">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="card animate-pulse p-7"><div className="h-4 w-1/3 rounded bg-white/[0.05]" /><div className="mt-4 h-5 w-3/4 rounded bg-white/[0.06]" /></div>
+              ))}
+              <p className="mono text-[11px] tracking-[0.06em] text-muted">Pulling the latest headlines…</p>
+            </div>
+          ) : (
+            <Feed items={items} live={live} />
+          )}
         </div>
-      ) : (
-        <Feed items={items} live={live} />
-      )}
-
-      <CommunityCTA />
+        <aside>
+          <div className="lg:sticky lg:top-24">
+            <CommunityCTA variant="sidebar" />
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
@@ -64,7 +71,7 @@ function Feed({ items, live }) {
   const [lead, ...rest] = items;
   return (
     <>
-      <div className="mt-8"><Card a={lead} lead /></div>
+      <div><Card a={lead} lead /></div>
       <div className="mt-4 grid gap-4">
         {rest.map((a, i) => <Card key={i} a={a} />)}
       </div>

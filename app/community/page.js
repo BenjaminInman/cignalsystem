@@ -106,7 +106,8 @@ export default function CommunityPage() {
         </main>
 
         {/* SIDEBAR */}
-        <aside className="space-y-6">
+        <aside>
+          <div className="lg:sticky lg:top-24 space-y-6">
           {/* live members */}
           <div className="card p-5">
             <div className="mb-4 flex items-center justify-between">
@@ -145,6 +146,7 @@ export default function CommunityPage() {
             <a href="#" className="mono mt-4 inline-flex items-center gap-2 rounded-sm border border-[var(--line-strong)] px-4 py-2.5 text-[11px] tracking-[0.08em] text-ink hover:bg-white/[0.04]">
               JOIN THE FB GROUP →
             </a>
+          </div>
           </div>
         </aside>
       </div>
