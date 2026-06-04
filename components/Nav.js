@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
-import { Home, Newspaper, Radio, Info, LayoutDashboard, Activity, BarChart3, LineChart, TrendingUp, BookOpen, Briefcase, Bell, ChevronDown, Terminal } from "lucide-react";
+import { Home, Newspaper, Radio, Info, LayoutDashboard, Activity, BarChart3, LineChart, TrendingUp, BookOpen, Briefcase, Users, Bell, ChevronDown, Terminal } from "lucide-react";
 
 const PRIMARY = [
   { label: "Home", href: "/", icon: Home },
@@ -20,6 +20,7 @@ const SUITE = [
   { label: "Indices", href: "/indices", icon: TrendingUp },
   { label: "Research", href: "/research", icon: BookOpen },
   { label: "Portfolio", href: "/portfolio", icon: Briefcase },
+  { label: "Community", href: "/community", icon: Users },
 ];
 
 export default function Nav() {
