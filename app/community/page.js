@@ -45,7 +45,7 @@ export default function CommunityPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="kicker mb-3 flex items-center gap-2"><Users size={12} className="text-signal" /> Community</p>
-          <h1 className="headline text-4xl text-ink md:text-5xl">The Signal Room</h1>
+          <h1 className="headline text-4xl text-ink md:text-5xl">The Cignal Room</h1>
           <p className="mt-3 max-w-2xl text-muted">Where members debate the signals, pressure-test reads, and compare notes on the cycle — on-platform, not lost in a Facebook feed.</p>
         </div>
         <span className="mono rounded-sm border border-signal/30 bg-signal/10 px-3 py-1.5 text-[11px] tracking-[0.06em] text-signal">Open to registered guests · members-only soon</span>
@@ -142,7 +142,7 @@ export default function CommunityPage() {
           <div className="card p-5">
             <Facebook size={20} className="text-signal" strokeWidth={1.8} />
             <h2 className="mt-3 font-semibold text-ink">Also on Facebook</h2>
-            <p className="mt-1 text-sm leading-relaxed text-muted">The Signal Room lives here first — but our members-only Facebook group is open too, if that&apos;s where you already spend time.</p>
+            <p className="mt-1 text-sm leading-relaxed text-muted">The Cignal Room lives here first — but our members-only Facebook group is open too, if that&apos;s where you already spend time.</p>
             <a href="#" className="mono mt-4 inline-flex items-center gap-2 rounded-sm border border-[var(--line-strong)] px-4 py-2.5 text-[11px] tracking-[0.08em] text-ink hover:bg-white/[0.04]">
               JOIN THE FB GROUP →
             </a>

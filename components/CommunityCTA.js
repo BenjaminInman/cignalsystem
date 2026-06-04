@@ -7,7 +7,7 @@ const XLogo = () => (
   </svg>
 );
 
-const FB_URL = "#"; // replace with the members-only Facebook group URL
+const FB_URL = "https://www.facebook.com/groups/cignalroom";
 const X_URL = "https://x.com/thecignalsystem";
 
 export default function CommunityCTA({ variant = "banner" }) {
@@ -17,12 +17,12 @@ export default function CommunityCTA({ variant = "banner" }) {
         <span className="flex h-11 w-11 items-center justify-center rounded-md bg-signal/10">
           <Users size={20} className="text-signal" strokeWidth={1.8} />
         </span>
-        <h2 className="headline mt-4 text-xl text-ink">Join The Signal Room</h2>
+        <h2 className="headline mt-4 text-xl text-ink">Join The Cignal Room</h2>
         <p className="mt-2 text-sm leading-relaxed text-muted">
           Debate the signals with other operators and compare reads on the cycle — on-platform, not lost in a feed.
         </p>
         <Link href="/community" className="mono mt-4 flex w-full items-center justify-center gap-2 rounded-sm bg-signal px-4 py-2.5 text-[12px] tracking-[0.08em] text-bg hover:opacity-90">
-          Enter The Signal Room <ArrowRight size={14} />
+          Enter The Cignal Room <ArrowRight size={14} />
         </Link>
         <a href={FB_URL} target="_blank" rel="noopener noreferrer" className="mono mt-2 flex w-full items-center justify-center gap-2 rounded-sm border border-[var(--line-strong)] px-4 py-2.5 text-[12px] tracking-[0.08em] text-ink hover:bg-white/[0.04]">
           <Facebook size={13} /> Join The FB Group
@@ -41,7 +41,7 @@ export default function CommunityCTA({ variant = "banner" }) {
           <Users size={20} className="text-signal" strokeWidth={1.8} />
         </span>
         <div>
-          <h2 className="headline text-2xl text-ink">Join The Signal Room</h2>
+          <h2 className="headline text-2xl text-ink">Join The Cignal Room</h2>
           <p className="mt-1 max-w-xl text-muted">
             Debate the signals with other operators and compare reads on the cycle — on-platform, not lost in a feed. Or follow the latest on X.
           </p>
@@ -49,7 +49,7 @@ export default function CommunityCTA({ variant = "banner" }) {
       </div>
       <div className="flex shrink-0 flex-wrap gap-3">
         <Link href="/community" className="mono flex items-center gap-2 rounded-sm bg-signal px-5 py-3 text-[12px] tracking-[0.08em] text-bg hover:opacity-90">
-          Enter The Signal Room <ArrowRight size={14} />
+          Enter The Cignal Room <ArrowRight size={14} />
         </Link>
         <a href={FB_URL} target="_blank" rel="noopener noreferrer" className="mono flex items-center gap-2 rounded-sm border border-[var(--line-strong)] px-5 py-3 text-[12px] tracking-[0.08em] text-ink hover:bg-white/[0.04]">
           <Facebook size={13} /> Join The FB Group
