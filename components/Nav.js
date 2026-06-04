@@ -7,9 +7,9 @@ import { Home, Newspaper, Radio, Info, LayoutDashboard, Activity, BarChart3, Lin
 
 const PRIMARY = [
   { label: "Home", href: "/", icon: Home },
+  { label: "About", href: "/about", icon: Info },
   { label: "News", href: "/news", icon: Newspaper },
   { label: "Signals", href: "/signals", icon: Radio },
-  { label: "About", href: "/about", icon: Info },
 ];
 
 const SUITE = [

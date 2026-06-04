@@ -62,7 +62,7 @@ function Feed({ items, live }) {
   return (
     <>
       <div className="mt-8"><Card a={lead} lead /></div>
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
+      <div className="mt-4 grid gap-4">
         {rest.map((a, i) => <Card key={i} a={a} />)}
       </div>
       <p className="mono mt-8 flex items-center gap-2 text-[11px] tracking-[0.06em] text-muted">
