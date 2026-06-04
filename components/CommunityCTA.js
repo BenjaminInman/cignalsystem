@@ -1,11 +1,14 @@
 import Link from "next/link";
-import { Users, ArrowRight } from "lucide-react";
+import { Users, ArrowRight, Facebook } from "lucide-react";
 
 const XLogo = () => (
   <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true">
     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
   </svg>
 );
+
+const FB_URL = "#"; // replace with the members-only Facebook group URL
+const X_URL = "https://x.com/thecignalsystem";
 
 export default function CommunityCTA({ variant = "banner" }) {
   if (variant === "sidebar") {
@@ -21,7 +24,10 @@ export default function CommunityCTA({ variant = "banner" }) {
         <Link href="/community" className="mono mt-4 flex w-full items-center justify-center gap-2 rounded-sm bg-signal px-4 py-2.5 text-[12px] tracking-[0.08em] text-bg hover:opacity-90">
           Enter The Signal Room <ArrowRight size={14} />
         </Link>
-        <a href="https://x.com/thecignalsystem" target="_blank" rel="noopener noreferrer" className="mono mt-2 flex w-full items-center justify-center gap-2 rounded-sm border border-[var(--line-strong)] px-4 py-2.5 text-[12px] tracking-[0.08em] text-ink hover:bg-white/[0.04]">
+        <a href={FB_URL} target="_blank" rel="noopener noreferrer" className="mono mt-2 flex w-full items-center justify-center gap-2 rounded-sm border border-[var(--line-strong)] px-4 py-2.5 text-[12px] tracking-[0.08em] text-ink hover:bg-white/[0.04]">
+          <Facebook size={13} /> Join The FB Group
+        </a>
+        <a href={X_URL} target="_blank" rel="noopener noreferrer" className="mono mt-2 flex w-full items-center justify-center gap-2 rounded-sm border border-[var(--line-strong)] px-4 py-2.5 text-[12px] tracking-[0.08em] text-ink hover:bg-white/[0.04]">
           <XLogo /> Follow on X
         </a>
       </div>
@@ -45,7 +51,10 @@ export default function CommunityCTA({ variant = "banner" }) {
         <Link href="/community" className="mono flex items-center gap-2 rounded-sm bg-signal px-5 py-3 text-[12px] tracking-[0.08em] text-bg hover:opacity-90">
           Enter The Signal Room <ArrowRight size={14} />
         </Link>
-        <a href="https://x.com/thecignalsystem" target="_blank" rel="noopener noreferrer" className="mono flex items-center gap-2 rounded-sm border border-[var(--line-strong)] px-5 py-3 text-[12px] tracking-[0.08em] text-ink hover:bg-white/[0.04]">
+        <a href={FB_URL} target="_blank" rel="noopener noreferrer" className="mono flex items-center gap-2 rounded-sm border border-[var(--line-strong)] px-5 py-3 text-[12px] tracking-[0.08em] text-ink hover:bg-white/[0.04]">
+          <Facebook size={13} /> Join The FB Group
+        </a>
+        <a href={X_URL} target="_blank" rel="noopener noreferrer" className="mono flex items-center gap-2 rounded-sm border border-[var(--line-strong)] px-5 py-3 text-[12px] tracking-[0.08em] text-ink hover:bg-white/[0.04]">
           <XLogo /> Follow on X
         </a>
       </div>
