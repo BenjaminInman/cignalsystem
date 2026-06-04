@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Newspaper, ArrowUpRight } from "lucide-react";
 import { NEWS } from "@/lib/data";
+import CommunityCTA from "@/components/CommunityCTA";
 
 export default function NewsPage() {
   const [items, setItems] = useState(null); // null = loading
@@ -36,6 +37,8 @@ export default function NewsPage() {
       ) : (
         <Feed items={items} live={live} />
       )}
+
+      <CommunityCTA />
     </div>
   );
 }

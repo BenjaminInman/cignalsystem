@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Activity, Radio, LineChart, BarChart3, BookOpen, Briefcase, ArrowRight } from "lucide-react";
+import CommunityCTA from "@/components/CommunityCTA";
 
 const SUITE = [
   { icon: Activity, name: "Indicators", desc: "Leading vs. trailing, scored and classified." },
@@ -103,6 +104,8 @@ export default function AboutPage() {
           His thesis fits on one line: <span className="text-signal">When &gt; How.</span>
         </p>
       </section>
+
+      <CommunityCTA />
 
       {/* CTA */}
       <section className="card mt-14 flex flex-col items-start justify-between gap-5 p-8 md:flex-row md:items-center">
