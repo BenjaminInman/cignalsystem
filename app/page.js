@@ -186,11 +186,11 @@ export default function Home() {
       </section>
 
       {/* LATEST SIGNALS (rotates daily) */}
-      <section className="relative mt-14 overflow-hidden rounded-2xl border border-[var(--line)] bg-gradient-to-bl from-bg2/70 via-bg2/30 to-bg/20 px-6 py-10 md:px-10">
+      <section className="relative mt-14 overflow-hidden rounded-2xl border border-[var(--line)] bg-gradient-to-b from-bg2/70 via-bg2/30 to-bg/10 px-6 py-10 md:px-10">
         {/* ambient signal-pulse backdrop */}
         <svg className="pointer-events-none absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 1200 420" aria-hidden="true">
           <defs>
-            <radialGradient id="sigGlow" cx="14%" cy="92%" r="75%">
+            <radialGradient id="sigGlow" cx="16%" cy="6%" r="75%">
               <stop offset="0%" stopColor="#F5B544" stopOpacity="0.10" />
               <stop offset="100%" stopColor="#F5B544" stopOpacity="0" />
             </radialGradient>
@@ -251,8 +251,25 @@ export default function Home() {
       </section>
 
       {/* PRO CTA */}
-      <section className="mt-14">
-        <div className="card flex flex-col items-start gap-6 p-8 md:flex-row md:items-center md:justify-between">
+      <section className="relative mt-14 overflow-hidden rounded-2xl border border-[var(--line)] bg-gradient-to-b from-bg2/70 via-bg2/30 to-bg/10 px-6 py-8 md:px-10">
+        {/* ambient market-signal backdrop */}
+        <svg className="pointer-events-none absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 1200 360" aria-hidden="true">
+          <defs>
+            <radialGradient id="proGlow" cx="82%" cy="6%" r="75%">
+              <stop offset="0%" stopColor="#F5B544" stopOpacity="0.10" />
+              <stop offset="100%" stopColor="#F5B544" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          <rect width="1200" height="360" fill="url(#proGlow)" />
+          <path d="M0,210 C120,150 200,250 320,200 C440,150 520,250 640,195 C760,140 840,240 960,185 C1080,135 1150,210 1200,175" fill="none" stroke="#F5B544" strokeOpacity="0.10" strokeWidth="2" />
+          <g fill="#F5B544" fillOpacity="0.3">
+            <circle cx="320" cy="200" r="3" />
+            <circle cx="640" cy="195" r="3" />
+            <circle cx="960" cy="185" r="3" />
+          </g>
+        </svg>
+
+        <div className="relative flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
           <div className="max-w-xl">
             <p className="kicker mb-3 flex items-center gap-2"><Lock size={12} className="text-signal" /> Pro Intelligence</p>
             <h3 className="headline text-3xl text-ink">Go deeper with Cignal Pro</h3>
