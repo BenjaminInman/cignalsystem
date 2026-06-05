@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { SIGNALS } from "@/lib/data";
 import SignalCard from "@/components/SignalCard";
+import YieldCurve from "@/components/YieldCurve";
 
 const FILTERS = ["All Signals", "Bull", "Bear", "Neutral"];
 const MAP = { Bull: "bull", Bear: "bear", Neutral: "neutral" };
@@ -42,6 +43,8 @@ export default function SignalsPage() {
       <div className="mt-8 grid gap-4 lg:grid-cols-2">
         {rows.map((s) => <SignalCard key={s.title} s={s} />)}
       </div>
+
+      <YieldCurve />
     </div>
   );
 }
