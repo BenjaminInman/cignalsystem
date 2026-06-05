@@ -186,24 +186,48 @@ export default function Home() {
       </section>
 
       {/* LATEST SIGNALS (rotates daily) */}
-      <section className="mt-14">
-        <div className="mb-6 flex items-end justify-between">
-          <div>
-            <p className="kicker mb-3 flex items-center gap-2">
-              <span className="h-1.5 w-1.5 animate-flicker rounded-full bg-signal" /> Today&apos;s featured signals
-            </p>
-            <h2 className="headline text-3xl text-ink md:text-4xl">Latest Signals</h2>
+      <section className="relative mt-14 overflow-hidden rounded-2xl border border-[var(--line)] bg-gradient-to-bl from-bg2/70 via-bg2/30 to-bg/20 px-6 py-10 md:px-10">
+        {/* ambient signal-pulse backdrop */}
+        <svg className="pointer-events-none absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 1200 420" aria-hidden="true">
+          <defs>
+            <radialGradient id="sigGlow" cx="14%" cy="92%" r="75%">
+              <stop offset="0%" stopColor="#F5B544" stopOpacity="0.10" />
+              <stop offset="100%" stopColor="#F5B544" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          <rect width="1200" height="420" fill="url(#sigGlow)" />
+          <g stroke="#F5B544" strokeOpacity="0.05" strokeWidth="1">
+            <line x1="300" y1="0" x2="300" y2="420" />
+            <line x1="600" y1="0" x2="600" y2="420" />
+            <line x1="900" y1="0" x2="900" y2="420" />
+          </g>
+          <path d="M0,250 L180,250 L210,162 L232,330 L255,250 L520,250 L548,150 L570,340 L595,250 L860,250 L888,172 L910,330 L935,250 L1200,250" fill="none" stroke="#F5B544" strokeOpacity="0.13" strokeWidth="2" strokeLinejoin="round" />
+          <g fill="#F5B544" fillOpacity="0.4">
+            <circle cx="210" cy="162" r="3" />
+            <circle cx="548" cy="150" r="3" />
+            <circle cx="888" cy="172" r="3" />
+          </g>
+        </svg>
+
+        <div className="relative">
+          <div className="mb-6 flex items-end justify-between">
+            <div>
+              <p className="kicker mb-3 flex items-center gap-2">
+                <span className="h-1.5 w-1.5 animate-flicker rounded-full bg-signal" /> Today&apos;s featured signals
+              </p>
+              <h2 className="headline text-3xl text-ink md:text-4xl">Latest Signals</h2>
+            </div>
+            <Link href="/signals" className="hover-line mono text-[12px] tracking-[0.08em] text-muted hover:text-ink">VIEW ALL →</Link>
           </div>
-          <Link href="/signals" className="hover-line mono text-[12px] tracking-[0.08em] text-muted hover:text-ink">VIEW ALL →</Link>
-        </div>
-        <div className="grid gap-4 lg:grid-cols-2">
-          {featured.map((s) => <SignalCard key={s.title} s={s} />)}
-        </div>
-        <div className="mt-4 flex flex-col items-center gap-3 rounded-lg border border-dashed border-[var(--line-strong)] p-5 text-center sm:flex-row sm:justify-between sm:text-left">
-          <p className="text-sm text-muted">
-            These rotate daily. <span className="text-ink">Sign up to unlock the full signal feed</span> and set custom alerts.
-          </p>
-          <Link href="/dashboard" className="mono shrink-0 rounded-sm bg-signal px-5 py-2.5 text-[12px] tracking-[0.08em] text-bg hover:opacity-90">UNLOCK ALL SIGNALS →</Link>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {featured.map((s) => <SignalCard key={s.title} s={s} />)}
+          </div>
+          <div className="mt-4 flex flex-col items-center gap-3 rounded-lg border border-dashed border-[var(--line-strong)] p-5 text-center sm:flex-row sm:justify-between sm:text-left">
+            <p className="text-sm text-muted">
+              These rotate daily. <span className="text-ink">Sign up to unlock the full signal feed</span> and set custom alerts.
+            </p>
+            <Link href="/dashboard" className="mono shrink-0 rounded-sm bg-signal px-5 py-2.5 text-[12px] tracking-[0.08em] text-bg hover:opacity-90">UNLOCK ALL SIGNALS →</Link>
+          </div>
         </div>
       </section>
 
