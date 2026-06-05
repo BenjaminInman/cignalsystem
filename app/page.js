@@ -80,29 +80,49 @@ export default function Home() {
       </section>
 
       {/* WHO THIS IS FOR */}
-      <section className="border-t border-[var(--line)] pt-12">
-        <p className="kicker mb-3">Who this is for</p>
-        <h2 className="headline max-w-3xl text-3xl text-ink md:text-4xl">
-          Built for the people who live inside the multifamily cycle.
-        </h2>
-        <p className="mt-3 max-w-2xl leading-relaxed text-muted">
-          Cignal System is market intelligence for multifamily real estate — it turns the economic data that
-          moves rents, occupancy, and values into a clear read on where the cycle is headed. If you own,
-          operate, invest in, or manage apartments, it&apos;s built for you.
-        </p>
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { icon: Building2, name: "Owners", desc: "Time acquisitions, refinances, and dispositions to the cycle — not the headlines." },
-            { icon: SlidersHorizontal, name: "Operators", desc: "See where rents, occupancy, and concessions are heading before they hit your P&L." },
-            { icon: TrendingUp, name: "Investors", desc: "Underwrite with leading indicators and spot the markets turning first." },
-            { icon: Users, name: "Management Firms", desc: "Give every property a cycle-aware read to guide pricing and strategy." },
-          ].map(({ icon: Icon, name, desc }) => (
-            <div key={name} className="card p-5">
-              <Icon size={20} className="text-signal" strokeWidth={1.8} />
-              <h3 className="mt-3 font-semibold text-ink">{name}</h3>
-              <p className="mt-1 text-sm leading-relaxed text-muted">{desc}</p>
-            </div>
-          ))}
+      <section className="relative mt-14 overflow-hidden rounded-2xl border border-[var(--line)] bg-gradient-to-br from-bg2/70 via-bg2/30 to-bg/20 px-6 py-12 md:px-10">
+        {/* ambient market-signal backdrop */}
+        <svg className="pointer-events-none absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 1200 420" aria-hidden="true">
+          <defs>
+            <radialGradient id="whoGlow" cx="78%" cy="6%" r="75%">
+              <stop offset="0%" stopColor="#F5B544" stopOpacity="0.10" />
+              <stop offset="100%" stopColor="#F5B544" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          <rect width="1200" height="420" fill="url(#whoGlow)" />
+          <path d="M0,250 C120,180 200,300 320,235 C440,175 520,300 640,225 C760,160 840,290 960,215 C1080,150 1150,250 1200,205" fill="none" stroke="#F5B544" strokeOpacity="0.13" strokeWidth="2" />
+          <path d="M0,310 C140,265 220,350 360,295 C500,245 580,340 720,285 C860,235 940,330 1080,280 C1140,258 1175,270 1200,262" fill="none" stroke="#F5B544" strokeOpacity="0.06" strokeWidth="1.5" />
+          <g fill="#F5B544" fillOpacity="0.35">
+            <circle cx="320" cy="235" r="3" />
+            <circle cx="640" cy="225" r="3" />
+            <circle cx="960" cy="215" r="3" />
+          </g>
+        </svg>
+
+        <div className="relative">
+          <p className="kicker mb-3">Who this is for</p>
+          <h2 className="headline max-w-3xl text-3xl text-ink md:text-4xl">
+            Built for the people who live inside the multifamily cycle.
+          </h2>
+          <p className="mt-3 max-w-2xl leading-relaxed text-muted">
+            Cignal System is market intelligence for multifamily real estate — it turns the economic data that
+            moves rents, occupancy, and values into a clear read on where the cycle is headed. If you own,
+            operate, invest in, or manage apartments, it&apos;s built for you.
+          </p>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { icon: Building2, name: "Owners", desc: "Time acquisitions, refinances, and dispositions to the cycle — not the headlines." },
+              { icon: SlidersHorizontal, name: "Operators", desc: "See where rents, occupancy, and concessions are heading before they hit your P&L." },
+              { icon: TrendingUp, name: "Investors", desc: "Underwrite with leading indicators and spot the markets turning first." },
+              { icon: Users, name: "Management Firms", desc: "Give every property a cycle-aware read to guide pricing and strategy." },
+            ].map(({ icon: Icon, name, desc }) => (
+              <div key={name} className="card p-5">
+                <Icon size={20} className="text-signal" strokeWidth={1.8} />
+                <h3 className="mt-3 font-semibold text-ink">{name}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted">{desc}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
