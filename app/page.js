@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowRight, Lock, Newspaper, ArrowUpRight } from "lucide-react";
+import { ArrowRight, Lock, Newspaper, ArrowUpRight, Building2, SlidersHorizontal, TrendingUp, Users } from "lucide-react";
 import { toneColor, Sparkline, StatusPill } from "@/components/ui";
 import SignalCard from "@/components/SignalCard";
 import {
@@ -76,6 +76,33 @@ export default function Home() {
           <Link href="/forecasts" className="hover-line mono text-[13px] tracking-[0.08em] text-muted hover:text-ink">
             SEE THE FORECASTS
           </Link>
+        </div>
+      </section>
+
+      {/* WHO THIS IS FOR */}
+      <section className="border-t border-[var(--line)] pt-12">
+        <p className="kicker mb-3">Who this is for</p>
+        <h2 className="headline max-w-3xl text-3xl text-ink md:text-4xl">
+          Built for the people who live inside the multifamily cycle.
+        </h2>
+        <p className="mt-3 max-w-2xl leading-relaxed text-muted">
+          Cignal System is market intelligence for multifamily real estate — it turns the economic data that
+          moves rents, occupancy, and values into a clear read on where the cycle is headed. If you own,
+          operate, invest in, or manage apartments, it&apos;s built for you.
+        </p>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { icon: Building2, name: "Owners", desc: "Time acquisitions, refinances, and dispositions to the cycle — not the headlines." },
+            { icon: SlidersHorizontal, name: "Operators", desc: "See where rents, occupancy, and concessions are heading before they hit your P&L." },
+            { icon: TrendingUp, name: "Investors", desc: "Underwrite with leading indicators and spot the markets turning first." },
+            { icon: Users, name: "Management Firms", desc: "Give every property a cycle-aware read to guide pricing and strategy." },
+          ].map(({ icon: Icon, name, desc }) => (
+            <div key={name} className="card p-5">
+              <Icon size={20} className="text-signal" strokeWidth={1.8} />
+              <h3 className="mt-3 font-semibold text-ink">{name}</h3>
+              <p className="mt-1 text-sm leading-relaxed text-muted">{desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 
