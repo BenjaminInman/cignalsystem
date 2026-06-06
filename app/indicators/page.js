@@ -24,7 +24,7 @@ function niceScale(min, max, maxTicks = 3) {
 
 function IndicatorTrend({ data, tone }) {
   const color = toneColor(tone);
-  const W = 440, H = 150, padL = 36, padR = 10, padT = 10, padB = 22;
+  const W = 480, H = 240, padL = 40, padR = 12, padT = 14, padB = 26;
   const innerW = W - padL - padR, innerH = H - padT - padB;
   const { niceMin, niceMax, ticks, decimals } = niceScale(Math.min(...data), Math.max(...data), 3);
   const xAt = (i) => padL + (i / (data.length - 1)) * innerW;
@@ -47,13 +47,13 @@ function IndicatorTrend({ data, tone }) {
       {ticks.map((v) => (
         <g key={v}>
           <line x1={padL} y1={yAt(v)} x2={W - padR} y2={yAt(v)} stroke="var(--line)" strokeWidth="1" strokeDasharray="2 4" />
-          <text x={padL - 7} y={yAt(v) + 3} textAnchor="end" fontSize="9" fill="#AEB4BB" fontFamily="monospace">{v.toFixed(decimals)}</text>
+          <text x={padL - 8} y={yAt(v) + 3} textAnchor="end" fontSize="10" fill="#AEB4BB" fontFamily="monospace">{v.toFixed(decimals)}</text>
         </g>
       ))}
       <path className="trend-fade" d={area} fill={`url(#${gid})`} />
       <polyline className="draw-line" style={{ strokeDasharray: pathLen, strokeDashoffset: pathLen }} points={line} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
       {QUARTERS.map((q, i) => (
-        <text key={q} x={xAt(i)} y={H - 7} textAnchor="middle" fontSize="8" fill="#AEB4BB" fontFamily="monospace">{q}</text>
+        <text key={q} x={xAt(i)} y={H - 9} textAnchor="middle" fontSize="9" fill="#AEB4BB" fontFamily="monospace">{q}</text>
       ))}
     </svg>
   );
@@ -90,11 +90,11 @@ export default function IndicatorsPage() {
         </div>
       </div>
 
-      <div className="mt-8 overflow-hidden rounded-lg border border-[var(--line)]">
-        {rows.map((r, i) => {
+      <div className="mt-8 space-y-4">
+        {rows.map((r) => {
           const isOpen = !!open[r.name];
           return (
-            <div key={r.name} className={`bg-bg2 ${i ? "border-t border-[var(--line)]" : ""}`}>
+            <div key={r.name} className="card overflow-hidden">
               <button onClick={() => toggle(r.name)} className="grid w-full grid-cols-2 items-center gap-4 px-6 py-5 text-left transition-colors hover:bg-white/[0.02] md:grid-cols-[1.4fr_1fr_1.2fr_auto]">
                 <div>
                   <p className="mono text-[10px] tracking-[0.18em] text-muted">{r.cat} · {r.type}</p>
@@ -115,20 +115,21 @@ export default function IndicatorsPage() {
               </button>
 
               {isOpen && (
-                <div className="border-t border-[var(--line)] px-6 py-6">
-                  <p className="mono text-[10px] tracking-[0.18em] text-muted">WHAT THIS MEASURES</p>
-                  <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted">{r.measures}</p>
-
-                  <div className="mt-5 grid gap-6 lg:grid-cols-2 lg:items-stretch">
-                    <div className="rounded-lg border border-[var(--line)] bg-bg/40 p-4">
+                <div className="grid gap-8 border-t border-[var(--line)] px-6 py-7 lg:grid-cols-2">
+                  {/* LEFT — measures + impact */}
+                  <div className="flex flex-col">
+                    <p className="mono text-[10px] tracking-[0.18em] text-muted">WHAT THIS MEASURES</p>
+                    <p className="mt-2 text-sm leading-relaxed text-muted">{r.measures}</p>
+                    <div className="mt-5 flex-1 rounded-lg border border-[var(--line)] bg-bg/40 p-4">
                       <p className="mono text-[11px] tracking-[0.16em]" style={{ color: "#38BDF8" }}>INVESTMENT IMPACT</p>
                       <p className="mt-2 text-sm leading-relaxed text-ink/90">{r.impact}</p>
                     </div>
-                    <div className="rounded-lg border border-[var(--line)] bg-bg/40 p-4">
-                      <p className="mono text-[11px] tracking-[0.16em] text-muted">HISTORICAL TREND</p>
-                      <div className="mt-1">
-                        <IndicatorTrend data={r.trend} tone={r.tone} />
-                      </div>
+                  </div>
+                  {/* RIGHT — historical trend */}
+                  <div className="flex flex-col">
+                    <p className="mono text-[10px] tracking-[0.18em] text-muted">HISTORICAL TREND</p>
+                    <div className="mt-2 flex flex-1 items-center">
+                      <IndicatorTrend data={r.trend} tone={r.tone} />
                     </div>
                   </div>
                 </div>
@@ -136,7 +137,7 @@ export default function IndicatorsPage() {
             </div>
           );
         })}
-        {rows.length === 0 && <p className="mono p-8 text-center text-sm text-muted">No indicators match this filter.</p>}
+        {rows.length === 0 && <p className="mono rounded-lg border border-[var(--line)] p-8 text-center text-sm text-muted">No indicators match this filter.</p>}
       </div>
     </div>
   );
