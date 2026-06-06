@@ -9,31 +9,44 @@ const TYPES = ["All Types", "Leading", "Trailing"];
 const CATS = ["All", "Supply", "Demand", "Capital", "Macro", "Performance"];
 const QUARTERS = ["Q1 '23", "Q2 '23", "Q3 '23", "Q4 '23", "Q1 '24", "Q2 '24", "Q3 '24", "Q4 '24", "Q1 '25"];
 
-function niceScale(min, max, maxTicks = 3) {
-  const range = max - min || 1;
-  const rawStep = range / maxTicks;
+// 0-based axis with headroom above the peak (gives e.g. 0/150/300/450/600 for permits)
+function niceScaleZero(max, maxTicks = 4) {
+  const padded = max * 1.2;
+  const rawStep = padded / maxTicks;
   const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
   const norm = rawStep / mag;
-  const step = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
-  const niceMin = Math.floor(min / step) * step;
-  const niceMax = Math.ceil(max / step) * step;
+  const niceNorm = norm <= 1 ? 1 : norm <= 1.5 ? 1.5 : norm <= 2 ? 2 : norm <= 2.5 ? 2.5 : norm <= 5 ? 5 : 10;
+  const step = niceNorm * mag;
+  const niceMax = Math.ceil(padded / step) * step;
   const ticks = [];
-  for (let v = niceMin; v <= niceMax + step * 0.5; v += step) ticks.push(+v.toFixed(6));
-  return { niceMin, niceMax, ticks, decimals: step >= 1 ? 0 : step >= 0.1 ? 1 : 2 };
+  for (let v = 0; v <= niceMax + step * 0.5; v += step) ticks.push(+v.toFixed(6));
+  return { niceMax, ticks };
+}
+
+const fmtTick = (v) => (Number.isInteger(v) ? String(v) : v.toFixed(1));
+
+function smooth(pts) {
+  if (pts.length < 2) return "";
+  let d = `M ${pts[0].x} ${pts[0].y}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+    const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${p2.x} ${p2.y}`;
+  }
+  return d;
 }
 
 function IndicatorTrend({ data, tone }) {
   const color = toneColor(tone);
-  const W = 480, H = 240, padL = 40, padR = 12, padT = 14, padB = 26;
+  const W = 480, H = 240, padL = 42, padR = 12, padT = 14, padB = 26;
   const innerW = W - padL - padR, innerH = H - padT - padB;
-  const { niceMin, niceMax, ticks, decimals } = niceScale(Math.min(...data), Math.max(...data), 3);
+  const { niceMax, ticks } = niceScaleZero(Math.max(...data), 4);
   const xAt = (i) => padL + (i / (data.length - 1)) * innerW;
-  const yAt = (v) => padT + (1 - (v - niceMin) / (niceMax - niceMin)) * innerH;
+  const yAt = (v) => padT + (1 - v / niceMax) * innerH;
   const pts = data.map((v, i) => ({ x: xAt(i), y: yAt(v) }));
-  let pathLen = 0;
-  for (let i = 1; i < pts.length; i++) pathLen += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
-  const line = pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-  const area = `M ${pts[0].x},${pts[0].y} L ${pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" L ")} L ${xAt(data.length - 1)},${H - padB} L ${padL},${H - padB} Z`;
+  const linePath = smooth(pts);
+  const areaPath = `${linePath} L ${xAt(data.length - 1).toFixed(1)},${H - padB} L ${padL},${H - padB} Z`;
   const gid = `grad-${tone}`;
 
   return (
@@ -47,11 +60,11 @@ function IndicatorTrend({ data, tone }) {
       {ticks.map((v) => (
         <g key={v}>
           <line x1={padL} y1={yAt(v)} x2={W - padR} y2={yAt(v)} stroke="var(--line)" strokeWidth="1" strokeDasharray="2 4" />
-          <text x={padL - 8} y={yAt(v) + 3} textAnchor="end" fontSize="10" fill="#AEB4BB" fontFamily="monospace">{v.toFixed(decimals)}</text>
+          <text x={padL - 8} y={yAt(v) + 3} textAnchor="end" fontSize="10" fill="#AEB4BB" fontFamily="monospace">{fmtTick(v)}</text>
         </g>
       ))}
-      <path className="trend-fade" d={area} fill={`url(#${gid})`} />
-      <polyline className="draw-line" style={{ strokeDasharray: pathLen, strokeDashoffset: pathLen }} points={line} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+      <path className="trend-fade" d={areaPath} fill={`url(#${gid})`} />
+      <path className="draw-line" d={linePath} pathLength={1} style={{ strokeDasharray: 1, strokeDashoffset: 1 }} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
       {QUARTERS.map((q, i) => (
         <text key={q} x={xAt(i)} y={H - 9} textAnchor="middle" fontSize="9" fill="#AEB4BB" fontFamily="monospace">{q}</text>
       ))}
@@ -116,7 +129,6 @@ export default function IndicatorsPage() {
 
               {isOpen && (
                 <div className="grid gap-8 border-t border-[var(--line)] px-6 py-7 lg:grid-cols-2">
-                  {/* LEFT — measures + impact */}
                   <div className="flex flex-col">
                     <p className="mono text-[10px] tracking-[0.18em] text-muted">WHAT THIS MEASURES</p>
                     <p className="mt-2 text-sm leading-relaxed text-muted">{r.measures}</p>
@@ -125,7 +137,6 @@ export default function IndicatorsPage() {
                       <p className="mt-2 text-sm leading-relaxed text-ink/90">{r.impact}</p>
                     </div>
                   </div>
-                  {/* RIGHT — historical trend */}
                   <div className="flex flex-col">
                     <p className="mono text-[10px] tracking-[0.18em] text-muted">HISTORICAL TREND</p>
                     <div className="mt-2 flex flex-1 items-center">
