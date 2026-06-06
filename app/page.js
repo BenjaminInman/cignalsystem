@@ -239,7 +239,10 @@ export default function Home() {
         {/* TOP MARKETS */}
         <section>
           <div className="card h-full p-6 md:p-8">
-            <h2 className="headline mb-5 text-2xl text-ink md:text-3xl">Top Markets</h2>
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="headline text-2xl text-ink md:text-3xl">Top Markets</h2>
+              <Link href="/market-maps" className="hover-line mono text-[12px] tracking-[0.08em] text-muted hover:text-ink">VIEW ALL →</Link>
+            </div>
             <div>
               {TOP_MARKETS.map((m, i) => (
                 <div key={m.city} className={`flex items-center justify-between py-3.5 ${i ? "border-t border-[var(--line)]" : ""}`}>

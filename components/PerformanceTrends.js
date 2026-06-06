@@ -1,9 +1,13 @@
+"use client";
+
+import { useState, useRef } from "react";
+
 const MONTHS = ["Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May"];
 
 const SERIES = [
-  { key: "rent", label: "Rent %", color: "#38BDF8", dash: false, data: [3.2, 3.3, 3.4, 3.5, 3.55, 3.65, 3.75, 3.85, 3.8, 3.85, 3.95, 3.85] },
-  { key: "noi", label: "NOI %", color: "#5FB97C", dash: false, data: [3.5, 3.6, 3.7, 3.8, 3.85, 3.95, 4.0, 4.05, 4.1, 4.15, 4.2, 4.2] },
-  { key: "vac", label: "Vacancy %", color: "#E5634D", dash: true, data: [6.2, 6.05, 5.95, 5.85, 5.75, 5.65, 5.55, 5.5, 5.45, 5.35, 5.25, 5.2] },
+  { key: "rent", label: "Rent %", color: "#38BDF8", dash: false, data: [3.2, 3.3, 3.4, 3.5, 3.55, 3.6, 3.75, 3.85, 3.8, 3.85, 3.95, 3.85] },
+  { key: "noi", label: "NOI %", color: "#5FB97C", dash: false, data: [3.5, 3.6, 3.7, 3.8, 3.85, 3.9, 4.0, 4.05, 4.1, 4.15, 4.2, 4.2] },
+  { key: "vac", label: "Vacancy %", color: "#E5634D", dash: true, data: [6.2, 6.05, 5.95, 5.85, 5.75, 5.7, 5.55, 5.5, 5.45, 5.35, 5.25, 5.2] },
 ];
 
 const W = 720, H = 300, padL = 42, padR = 14, padT = 18, padB = 32;
@@ -12,6 +16,7 @@ const Y_MIN = 0, Y_MAX = 8;
 
 const xAt = (i) => padL + (i / (MONTHS.length - 1)) * innerW;
 const yAt = (v) => padT + (1 - (v - Y_MIN) / (Y_MAX - Y_MIN)) * innerH;
+const fmt = (v) => (Math.round(v * 10) / 10).toFixed(1);
 
 function smooth(pts) {
   if (pts.length < 2) return "";
@@ -37,7 +42,23 @@ function Swatch({ color, dash }) {
 }
 
 export default function PerformanceTrends() {
+  const [hover, setHover] = useState(null);
+  const svgRef = useRef(null);
   const gridVals = [0, 2, 4, 6, 8];
+
+  const onMove = (e) => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const fx = (e.clientX - rect.left) / rect.width;
+    const svgX = fx * W;
+    let idx = Math.round(((svgX - padL) / innerW) * (MONTHS.length - 1));
+    idx = Math.max(0, Math.min(MONTHS.length - 1, idx));
+    setHover(idx);
+  };
+
+  const leftPct = hover != null ? (xAt(hover) / W) * 100 : 0;
+  const flip = hover != null && hover > (MONTHS.length - 1) * 0.62;
 
   return (
     <section>
@@ -57,8 +78,9 @@ export default function PerformanceTrends() {
           </div>
         </div>
 
-        <div className="mt-6">
-          <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: "auto" }}>
+        <div className="relative mt-6">
+          <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: "auto" }}
+            onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
             {/* horizontal grid + y-axis % labels */}
             {gridVals.map((v) => (
               <g key={v}>
@@ -70,7 +92,7 @@ export default function PerformanceTrends() {
             {MONTHS.map((m, i) => (
               <g key={m + i}>
                 <line x1={xAt(i)} y1={padT} x2={xAt(i)} y2={H - padB} stroke="var(--line)" strokeWidth="1" strokeOpacity="0.4" strokeDasharray="2 4" />
-                <text x={xAt(i)} y={H - 12} textAnchor="middle" fontSize="10" fill="var(--muted)" fontFamily="monospace">{m}</text>
+                <text x={xAt(i)} y={H - 12} textAnchor="middle" fontSize="10" fill={hover === i ? "#ECEDEF" : "var(--muted)"} fontFamily="monospace">{m}</text>
               </g>
             ))}
             {/* solid axes */}
@@ -84,7 +106,30 @@ export default function PerformanceTrends() {
                   strokeDasharray={s.dash ? "6 4" : ""} strokeLinejoin="round" strokeLinecap="round" />
               );
             })}
+            {/* hover crosshair + markers */}
+            {hover != null && (
+              <g>
+                <line x1={xAt(hover)} y1={padT} x2={xAt(hover)} y2={H - padB} stroke="#ECEDEF" strokeOpacity="0.45" strokeWidth="1" />
+                {SERIES.map((s) => (
+                  <circle key={s.key} cx={xAt(hover)} cy={yAt(s.data[hover])} r="5" fill="#0E0F11" stroke={s.color} strokeWidth="3" />
+                ))}
+              </g>
+            )}
+            {/* transparent capture layer */}
+            <rect x="0" y="0" width={W} height={H} fill="transparent" />
           </svg>
+
+          {hover != null && (
+            <div
+              className="pointer-events-none absolute z-10 rounded-lg border border-[var(--line-strong)] bg-bg2/95 px-3 py-2 shadow-xl shadow-black/40"
+              style={{ top: 8, left: `${leftPct}%`, transform: flip ? "translateX(calc(-100% - 12px))" : "translateX(12px)" }}
+            >
+              <p className="mono text-[12px] text-muted">{MONTHS[hover]}</p>
+              <p className="mono text-[12px]" style={{ color: "#38BDF8" }}>rent : {fmt(SERIES[0].data[hover])}</p>
+              <p className="mono text-[12px]" style={{ color: "#5FB97C" }}>noi : {fmt(SERIES[1].data[hover])}</p>
+              <p className="mono text-[12px]" style={{ color: "#E5634D" }}>vacancy : {fmt(SERIES[2].data[hover])}</p>
+            </div>
+          )}
         </div>
 
         <p className="mono mt-3 text-[10px] tracking-[0.06em] text-muted">Illustrative sample of national same-store averages.</p>
