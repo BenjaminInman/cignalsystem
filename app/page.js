@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight, Lock, Newspaper, ArrowUpRight, Building2, SlidersHorizontal, TrendingUp, Users } from "lucide-react";
 import { toneColor, Sparkline, StatusPill } from "@/components/ui";
 import SignalCard from "@/components/SignalCard";
+import PerformanceTrends from "@/components/PerformanceTrends";
 import {
   COMPOSITE, DASH_STATS, LEADING_CARDS, TRAILING_CARDS, TOP_MARKETS, SIGNALS, NEWS,
 } from "@/lib/data";
@@ -230,6 +231,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* 12-MONTH PERFORMANCE TRENDS */}
+      <PerformanceTrends />
 
       {/* TOP MARKETS */}
       <section className="mt-14">
