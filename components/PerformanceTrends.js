@@ -85,14 +85,14 @@ export default function PerformanceTrends() {
             {gridVals.map((v) => (
               <g key={v}>
                 <line x1={padL} y1={yAt(v)} x2={W - padR} y2={yAt(v)} stroke="var(--line)" strokeWidth="1" strokeDasharray="2 4" />
-                <text x={padL - 10} y={yAt(v) + 3} textAnchor="end" fontSize="11" fill="var(--muted)" fontFamily="monospace">{v}%</text>
+                <text x={padL - 10} y={yAt(v) + 4} textAnchor="end" fontSize="12" fill="#AEB4BB" fontFamily="monospace">{v}%</text>
               </g>
             ))}
             {/* vertical grid + x-axis month labels */}
             {MONTHS.map((m, i) => (
               <g key={m + i}>
                 <line x1={xAt(i)} y1={padT} x2={xAt(i)} y2={H - padB} stroke="var(--line)" strokeWidth="1" strokeOpacity="0.4" strokeDasharray="2 4" />
-                <text x={xAt(i)} y={H - 12} textAnchor="middle" fontSize="10" fill={hover === i ? "#ECEDEF" : "var(--muted)"} fontFamily="monospace">{m}</text>
+                <text x={xAt(i)} y={H - 12} textAnchor="middle" fontSize="12" fill={hover === i ? "#ECEDEF" : "#AEB4BB"} fontFamily="monospace">{m}</text>
               </g>
             ))}
             {/* solid axes */}
