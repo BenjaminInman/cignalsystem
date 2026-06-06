@@ -6,7 +6,7 @@ const SERIES = [
   { key: "vac", label: "Vacancy %", color: "#E5634D", dash: true, data: [6.2, 6.05, 5.95, 5.85, 5.75, 5.65, 5.55, 5.5, 5.45, 5.35, 5.25, 5.2] },
 ];
 
-const W = 760, H = 300, padL = 34, padR = 16, padT = 18, padB = 30;
+const W = 720, H = 300, padL = 42, padR = 14, padT = 18, padB = 32;
 const innerW = W - padL - padR, innerH = H - padT - padB;
 const Y_MIN = 0, Y_MAX = 8;
 
@@ -40,8 +40,8 @@ export default function PerformanceTrends() {
   const gridVals = [0, 2, 4, 6, 8];
 
   return (
-    <section className="mt-14">
-      <div className="card p-6 md:p-8">
+    <section>
+      <div className="card h-full p-6 md:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="headline text-2xl text-ink md:text-3xl">12-Month Performance Trends</h2>
@@ -59,20 +59,23 @@ export default function PerformanceTrends() {
 
         <div className="mt-6">
           <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: "auto" }}>
-            {/* horizontal grid + y labels */}
+            {/* horizontal grid + y-axis % labels */}
             {gridVals.map((v) => (
               <g key={v}>
                 <line x1={padL} y1={yAt(v)} x2={W - padR} y2={yAt(v)} stroke="var(--line)" strokeWidth="1" strokeDasharray="2 4" />
-                <text x={padL - 8} y={yAt(v) + 3} textAnchor="end" fontSize="11" fill="var(--muted)" fontFamily="monospace">{v}</text>
+                <text x={padL - 10} y={yAt(v) + 3} textAnchor="end" fontSize="11" fill="var(--muted)" fontFamily="monospace">{v}%</text>
               </g>
             ))}
-            {/* vertical grid + x labels */}
+            {/* vertical grid + x-axis month labels */}
             {MONTHS.map((m, i) => (
               <g key={m + i}>
                 <line x1={xAt(i)} y1={padT} x2={xAt(i)} y2={H - padB} stroke="var(--line)" strokeWidth="1" strokeOpacity="0.4" strokeDasharray="2 4" />
-                <text x={xAt(i)} y={H - 10} textAnchor="middle" fontSize="10" fill="var(--muted)" fontFamily="monospace">{m}</text>
+                <text x={xAt(i)} y={H - 12} textAnchor="middle" fontSize="10" fill="var(--muted)" fontFamily="monospace">{m}</text>
               </g>
             ))}
+            {/* solid axes */}
+            <line x1={padL} y1={padT} x2={padL} y2={H - padB} stroke="var(--muted)" strokeOpacity="0.55" strokeWidth="1" />
+            <line x1={padL} y1={H - padB} x2={W - padR} y2={H - padB} stroke="var(--muted)" strokeOpacity="0.55" strokeWidth="1" />
             {/* series */}
             {SERIES.map((s) => {
               const pts = s.data.map((v, i) => ({ x: xAt(i), y: yAt(v) }));

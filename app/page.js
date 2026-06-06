@@ -232,27 +232,31 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 12-MONTH PERFORMANCE TRENDS */}
-      <PerformanceTrends />
+      {/* 12-MONTH PERFORMANCE TRENDS + TOP MARKETS */}
+      <div className="mt-14 grid gap-6 lg:grid-cols-[1.5fr_1fr] lg:items-stretch">
+        <PerformanceTrends />
 
-      {/* TOP MARKETS */}
-      <section className="mt-14">
-        <h2 className="headline mb-6 text-3xl text-ink md:text-4xl">Top Markets</h2>
-        <div className="overflow-hidden rounded-lg border border-[var(--line)]">
-          {TOP_MARKETS.map((m, i) => (
-            <div key={m.city} className={`flex items-center justify-between px-6 py-4 ${i ? "border-t border-[var(--line)]" : ""} bg-bg2`}>
-              <div>
-                <p className="font-semibold text-ink">{m.city}</p>
-                <p className="mono mt-0.5 text-[11px] text-muted">Rent: {m.rent} &nbsp; Vac: {m.vac}</p>
-              </div>
-              <div className="flex items-center gap-5">
-                <span className="headline text-2xl" style={{ color: toneColor(m.tone) }}>{m.score}</span>
-                <StatusPill tone={m.tone} />
-              </div>
+        {/* TOP MARKETS */}
+        <section>
+          <div className="card h-full p-6 md:p-8">
+            <h2 className="headline mb-5 text-2xl text-ink md:text-3xl">Top Markets</h2>
+            <div>
+              {TOP_MARKETS.map((m, i) => (
+                <div key={m.city} className={`flex items-center justify-between py-3.5 ${i ? "border-t border-[var(--line)]" : ""}`}>
+                  <div>
+                    <p className="font-semibold text-ink">{m.city}</p>
+                    <p className="mono mt-0.5 text-[11px] text-muted">Rent: {m.rent} &nbsp; Vac: {m.vac}</p>
+                  </div>
+                  <div className="flex items-center gap-5">
+                    <span className="headline text-2xl" style={{ color: toneColor(m.tone) }}>{m.score}</span>
+                    <StatusPill tone={m.tone} />
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </section>
+          </div>
+        </section>
+      </div>
 
       {/* PRO CTA */}
       <section className="relative mt-14 overflow-hidden rounded-2xl border border-[var(--line)] bg-gradient-to-b from-bg2/70 via-bg2/30 to-bg/10 px-6 py-8 md:px-10">
