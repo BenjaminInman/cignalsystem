@@ -11,6 +11,83 @@ const SUITE = [
   { icon: Briefcase, name: "Portfolio", desc: "Your assets, scored against the cycle." },
 ];
 
+function smoothPath(pts) {
+  if (pts.length < 2) return "";
+  let d = `M ${pts[0].x} ${pts[0].y}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+    const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${p2.x} ${p2.y}`;
+  }
+  return d;
+}
+
+function MarketCycle() {
+  const W = 820, H = 380, padL = 24, padR = 24, padT = 48, padB = 70;
+  const innerW = W - padL - padR;
+  const plotTop = padT, plotBottom = H - padB;
+  const innerH = plotBottom - plotTop;
+  const fx = (f) => padL + f * innerW;
+  const fy = (occ) => plotBottom - occ * innerH;
+
+  const pts = [
+    { x: fx(0), y: fy(0.14) },
+    { x: fx(0.25), y: fy(0.5) },
+    { x: fx(0.5), y: fy(0.9) },
+    { x: fx(0.75), y: fy(0.5) },
+    { x: fx(1), y: fy(0.14) },
+  ];
+  const line = smoothPath(pts);
+  const area = `${line} L ${fx(1)} ${plotBottom} L ${fx(0)} ${plotBottom} Z`;
+  const ltY = fy(0.5);
+  const dividers = [0.25, 0.5, 0.75].map(fx);
+  const phases = [
+    { name: "Recovery", desc: "Occupancy rising", color: "#4FA8C7", c: 0.125 },
+    { name: "Expansion", desc: "Demand > supply", color: "#5FB97C", c: 0.375 },
+    { name: "Hypersupply", desc: "Supply > demand", color: "#E8B04B", c: 0.625 },
+    { name: "Contraction", desc: "Occupancy falling", color: "#E5634D", c: 0.875 },
+  ];
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: "auto" }}>
+      <defs>
+        <linearGradient id="cycleStroke" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#4FA8C7" />
+          <stop offset="33%" stopColor="#5FB97C" />
+          <stop offset="66%" stopColor="#E8B04B" />
+          <stop offset="100%" stopColor="#E5634D" />
+        </linearGradient>
+        <linearGradient id="cycleFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#F5B544" stopOpacity="0.10" />
+          <stop offset="100%" stopColor="#F5B544" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+
+      {dividers.map((x, i) => (
+        <line key={i} x1={x} y1={plotTop} x2={x} y2={plotBottom} stroke="var(--line)" strokeWidth="1" strokeDasharray="3 5" />
+      ))}
+
+      <line x1={padL} y1={plotBottom} x2={W - padR} y2={plotBottom} stroke="var(--line)" strokeWidth="1" />
+      <line x1={padL} y1={ltY} x2={W - padR} y2={ltY} stroke="var(--muted)" strokeOpacity="0.5" strokeWidth="1" strokeDasharray="5 5" />
+      <text x={padL + 4} y={ltY - 8} fontSize="10" fill="var(--muted)" fontFamily="monospace" letterSpacing="1">LONG-TERM OCCUPANCY AVERAGE</text>
+
+      <path d={area} fill="url(#cycleFill)" />
+      <path d={line} fill="none" stroke="url(#cycleStroke)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+
+      <circle cx={fx(0.5)} cy={fy(0.9)} r="4" fill="#5FB97C" />
+      <text x={fx(0.5)} y={fy(0.9) - 12} textAnchor="middle" fontSize="10" fill="var(--muted)" fontFamily="monospace" letterSpacing="1">PEAK · EQUILIBRIUM</text>
+
+      {phases.map((p) => (
+        <g key={p.name}>
+          <text x={fx(p.c)} y={plotBottom + 26} textAnchor="middle" fontSize="14" fill={p.color} fontWeight="600">{p.name}</text>
+          <text x={fx(p.c)} y={plotBottom + 44} textAnchor="middle" fontSize="10" fill="var(--muted)" fontFamily="monospace">{p.desc}</text>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
 export default function AboutPage() {
   return (
     <div className="pt-12 pb-12">
@@ -45,18 +122,16 @@ export default function AboutPage() {
             </p>
           </section>
 
-          {/* 30x */}
-          <section className="card flex flex-col gap-6 p-8 sm:flex-row sm:items-center">
-            <div className="shrink-0">
-              <div className="headline text-6xl text-signal">30×</div>
-              <p className="mono mt-1 text-[10px] tracking-[0.14em] text-muted">THE INSIGHT</p>
-            </div>
-            <p className="leading-relaxed text-muted">
-              Operators spend roughly two months acquiring an asset and sixty months operating it — yet
-              close to ninety percent of real estate education focuses on the purchase. Cignal focuses on
-              the other <span className="text-ink">30×</span>: operating in rhythm with the cycle across
-              the whole hold, not just the day you buy.
+          {/* Four phases of the market cycle */}
+          <section className="card p-6 md:p-8">
+            <p className="kicker mb-1">The market cycle</p>
+            <h2 className="headline text-2xl text-ink">The four phases</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
+              Every read maps to where the market sits in the cycle — and which way it&apos;s turning.
             </p>
+            <div className="mt-6">
+              <MarketCycle />
+            </div>
           </section>
 
           {/* Phases */}
