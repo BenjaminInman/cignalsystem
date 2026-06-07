@@ -39,7 +39,7 @@ function smooth(pts) {
 
 function IndicatorTrend({ data, tone }) {
   const color = toneColor(tone);
-  const W = 480, H = 240, padL = 42, padR = 12, padT = 14, padB = 26;
+  const W = 480, H = 185, padL = 42, padR = 12, padT = 12, padB = 24;
   const innerW = W - padL - padR, innerH = H - padT - padB;
   const { niceMax, ticks } = niceScaleZero(Math.max(...data), 4);
   const xAt = (i) => padL + (i / (data.length - 1)) * innerW;
@@ -128,20 +128,17 @@ export default function IndicatorsPage() {
               </button>
 
               {isOpen && (
-                <div className="grid gap-8 border-t border-[var(--line)] px-6 py-7 lg:grid-cols-2">
-                  <div className="flex flex-col">
-                    <p className="mono text-[10px] tracking-[0.18em] text-muted">WHAT THIS MEASURES</p>
-                    <p className="mt-2 text-sm leading-relaxed text-muted">{r.measures}</p>
-                    <div className="mt-5 flex-1 rounded-lg border border-[var(--line)] bg-bg/40 p-4">
-                      <p className="mono text-[11px] tracking-[0.16em]" style={{ color: "#38BDF8" }}>INVESTMENT IMPACT</p>
-                      <p className="mt-2 text-sm leading-relaxed text-ink/90">{r.impact}</p>
-                    </div>
+                <div className="grid gap-x-8 gap-y-4 border-t border-[var(--line)] px-6 py-7 lg:grid-cols-2 lg:grid-rows-[auto_auto_1fr]">
+                  <p className="mono text-[10px] tracking-[0.18em] text-muted lg:col-start-1 lg:row-start-1">WHAT THIS MEASURES</p>
+                  <p className="text-sm leading-relaxed text-muted lg:col-start-1 lg:row-start-2">{r.measures}</p>
+                  <div className="rounded-lg border border-[var(--line)] bg-bg/40 p-4 lg:col-start-1 lg:row-start-3">
+                    <p className="mono text-[11px] tracking-[0.16em]" style={{ color: "#38BDF8" }}>INVESTMENT IMPACT</p>
+                    <p className="mt-2 text-sm leading-relaxed text-ink/90">{r.impact}</p>
                   </div>
-                  <div className="flex flex-col">
-                    <p className="mono text-[10px] tracking-[0.18em] text-muted">HISTORICAL TREND</p>
-                    <div className="mt-2 flex flex-1 items-center">
-                      <IndicatorTrend data={r.trend} tone={r.tone} />
-                    </div>
+
+                  <p className="mono text-[10px] tracking-[0.18em] text-muted lg:col-start-2 lg:row-start-1">HISTORICAL TREND</p>
+                  <div className="flex items-center lg:col-start-2 lg:row-start-3">
+                    <IndicatorTrend data={r.trend} tone={r.tone} />
                   </div>
                 </div>
               )}
