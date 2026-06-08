@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Activity, Radio, LineChart, BarChart3, BookOpen, Briefcase, ArrowRight } from "lucide-react";
 import CommunityCTA from "@/components/CommunityCTA";
 import CignalScoreCTA from "@/components/CignalScoreCTA";
+import { getActiveContent } from "@/lib/active-vertical";
 
 const SUITE = [
   { icon: Activity, name: "Indicators", desc: "Leading vs. trailing, scored and classified." },
@@ -24,7 +25,8 @@ function smoothPath(pts) {
   return d;
 }
 
-function MarketCycle() {
+function MarketCycle({ axisLabel = "OCCUPANCY", phaseDescs }) {
+  const descs = phaseDescs || ["Occupancy rising", "Demand > supply", "Supply > demand", "Occupancy falling"];
   const W = 820, H = 380, padL = 24, padR = 24, padT = 48, padB = 70;
   const innerW = W - padL - padR;
   const plotTop = padT, plotBottom = H - padB;
@@ -44,10 +46,10 @@ function MarketCycle() {
   const ltY = fy(0.5);
   const dividers = [0.25, 0.5, 0.75].map(fx);
   const phases = [
-    { name: "Recovery", desc: "Occupancy rising", color: "#4FA8C7", c: 0.125 },
-    { name: "Expansion", desc: "Demand > supply", color: "#5FB97C", c: 0.375 },
-    { name: "Hypersupply", desc: "Supply > demand", color: "#E8B04B", c: 0.625 },
-    { name: "Contraction", desc: "Occupancy falling", color: "#E5634D", c: 0.875 },
+    { name: "Recovery", desc: descs[0], color: "#4FA8C7", c: 0.125 },
+    { name: "Expansion", desc: descs[1], color: "#5FB97C", c: 0.375 },
+    { name: "Hypersupply", desc: descs[2], color: "#E8B04B", c: 0.625 },
+    { name: "Contraction", desc: descs[3], color: "#E5634D", c: 0.875 },
   ];
 
   return (
@@ -71,7 +73,7 @@ function MarketCycle() {
 
       <line x1={padL} y1={plotBottom} x2={W - padR} y2={plotBottom} stroke="var(--line)" strokeWidth="1" />
       <line x1={padL} y1={ltY} x2={W - padR} y2={ltY} stroke="var(--muted)" strokeOpacity="0.5" strokeWidth="1" strokeDasharray="5 5" />
-      <text x={padL + 4} y={ltY - 8} fontSize="10" fill="var(--muted)" fontFamily="monospace" letterSpacing="1">LONG-TERM OCCUPANCY AVERAGE</text>
+      <text x={padL + 4} y={ltY - 8} fontSize="10" fill="var(--muted)" fontFamily="monospace" letterSpacing="1">LONG-TERM {axisLabel} AVERAGE</text>
 
       <path d={area} fill="url(#cycleFill)" />
       <path d={line} fill="none" stroke="url(#cycleStroke)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
@@ -90,6 +92,7 @@ function MarketCycle() {
 }
 
 export default function AboutPage() {
+  const { COPY = {} } = getActiveContent();
   return (
     <div className="pt-12 pb-12">
       {/* Intro — full width */}
@@ -98,7 +101,7 @@ export default function AboutPage() {
         The signals the market sends <span className="text-signal">before</span> it moves.
       </h1>
       <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
-        Cignal System is market-cycle intelligence built for multifamily real estate — the instrument
+        Cignal System is market-cycle intelligence built for {COPY.aboutAsset} — the instrument
         that tells operators and investors not just <span className="text-ink">how</span> to act, but
         <span className="text-ink"> when</span>.
       </p>
@@ -147,7 +150,7 @@ export default function AboutPage() {
                 turning — drives every sound investment and operating decision.
               </p>
               <div className="mt-6">
-                <MarketCycle />
+                <MarketCycle axisLabel={COPY.cycleMetric} phaseDescs={COPY.cyclePhases} />
               </div>
               <p className="mt-6 max-w-2xl text-sm leading-relaxed text-muted">
                 Cignal System was built as the instrument for the <span className="text-signal">Onion Framework</span> —
@@ -207,8 +210,7 @@ export default function AboutPage() {
               <p className="kicker mb-4">The founder</p>
               <h2 className="headline text-2xl text-ink">Benjamin Inman</h2>
               <p className="mt-4 leading-relaxed text-muted">
-                Cignal System was created by Benjamin Inman, a multifamily operator and market-cycle
-                researcher. Across more than 20 years acquiring, operating, and disposing of assets — through the
+                Cignal System was created by Benjamin Inman, {COPY.founderRole}. Across more than 20 years acquiring, operating, and disposing of assets — through the
                 post-GFC recovery, the pandemic boom, and the 2022–2024 correction — he watched the same
                 pattern repeat: capable operators caught on the wrong side of timing. Cignal is the system he
                 built to read the cycle before it turns, and the frameworks behind it grew out of that work.
