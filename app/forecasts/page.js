@@ -2,14 +2,13 @@
 
 import { useState } from "react";
 import { Info } from "lucide-react";
-import { FORECAST_MARKETS, FORECAST_DRIVERS } from "@/lib/data";
 import { toneColor } from "@/components/ui";
-import { useVertical } from "@/components/VerticalProvider";
+import { useContent, useVertical } from "@/components/VerticalProvider";
 import { isPageReady } from "@/lib/verticals";
 import ComingSoonInline from "@/components/ComingSoonInline";
 
 const SCENARIOS = ["Base Case", "Bull Case", "Bear Case"];
-const METRICS = ["Rent Growth", "Vacancy", "Cap Rate", "NOI Growth"];
+const DEFAULT_METRICS = ["Rent Growth", "Vacancy", "Cap Rate", "NOI Growth"];
 const SERIES = {
   "Base Case": [3.8, 4.2, 4.5, 4.3, 4.1],
   "Bull Case": [3.8, 4.8, 5.6, 5.9, 6.1],
@@ -52,14 +51,17 @@ export default function ForecastsPage() {
 }
 
 function ForecastsInner() {
+  const { FORECAST_MARKETS = [], FORECAST_DRIVERS = [], COPY = {} } = useContent();
+  const metrics = COPY.fcMetrics || DEFAULT_METRICS;
+  const colLabel = COPY.fcColLabel || "RENT";
   const [sc, setSc] = useState("Base Case");
-  const [metric, setMetric] = useState("Rent Growth");
+  const [metric, setMetric] = useState(metrics[0]);
   const conf = sc === "Base Case" ? 78 : sc === "Bull Case" ? 64 : 71;
 
   return (
     <div className="pt-12 pb-10">
       <h1 className="headline text-4xl text-ink md:text-5xl">Market Forecasts</h1>
-      <p className="mt-3 max-w-2xl text-muted">5-year forward projections for multifamily fundamentals across leading indicators.</p>
+      <p className="mt-3 max-w-2xl text-muted">{COPY.fcSubtitle || "5-year forward projections across leading indicators."}</p>
 
       <div className="mt-8 flex flex-wrap items-center gap-6">
         <div className="flex items-center gap-3">
@@ -73,7 +75,7 @@ function ForecastsInner() {
         <div className="flex items-center gap-3">
           <span className="kicker">Metric</span>
           <div className="inline-flex flex-wrap rounded-md border border-[var(--line)] p-1">
-            {METRICS.map((m) => (
+            {metrics.map((m) => (
               <button key={m} onClick={() => setMetric(m)} className={`mono rounded px-3 py-1.5 text-[12px] ${metric === m ? "bg-signal/15 text-signal" : "text-muted hover:text-ink"}`}>{m}</button>
             ))}
           </div>
@@ -84,7 +86,7 @@ function ForecastsInner() {
         <div className="mb-4 flex items-start justify-between">
           <div>
             <h2 className="font-semibold text-ink">{sc} — 5 Year Forecast</h2>
-            <p className="mono text-[12px] text-muted">Effective {metric} % YoY</p>
+            <p className="mono text-[12px] text-muted">{metric} · {sc} projection</p>
           </div>
           <span className="mono rounded-sm border border-neutral/40 bg-neutral/10 px-2.5 py-1 text-[11px] text-neutral">{conf}% conf</span>
         </div>
@@ -96,7 +98,7 @@ function ForecastsInner() {
         <div className="card p-6">
           <h2 className="mb-5 font-semibold text-ink">Market-Level Forecasts</h2>
           <div className="grid grid-cols-4 gap-2 pb-3 mono text-[10px] tracking-[0.12em] text-muted">
-            <span>MARKET</span><span>1Y RENT</span><span>3Y RENT</span><span className="text-right">SIGNAL</span>
+            <span>MARKET</span><span>1Y {colLabel}</span><span>3Y {colLabel}</span><span className="text-right">SIGNAL</span>
           </div>
           {FORECAST_MARKETS.map((m) => (
             <div key={m.city} className="grid grid-cols-4 items-center gap-2 border-t border-[var(--line)] py-3 text-sm">

@@ -1,21 +1,27 @@
 "use client";
 
 import { Plus, DollarSign, TrendingUp, Building2, Activity } from "lucide-react";
-import { PORTFOLIO_STATS, PORTFOLIO_ASSETS } from "@/lib/data";
 import { toneColor, StatusPill } from "@/components/ui";
-import { useVertical } from "@/components/VerticalProvider";
+import { useContent, useVertical } from "@/components/VerticalProvider";
 import { isPageReady } from "@/lib/verticals";
 import ComingSoonInline from "@/components/ComingSoonInline";
 
-const ICONS = { "TOTAL PORTFOLIO VALUE": DollarSign, "ANNUAL NOI": TrendingUp, "TOTAL UNITS": Building2, "AVG OCCUPANCY": Activity };
+const ICONS = {
+  "TOTAL PORTFOLIO VALUE": DollarSign,
+  "ANNUAL NOI": TrendingUp,
+  "ANNUAL INCOME": TrendingUp,
+  "TOTAL UNITS": Building2,
+  "PROPERTIES": Building2,
+  "AVG OCCUPANCY": Activity,
+};
 
-function NoiChart() {
-  const max = Math.max(...PORTFOLIO_ASSETS.map((a) => a.noi));
+function NoiChart({ assets }) {
+  const max = Math.max(...assets.map((a) => a.noi), 0.0001);
   const w = 1100, h = 230, pad = 30;
-  const bw = (w - pad * 2) / PORTFOLIO_ASSETS.length;
+  const bw = (w - pad * 2) / Math.max(assets.length, 1);
   return (
     <svg viewBox={`0 0 ${w} ${h + 30}`} className="w-full">
-      {PORTFOLIO_ASSETS.map((a, i) => {
+      {assets.map((a, i) => {
         const x = pad + i * bw + bw * 0.2;
         const bwInner = bw * 0.6;
         const hgt = (a.noi / max) * (h - pad);
@@ -37,19 +43,21 @@ export default function PortfolioPage() {
 }
 
 function PortfolioInner() {
+  const { PORTFOLIO_STATS = [], PORTFOLIO_ASSETS = [], COPY = {} } = useContent();
+
   return (
     <div className="pt-12 pb-10">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="headline text-4xl text-ink md:text-5xl">Portfolio Tracker</h1>
-          <p className="mt-3 max-w-2xl text-muted">Monitor your multifamily assets against live market signals.</p>
+          <p className="mt-3 max-w-2xl text-muted">{COPY.pfSubtitle || "Monitor your assets against live market signals."}</p>
         </div>
         <button className="mono flex items-center gap-2 rounded-sm bg-signal px-4 py-2.5 text-[12px] tracking-[0.06em] text-bg hover:opacity-90"><Plus size={14} /> Add Asset</button>
       </div>
 
       <div className="mt-8 grid gap-px overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--line)] sm:grid-cols-2 lg:grid-cols-4">
         {PORTFOLIO_STATS.map((s) => {
-          const Icon = ICONS[s.label];
+          const Icon = ICONS[s.label] || Activity;
           return (
             <div key={s.label} className="bg-bg2 p-6">
               <p className="kicker mb-4 flex items-center gap-2"><Icon size={13} className="text-muted" /> {s.label}</p>
@@ -60,8 +68,8 @@ function PortfolioInner() {
       </div>
 
       <div className="card mt-8 p-6">
-        <h2 className="mb-4 font-semibold text-ink">NOI by Asset ($M)</h2>
-        <NoiChart />
+        <h2 className="mb-4 font-semibold text-ink">{COPY.pfChartTitle || "NOI by Asset ($M)"}</h2>
+        <NoiChart assets={PORTFOLIO_ASSETS} />
       </div>
 
       <div className="mt-8 space-y-4">
@@ -73,14 +81,14 @@ function PortfolioInner() {
                 <span className="mono rounded bg-white/[0.05] px-1.5 py-0.5 text-[10px] text-muted">{a.grade}</span>
                 <StatusPill tone={a.tone} />
               </div>
-              <p className="mono mt-1 text-[12px] text-muted">{a.loc} · {a.units} units</p>
+              <p className="mono mt-1 text-[12px] text-muted">{a.loc}{a.meta ? ` · ${a.meta}` : a.units ? ` · ${a.units} units` : ""}</p>
             </div>
             <div className="grid grid-cols-3 gap-x-8 gap-y-2 sm:grid-cols-5">
               <Col label="Value" value={a.value} />
-              <Col label="Gain/Loss" value={a.gl} color={a.glUp ? "#5FB97C" : "#E5634D"} />
+              <Col label="Gain/Loss" value={a.gl} color={a.gl === "—" ? undefined : a.glUp ? "#5FB97C" : "#E5634D"} />
               <Col label="Cap Rate" value={a.cap} />
               <Col label="Occupancy" value={a.occ} />
-              <Col label="Rent Δ" value={a.rent} color={a.rentUp ? "#5FB97C" : "#E5634D"} />
+              <Col label="Rent Δ" value={a.rent} color={a.rent === "—" ? undefined : a.rentUp ? "#5FB97C" : "#E5634D"} />
             </div>
           </div>
         ))}
