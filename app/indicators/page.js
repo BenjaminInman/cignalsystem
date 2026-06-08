@@ -128,17 +128,20 @@ export default function IndicatorsPage() {
               </button>
 
               {isOpen && (
-                <div className="grid gap-x-8 gap-y-4 border-t border-[var(--line)] px-6 py-7 lg:grid-cols-2 lg:grid-rows-[auto_auto_1fr]">
-                  <p className="mono text-[10px] tracking-[0.18em] text-muted lg:col-start-1 lg:row-start-1">WHAT THIS MEASURES</p>
-                  <p className="text-sm leading-relaxed text-muted lg:col-start-1 lg:row-start-2">{r.measures}</p>
-                  <div className="rounded-lg border border-[var(--line)] bg-bg/40 p-4 lg:col-start-1 lg:row-start-3 lg:self-start">
-                    <p className="mono text-[11px] tracking-[0.16em]" style={{ color: "#38BDF8" }}>INVESTMENT IMPACT</p>
-                    <p className="mt-2 text-sm leading-relaxed text-ink/90">{r.impact}</p>
+                <div className="grid gap-8 border-t border-[var(--line)] px-6 py-7 lg:grid-cols-2">
+                  <div>
+                    <p className="mono text-[10px] tracking-[0.18em] text-muted">WHAT THIS MEASURES</p>
+                    <p className="mt-2 text-sm leading-relaxed text-muted">{r.measures}</p>
+                    <div className="mt-5 rounded-lg border border-[var(--line)] bg-bg/40 p-4">
+                      <p className="mono text-[11px] tracking-[0.16em]" style={{ color: "#38BDF8" }}>INVESTMENT IMPACT</p>
+                      <p className="mt-2 text-sm leading-relaxed text-ink/90">{r.impact}</p>
+                    </div>
                   </div>
-
-                  <p className="mono text-[10px] tracking-[0.18em] text-muted lg:col-start-2 lg:row-start-1">HISTORICAL TREND</p>
-                  <div className="lg:col-start-2 lg:row-start-3 lg:self-start">
-                    <IndicatorTrend data={r.trend} tone={r.tone} />
+                  <div>
+                    <p className="mono text-[10px] tracking-[0.18em] text-muted">HISTORICAL TREND</p>
+                    <div className="mt-2">
+                      <IndicatorTrend data={r.trend} tone={r.tone} />
+                    </div>
                   </div>
                 </div>
               )}
