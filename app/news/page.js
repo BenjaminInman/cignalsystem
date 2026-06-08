@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Newspaper, ArrowUpRight } from "lucide-react";
 import { NEWS } from "@/lib/data";
 import CommunityCTA from "@/components/CommunityCTA";
+import CignalScoreCTA from "@/components/CignalScoreCTA";
 
 export default function NewsPage() {
   const [items, setItems] = useState(null); // null = loading
@@ -43,6 +44,9 @@ export default function NewsPage() {
         <aside>
           <div className="lg:sticky lg:top-24">
             <CommunityCTA variant="sidebar" />
+            <div className="mt-4">
+              <CignalScoreCTA />
+            </div>
           </div>
         </aside>
       </div>

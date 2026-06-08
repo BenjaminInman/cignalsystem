@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Activity, Radio, LineChart, BarChart3, BookOpen, Briefcase, ArrowRight } from "lucide-react";
 import CommunityCTA from "@/components/CommunityCTA";
+import CignalScoreCTA from "@/components/CignalScoreCTA";
 
 const SUITE = [
   { icon: Activity, name: "Indicators", desc: "Leading vs. trailing, scored and classified." },
@@ -223,6 +224,9 @@ export default function AboutPage() {
         <aside>
           <div className="lg:sticky lg:top-24">
             <CommunityCTA variant="sidebar" />
+            <div className="mt-4">
+              <CignalScoreCTA />
+            </div>
           </div>
         </aside>
       </div>
