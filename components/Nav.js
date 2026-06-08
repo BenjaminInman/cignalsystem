@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import { Home, Newspaper, Radio, Info, LayoutDashboard, Activity, BarChart3, LineChart, TrendingUp, BookOpen, Briefcase, Users, Bell, ChevronDown, Terminal } from "lucide-react";
+import { useVertical } from "@/components/VerticalProvider";
 
 const PRIMARY = [
   { label: "Home", href: "/", icon: Home },
@@ -25,6 +26,7 @@ const SUITE = [
 
 export default function Nav() {
   const path = usePathname();
+  const vertical = useVertical();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const inSuite = SUITE.some((s) => s.href === path);
@@ -38,18 +40,25 @@ export default function Nav() {
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--line)] bg-bg/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-5 py-3">
-        <Link href="/" className="flex shrink-0 items-center gap-2.5">
-          <span className="flex h-6 w-6 items-center justify-center">
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-              <circle cx="11" cy="11" r="2.4" fill="#F5B544" />
-              <circle cx="11" cy="11" r="6" stroke="#F5B544" strokeOpacity="0.5" strokeWidth="1" />
-              <circle cx="11" cy="11" r="9.5" stroke="#F5B544" strokeOpacity="0.2" strokeWidth="1" />
-            </svg>
-          </span>
-          <span className="mono text-sm font-medium tracking-[0.16em] text-ink">
-            CIGNAL<span className="text-signal">·</span>SYSTEM
-          </span>
-        </Link>
+        <div className="flex shrink-0 items-center gap-2.5">
+          <Link href="/" className="flex items-center gap-2.5">
+            <span className="flex h-6 w-6 items-center justify-center">
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                <circle cx="11" cy="11" r="2.4" fill="#F5B544" />
+                <circle cx="11" cy="11" r="6" stroke="#F5B544" strokeOpacity="0.5" strokeWidth="1" />
+                <circle cx="11" cy="11" r="9.5" stroke="#F5B544" strokeOpacity="0.2" strokeWidth="1" />
+              </svg>
+            </span>
+            <span className="mono text-sm font-medium tracking-[0.16em] text-ink">
+              CIGNAL<span className="text-signal">·</span>SYSTEM
+            </span>
+          </Link>
+          {vertical?.label && (
+            <span className="mono hidden rounded border border-[var(--line-strong)] px-1.5 py-0.5 text-[9px] tracking-[0.16em] text-muted sm:inline-block">
+              {vertical.label.toUpperCase()}
+            </span>
+          )}
+        </div>
 
         <nav className="hidden items-center gap-1 md:flex">
           {PRIMARY.map(({ label, href, icon: Icon }) => {
