@@ -39,7 +39,7 @@ function smooth(pts) {
 
 function IndicatorTrend({ data, tone }) {
   const color = toneColor(tone);
-  const W = 480, H = 185, padL = 42, padR = 12, padT = 12, padB = 24;
+  const W = 480, H = 140, padL = 42, padR = 12, padT = 10, padB = 22;
   const innerW = W - padL - padR, innerH = H - padT - padB;
   const { niceMax, ticks } = niceScaleZero(Math.max(...data), 4);
   const xAt = (i) => padL + (i / (data.length - 1)) * innerW;
@@ -131,13 +131,13 @@ export default function IndicatorsPage() {
                 <div className="grid gap-x-8 gap-y-4 border-t border-[var(--line)] px-6 py-7 lg:grid-cols-2 lg:grid-rows-[auto_auto_1fr]">
                   <p className="mono text-[10px] tracking-[0.18em] text-muted lg:col-start-1 lg:row-start-1">WHAT THIS MEASURES</p>
                   <p className="text-sm leading-relaxed text-muted lg:col-start-1 lg:row-start-2">{r.measures}</p>
-                  <div className="rounded-lg border border-[var(--line)] bg-bg/40 p-4 lg:col-start-1 lg:row-start-3">
+                  <div className="rounded-lg border border-[var(--line)] bg-bg/40 p-4 lg:col-start-1 lg:row-start-3 lg:self-start">
                     <p className="mono text-[11px] tracking-[0.16em]" style={{ color: "#38BDF8" }}>INVESTMENT IMPACT</p>
                     <p className="mt-2 text-sm leading-relaxed text-ink/90">{r.impact}</p>
                   </div>
 
                   <p className="mono text-[10px] tracking-[0.18em] text-muted lg:col-start-2 lg:row-start-1">HISTORICAL TREND</p>
-                  <div className="flex items-center lg:col-start-2 lg:row-start-3">
+                  <div className="lg:col-start-2 lg:row-start-3 lg:self-start">
                     <IndicatorTrend data={r.trend} tone={r.tone} />
                   </div>
                 </div>
