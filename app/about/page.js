@@ -127,11 +127,22 @@ export default function AboutPage() {
             <p className="kicker mb-1">The market cycle</p>
             <h2 className="headline text-2xl text-ink">The four phases</h2>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
-              Every read maps to where the market sits in the cycle — and which way it&apos;s turning.
+              Occupancy moves through four repeating phases —
+              <span className="text-ink"> Recovery</span>,
+              <span className="text-ink"> Expansion</span>,
+              <span className="text-ink"> Hypersupply</span>, and
+              <span className="text-ink"> Contraction</span>. Knowing which one you&apos;re in — and which way it&apos;s
+              turning — drives every sound investment and operating decision.
             </p>
             <div className="mt-6">
               <MarketCycle />
             </div>
+            <p className="mt-6 max-w-2xl text-sm leading-relaxed text-muted">
+              Cignal System was built as the instrument for the <span className="text-signal">Onion Framework</span> —
+              a layered method for navigating these four phases. It peels the market back one layer at a time: from the
+              outer macro signals, through leading and trailing indicators, down to the core decision for the phase
+              you&apos;re actually in — so your strategy is matched to the moment instead of fighting against it.
+            </p>
           </section>
 
           {/* Phases */}
