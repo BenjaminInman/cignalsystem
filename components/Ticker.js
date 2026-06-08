@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { TICKER } from "@/lib/data";
 
-function Item({ label, value, delta, dir }) {
+function Item({ label, value, delta, dir, live }) {
   const color = dir === "up" ? "#5FB97C" : "#E5634D";
   return (
     <span className="mono inline-flex items-center gap-2 px-6 text-[12px] tracking-wide whitespace-nowrap">
+      {live && <span className="h-1 w-1 rounded-full bg-signal" />}
       <span className="text-muted">{label}</span>
       <span className="text-ink">{value}</span>
       <span style={{ color }}>{delta}</span>
@@ -16,8 +17,21 @@ function Item({ label, value, delta, dir }) {
 }
 
 export default function Ticker() {
-  const loop = [...TICKER, ...TICKER];
+  const [items, setItems] = useState(TICKER);
   const [time, setTime] = useState("");
+
+  // pull live values and merge over the sample set
+  useEffect(() => {
+    fetch("/api/ticker")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d && d.items) {
+          setItems(TICKER.map((it) => (d.items[it.label] ? { ...it, ...d.items[it.label] } : it)));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     const fmt = () =>
       new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZone: "America/New_York" }) + " EST";
@@ -25,6 +39,8 @@ export default function Ticker() {
     const id = setInterval(() => setTime(fmt()), 30000);
     return () => clearInterval(id);
   }, []);
+
+  const loop = [...items, ...items];
 
   return (
     <div className="relative w-full overflow-hidden border-b border-[var(--line)] bg-[#0a0b0d]/90 backdrop-blur">
