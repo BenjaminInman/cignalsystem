@@ -123,26 +123,38 @@ export default function AboutPage() {
           </section>
 
           {/* Four phases of the market cycle */}
-          <section className="card p-6 md:p-8">
-            <p className="kicker mb-1">The market cycle</p>
-            <h2 className="headline text-2xl text-ink">The four phases</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
-              Occupancy moves through four repeating phases —
-              <span className="text-ink"> Recovery</span>,
-              <span className="text-ink"> Expansion</span>,
-              <span className="text-ink"> Hypersupply</span>, and
-              <span className="text-ink"> Contraction</span>. Knowing which one you&apos;re in — and which way it&apos;s
-              turning — drives every sound investment and operating decision.
-            </p>
-            <div className="mt-6">
-              <MarketCycle />
+          <section className="relative overflow-hidden rounded-2xl border border-[var(--line)] bg-gradient-to-b from-bg2/70 via-bg2/30 to-bg/10 p-6 md:p-8">
+            <svg className="pointer-events-none absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 1200 360" aria-hidden="true">
+              <defs>
+                <radialGradient id="phasesGlow" cx="85%" cy="6%" r="80%">
+                  <stop offset="0%" stopColor="#F5B544" stopOpacity="0.10" />
+                  <stop offset="100%" stopColor="#F5B544" stopOpacity="0" />
+                </radialGradient>
+              </defs>
+              <rect width="1200" height="360" fill="url(#phasesGlow)" />
+              <path d="M0,250 C150,200 250,300 400,250 C550,200 650,300 800,250 C950,200 1050,300 1200,250" fill="none" stroke="#F5B544" strokeOpacity="0.08" strokeWidth="2" />
+            </svg>
+            <div className="relative">
+              <p className="kicker mb-1">The market cycle</p>
+              <h2 className="headline text-2xl text-ink">The four phases</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
+                Acquisition, Operations, and Disposition all play out across four repeating phases —
+                <span className="text-ink"> Recovery</span>,
+                <span className="text-ink"> Expansion</span>,
+                <span className="text-ink"> Hypersupply</span>, and
+                <span className="text-ink"> Contraction</span>. Knowing which one you&apos;re in — and which way it&apos;s
+                turning — drives every sound investment and operating decision.
+              </p>
+              <div className="mt-6">
+                <MarketCycle />
+              </div>
+              <p className="mt-6 max-w-2xl text-sm leading-relaxed text-muted">
+                Cignal System was built as the instrument for the <span className="text-signal">Onion Framework</span> —
+                a layered method for navigating these four phases. It peels the market back one layer at a time: from the
+                outer macro signals, through leading and trailing indicators, down to the core decision for the phase
+                you&apos;re actually in — so your strategy is matched to the moment instead of fighting against it.
+              </p>
             </div>
-            <p className="mt-6 max-w-2xl text-sm leading-relaxed text-muted">
-              Cignal System was built as the instrument for the <span className="text-signal">Onion Framework</span> —
-              a layered method for navigating these four phases. It peels the market back one layer at a time: from the
-              outer macro signals, through leading and trailing indicators, down to the core decision for the phase
-              you&apos;re actually in — so your strategy is matched to the moment instead of fighting against it.
-            </p>
           </section>
 
           {/* Phases */}
@@ -179,19 +191,31 @@ export default function AboutPage() {
           </section>
 
           {/* Founder */}
-          <section className="max-w-3xl">
-            <p className="kicker mb-4">The founder</p>
-            <h2 className="headline text-2xl text-ink">Benjamin Inman</h2>
-            <p className="mt-4 leading-relaxed text-muted">
-              Cignal System was created by Benjamin Inman, a multifamily operator and market-cycle
-              researcher. Across fifteen years acquiring, operating, and disposing of assets — through the
-              post-GFC recovery, the pandemic boom, and the 2022–2024 correction — he watched the same
-              pattern repeat: capable operators caught on the wrong side of timing. Cignal is the system he
-              built to read the cycle before it turns, and the frameworks behind it grew out of that work.
-            </p>
-            <p className="mt-4 leading-relaxed text-muted">
-              His thesis fits on one line: <span className="text-signal">When &gt; How.</span>
-            </p>
+          <section className="relative overflow-hidden rounded-2xl border border-[var(--line)] bg-gradient-to-b from-bg2/70 via-bg2/30 to-bg/10 p-6 md:p-8">
+            <svg className="pointer-events-none absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 1200 360" aria-hidden="true">
+              <defs>
+                <radialGradient id="founderGlow" cx="85%" cy="6%" r="80%">
+                  <stop offset="0%" stopColor="#F5B544" stopOpacity="0.10" />
+                  <stop offset="100%" stopColor="#F5B544" stopOpacity="0" />
+                </radialGradient>
+              </defs>
+              <rect width="1200" height="360" fill="url(#founderGlow)" />
+              <path d="M0,250 C150,200 250,300 400,250 C550,200 650,300 800,250 C950,200 1050,300 1200,250" fill="none" stroke="#F5B544" strokeOpacity="0.08" strokeWidth="2" />
+            </svg>
+            <div className="relative max-w-2xl">
+              <p className="kicker mb-4">The founder</p>
+              <h2 className="headline text-2xl text-ink">Benjamin Inman</h2>
+              <p className="mt-4 leading-relaxed text-muted">
+                Cignal System was created by Benjamin Inman, a multifamily operator and market-cycle
+                researcher. Across more than 20 years acquiring, operating, and disposing of assets — through the
+                post-GFC recovery, the pandemic boom, and the 2022–2024 correction — he watched the same
+                pattern repeat: capable operators caught on the wrong side of timing. Cignal is the system he
+                built to read the cycle before it turns, and the frameworks behind it grew out of that work.
+              </p>
+              <p className="mt-4 leading-relaxed text-muted">
+                His thesis fits on one line: <span className="text-signal">When &gt; How.</span>
+              </p>
+            </div>
           </section>
         </div>
 
