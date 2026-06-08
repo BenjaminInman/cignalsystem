@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import { INDICATORS } from "@/lib/data";
 import { toneColor, StatusPill } from "@/components/ui";
@@ -76,10 +76,22 @@ export default function IndicatorsPage() {
   const [type, setType] = useState("All Types");
   const [cat, setCat] = useState("All");
   const [open, setOpen] = useState({});
+  const [live, setLive] = useState({});
+
+  useEffect(() => {
+    let on = true;
+    fetch("/api/indicators")
+      .then((r) => r.json())
+      .then((d) => { if (on && d?.items) setLive(d.items); })
+      .catch(() => {});
+    return () => { on = false; };
+  }, []);
 
   const toggle = (name) => setOpen((o) => ({ ...o, [name]: !o[name] }));
 
-  const rows = INDICATORS.filter(
+  const merged = INDICATORS.map((r) => (live[r.name] ? { ...r, ...live[r.name] } : r));
+
+  const rows = merged.filter(
     (r) =>
       (type === "All Types" || r.type === type.toUpperCase()) &&
       (cat === "All" || r.cat === cat.toUpperCase())
