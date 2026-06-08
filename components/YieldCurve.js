@@ -16,7 +16,7 @@ const SAMPLE = {
 };
 
 function Curve({ points }) {
-  const W = 640, H = 240, padL = 36, padR = 14, padT = 16, padB = 28;
+  const W = 640, H = 240, padL = 44, padR = 14, padT = 16, padB = 30;
   const innerW = W - padL - padR, innerH = H - padT - padB;
   const ys = points.map((p) => p.y);
   const lo = Math.min(...ys), hi = Math.max(...ys);
@@ -33,15 +33,17 @@ function Curve({ points }) {
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: "auto" }}>
       {gridVals.map((v, i) => (
         <g key={i}>
-          <line x1={padL} y1={yAt(v)} x2={W - padR} y2={yAt(v)} stroke="var(--line)" strokeWidth="1" />
-          <text x={padL - 6} y={yAt(v) + 3} textAnchor="end" fontSize="10" fill="var(--muted)" fontFamily="monospace">{v.toFixed(1)}</text>
+          <line x1={padL} y1={yAt(v)} x2={W - padR} y2={yAt(v)} stroke="var(--line)" strokeWidth="1" strokeDasharray="2 4" />
+          <text x={padL - 9} y={yAt(v) + 3} textAnchor="end" fontSize="11" fill="#AEB4BB" fontFamily="monospace">{v.toFixed(1)}%</text>
         </g>
       ))}
+      <line x1={padL} y1={padT} x2={padL} y2={H - padB} stroke="var(--muted)" strokeOpacity="0.55" strokeWidth="1" />
+      <line x1={padL} y1={H - padB} x2={W - padR} y2={H - padB} stroke="var(--muted)" strokeOpacity="0.55" strokeWidth="1" />
       <polyline points={line} fill="none" stroke="#F5B544" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
       {points.map((p, i) => (
         <g key={p.label}>
           <circle cx={xAt(i)} cy={yAt(p.y)} r="3" fill="#F5B544" />
-          <text x={xAt(i)} y={H - 9} textAnchor="middle" fontSize="10" fill="var(--muted)" fontFamily="monospace">{p.label}</text>
+          <text x={xAt(i)} y={H - 10} textAnchor="middle" fontSize="11" fill="#AEB4BB" fontFamily="monospace">{p.label}</text>
         </g>
       ))}
     </svg>
