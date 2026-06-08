@@ -67,12 +67,10 @@ export default function Home() {
           {COPY.heroKicker}
         </p>
         <h1 className="headline max-w-4xl text-5xl text-ink md:text-7xl">
-          The signals the market<br />doesn&apos;t <span className="text-signal">broadcast.</span>
+          Better Signals. Better Decisions.<br />Better <span className="text-signal">Returns.</span>
         </h1>
         <p className="mt-7 max-w-xl text-lg leading-relaxed text-muted">
-          Cignal System decodes the economic data moving {COPY.heroAsset} — separating the{" "}
-          <span className="text-ink">leading indicators</span> that predict the next phase from the{" "}
-          <span className="text-ink">trailing noise</span> everyone else reacts to.
+          {COPY.heroLead}
         </p>
         <div className="mt-9 flex flex-wrap items-center gap-4">
           <Link href="/signals" className="mono rounded-sm bg-signal px-6 py-3 text-[13px] tracking-[0.08em] text-bg transition-opacity hover:opacity-90">
