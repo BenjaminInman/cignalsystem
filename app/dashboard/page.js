@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Lock, Activity, BarChart3, LineChart, Radio, BookOpen, Briefcase } from "lucide-react";
-import { useVertical } from "@/components/VerticalProvider";
+import { useVertical, useContent } from "@/components/VerticalProvider";
 import { isPageReady } from "@/lib/verticals";
 import ComingSoonInline from "@/components/ComingSoonInline";
 
@@ -23,6 +23,12 @@ export default function DashboardPage() {
 }
 
 function DashboardInner() {
+  const { DASH_STATS = [] } = useContent();
+  const mt = DASH_STATS.find((s) => s.label === "MARKETS TRACKED");
+  const markets = mt ? `${mt.value} ${mt.unit}` : "every major metro";
+  const suite = SUITE.map((s) =>
+    s.name === "Market Maps" ? { ...s, desc: `Fundamentals scored and ranked across ${markets}.` } : s
+  );
   const [mode, setMode] = useState("login");
   const [notice, setNotice] = useState("");
 
@@ -97,7 +103,7 @@ function DashboardInner() {
         <div>
           <p className="kicker mb-4">What you unlock</p>
           <div className="grid gap-px overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--line)] sm:grid-cols-2">
-            {SUITE.map((s) => (
+            {suite.map((s) => (
               <div key={s.name} className="relative bg-bg2 p-6">
                 <div className="mb-3 flex items-center justify-between">
                   <span className="flex h-8 w-8 items-center justify-center rounded-md bg-signal/10">
