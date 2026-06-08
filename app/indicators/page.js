@@ -98,6 +98,62 @@ export default function IndicatorsPage() {
       (cat === "All" || r.cat === cat.toUpperCase())
   );
 
+  const reRows = rows.filter((r) => r.group !== "macro");
+  const macroRows = rows.filter((r) => r.group === "macro");
+
+  const renderRow = (r) => {
+    const isOpen = !!open[r.name];
+    return (
+      <div key={r.name} className="card overflow-hidden">
+        <button onClick={() => toggle(r.name)} className="grid w-full grid-cols-2 items-center gap-4 px-6 py-5 text-left transition-colors hover:bg-white/[0.02] md:grid-cols-[1.4fr_1fr_1.2fr_auto]">
+          <div>
+            <p className="mono text-[10px] tracking-[0.18em] text-muted">{r.cat} · {r.type}</p>
+            <p className="mt-1 font-semibold text-ink">{r.name}</p>
+          </div>
+          <div>
+            <p className="headline text-2xl text-ink">{r.value}</p>
+            <p className="mono text-[11px] text-muted">{r.unit}</p>
+          </div>
+          <div className="hidden md:block">
+            <p className="mono text-sm" style={{ color: toneColor(r.tone) }}>{r.change}</p>
+            <p className="mono mt-0.5 text-[11px] text-muted">{r.note}</p>
+          </div>
+          <div className="flex items-center justify-end gap-3">
+            <StatusPill tone={r.tone} />
+            <ChevronDown size={16} className={`text-muted transition-transform ${isOpen ? "rotate-180" : ""}`} />
+          </div>
+        </button>
+
+        {isOpen && (
+          <div className="grid gap-8 border-t border-[var(--line)] px-6 py-7 lg:grid-cols-2">
+            <div>
+              <p className="mono text-[10px] tracking-[0.18em] text-muted">WHAT THIS MEASURES</p>
+              <p className="mt-2 text-sm leading-relaxed text-muted">{r.measures}</p>
+              <div className="mt-5 rounded-lg border border-[var(--line)] bg-bg/40 p-4">
+                <p className="mono text-[11px] tracking-[0.16em]" style={{ color: "#38BDF8" }}>INVESTMENT IMPACT</p>
+                <p className="mt-2 text-sm leading-relaxed text-ink/90">{r.impact}</p>
+              </div>
+            </div>
+            <div>
+              <p className="mono text-[10px] tracking-[0.18em] text-muted">HISTORICAL TREND</p>
+              <div className="mt-2">
+                <IndicatorTrend data={r.trend} tone={r.tone} />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const SectionHead = ({ label, count }) => (
+    <div className="flex items-center gap-3">
+      <span className="h-px w-8 bg-signal/60" />
+      <h2 className="mono text-[12px] tracking-[0.2em] text-signal">{label}</h2>
+      <span className="mono text-[11px] text-muted">{count}</span>
+    </div>
+  );
+
   return (
     <div className="pt-12 pb-10">
       <h1 className="headline text-4xl text-ink md:text-5xl">Economic Indicators</h1>
@@ -116,53 +172,21 @@ export default function IndicatorsPage() {
         </div>
       </div>
 
-      <div className="mt-8 space-y-4">
-        {rows.map((r) => {
-          const isOpen = !!open[r.name];
-          return (
-            <div key={r.name} className="card overflow-hidden">
-              <button onClick={() => toggle(r.name)} className="grid w-full grid-cols-2 items-center gap-4 px-6 py-5 text-left transition-colors hover:bg-white/[0.02] md:grid-cols-[1.4fr_1fr_1.2fr_auto]">
-                <div>
-                  <p className="mono text-[10px] tracking-[0.18em] text-muted">{r.cat} · {r.type}</p>
-                  <p className="mt-1 font-semibold text-ink">{r.name}</p>
-                </div>
-                <div>
-                  <p className="headline text-2xl text-ink">{r.value}</p>
-                  <p className="mono text-[11px] text-muted">{r.unit}</p>
-                </div>
-                <div className="hidden md:block">
-                  <p className="mono text-sm" style={{ color: toneColor(r.tone) }}>{r.change}</p>
-                  <p className="mono mt-0.5 text-[11px] text-muted">{r.note}</p>
-                </div>
-                <div className="flex items-center justify-end gap-3">
-                  <StatusPill tone={r.tone} />
-                  <ChevronDown size={16} className={`text-muted transition-transform ${isOpen ? "rotate-180" : ""}`} />
-                </div>
-              </button>
+      {reRows.length > 0 && (
+        <div className="mt-10">
+          <SectionHead label="REAL ESTATE INDICATORS" count={reRows.length} />
+          <div className="mt-4 space-y-4">{reRows.map(renderRow)}</div>
+        </div>
+      )}
 
-              {isOpen && (
-                <div className="grid gap-8 border-t border-[var(--line)] px-6 py-7 lg:grid-cols-2">
-                  <div>
-                    <p className="mono text-[10px] tracking-[0.18em] text-muted">WHAT THIS MEASURES</p>
-                    <p className="mt-2 text-sm leading-relaxed text-muted">{r.measures}</p>
-                    <div className="mt-5 rounded-lg border border-[var(--line)] bg-bg/40 p-4">
-                      <p className="mono text-[11px] tracking-[0.16em]" style={{ color: "#38BDF8" }}>INVESTMENT IMPACT</p>
-                      <p className="mt-2 text-sm leading-relaxed text-ink/90">{r.impact}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="mono text-[10px] tracking-[0.18em] text-muted">HISTORICAL TREND</p>
-                    <div className="mt-2">
-                      <IndicatorTrend data={r.trend} tone={r.tone} />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-        {rows.length === 0 && <p className="mono rounded-lg border border-[var(--line)] p-8 text-center text-sm text-muted">No indicators match this filter.</p>}
-      </div>
+      {macroRows.length > 0 && (
+        <div className="mt-12">
+          <SectionHead label="NON–REAL ESTATE INDICATORS" count={macroRows.length} />
+          <div className="mt-4 space-y-4">{macroRows.map(renderRow)}</div>
+        </div>
+      )}
+
+      {rows.length === 0 && <p className="mono mt-8 rounded-lg border border-[var(--line)] p-8 text-center text-sm text-muted">No indicators match this filter.</p>}
     </div>
   );
 }
