@@ -4,6 +4,9 @@ import { useState } from "react";
 import { MapPin, Building2, ChevronDown } from "lucide-react";
 import { MARKET_GROUPS } from "@/lib/data";
 import { toneColor } from "@/components/ui";
+import { useVertical } from "@/components/VerticalProvider";
+import { isPageReady } from "@/lib/verticals";
+import ComingSoonInline from "@/components/ComingSoonInline";
 
 const FILTERS = ["All", "Sun Belt", "Mountain West", "Gateway"];
 
@@ -40,6 +43,12 @@ function BarChart() {
 }
 
 export default function MarketMapsPage() {
+  const vertical = useVertical();
+  if (!isPageReady(vertical, "market-maps")) return <ComingSoonInline vertical={vertical} title="Market Maps" />;
+  return <MarketMapsInner />;
+}
+
+function MarketMapsInner() {
   const [f, setF] = useState("All");
   const groups = MARKET_GROUPS.filter((g) => f === "All" || g.region === f.toUpperCase());
 

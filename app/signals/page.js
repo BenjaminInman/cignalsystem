@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { SIGNALS } from "@/lib/data";
+import { useContent } from "@/components/VerticalProvider";
 import SignalCard from "@/components/SignalCard";
 import YieldCurve from "@/components/YieldCurve";
 
@@ -9,6 +9,7 @@ const FILTERS = ["All Signals", "Bull", "Bear", "Neutral"];
 const MAP = { Bull: "bull", Bear: "bear", Neutral: "neutral" };
 
 export default function SignalsPage() {
+  const { SIGNALS = [] } = useContent();
   const [f, setF] = useState("All Signals");
   const rows = SIGNALS.filter((s) => f === "All Signals" || s.tone === MAP[f]);
   const counts = {

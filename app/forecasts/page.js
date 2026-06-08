@@ -4,6 +4,9 @@ import { useState } from "react";
 import { Info } from "lucide-react";
 import { FORECAST_MARKETS, FORECAST_DRIVERS } from "@/lib/data";
 import { toneColor } from "@/components/ui";
+import { useVertical } from "@/components/VerticalProvider";
+import { isPageReady } from "@/lib/verticals";
+import ComingSoonInline from "@/components/ComingSoonInline";
 
 const SCENARIOS = ["Base Case", "Bull Case", "Bear Case"];
 const METRICS = ["Rent Growth", "Vacancy", "Cap Rate", "NOI Growth"];
@@ -43,6 +46,12 @@ function LineChart({ data }) {
 }
 
 export default function ForecastsPage() {
+  const vertical = useVertical();
+  if (!isPageReady(vertical, "forecasts")) return <ComingSoonInline vertical={vertical} title="Market Forecasts" />;
+  return <ForecastsInner />;
+}
+
+function ForecastsInner() {
   const [sc, setSc] = useState("Base Case");
   const [metric, setMetric] = useState("Rent Growth");
   const conf = sc === "Base Case" ? 78 : sc === "Bull Case" ? 64 : 71;

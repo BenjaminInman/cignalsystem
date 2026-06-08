@@ -4,7 +4,7 @@ import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import ComingSoon from "@/components/ComingSoon";
 import { VerticalProvider } from "@/components/VerticalProvider";
-import { getActiveVertical } from "@/lib/active-vertical";
+import { getActiveVertical, getActiveContent } from "@/lib/active-vertical";
 
 export function generateMetadata() {
   const v = getActiveVertical();
@@ -13,6 +13,7 @@ export function generateMetadata() {
 
 export default function RootLayout({ children }) {
   const vertical = getActiveVertical();
+  const content = getActiveContent();
 
   return (
     <html lang="en">
@@ -21,7 +22,7 @@ export default function RootLayout({ children }) {
         <div className="grain" />
         <div style={{ position: "relative", zIndex: 2 }}>
           {vertical.ready ? (
-            <VerticalProvider vertical={vertical}>
+            <VerticalProvider vertical={vertical} content={content}>
               <Ticker />
               <Nav />
               <main className="mx-auto max-w-[1400px] px-5 pb-4">{children}</main>

@@ -3,6 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Lock, Activity, BarChart3, LineChart, Radio, BookOpen, Briefcase } from "lucide-react";
+import { useVertical } from "@/components/VerticalProvider";
+import { isPageReady } from "@/lib/verticals";
+import ComingSoonInline from "@/components/ComingSoonInline";
 
 const SUITE = [
   { name: "Indicators", icon: Activity, desc: "Leading & trailing metrics across every major metro." },
@@ -14,6 +17,12 @@ const SUITE = [
 ];
 
 export default function DashboardPage() {
+  const vertical = useVertical();
+  if (!isPageReady(vertical, "dashboard")) return <ComingSoonInline vertical={vertical} title="Dashboard" />;
+  return <DashboardInner />;
+}
+
+function DashboardInner() {
   const [mode, setMode] = useState("login");
   const [notice, setNotice] = useState("");
 

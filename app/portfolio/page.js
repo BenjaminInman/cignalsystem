@@ -3,6 +3,9 @@
 import { Plus, DollarSign, TrendingUp, Building2, Activity } from "lucide-react";
 import { PORTFOLIO_STATS, PORTFOLIO_ASSETS } from "@/lib/data";
 import { toneColor, StatusPill } from "@/components/ui";
+import { useVertical } from "@/components/VerticalProvider";
+import { isPageReady } from "@/lib/verticals";
+import ComingSoonInline from "@/components/ComingSoonInline";
 
 const ICONS = { "TOTAL PORTFOLIO VALUE": DollarSign, "ANNUAL NOI": TrendingUp, "TOTAL UNITS": Building2, "AVG OCCUPANCY": Activity };
 
@@ -28,6 +31,12 @@ function NoiChart() {
 }
 
 export default function PortfolioPage() {
+  const vertical = useVertical();
+  if (!isPageReady(vertical, "portfolio")) return <ComingSoonInline vertical={vertical} title="Portfolio" />;
+  return <PortfolioInner />;
+}
+
+function PortfolioInner() {
   return (
     <div className="pt-12 pb-10">
       <div className="flex flex-wrap items-start justify-between gap-4">

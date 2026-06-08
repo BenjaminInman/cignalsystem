@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { Newspaper, ArrowUpRight } from "lucide-react";
-import { NEWS } from "@/lib/data";
+import { useContent } from "@/components/VerticalProvider";
 import CommunityCTA from "@/components/CommunityCTA";
 import CignalScoreCTA from "@/components/CignalScoreCTA";
 
 export default function NewsPage() {
+  const { NEWS = [] } = useContent();
   const [items, setItems] = useState(null); // null = loading
   const [live, setLive] = useState(false);
 
@@ -18,7 +19,7 @@ export default function NewsPage() {
         else setItems(NEWS);
       })
       .catch(() => setItems(NEWS));
-  }, []);
+  }, [NEWS]);
 
   return (
     <div className="pt-12 pb-10">

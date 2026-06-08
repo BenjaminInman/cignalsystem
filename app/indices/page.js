@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { TrendingUp, Hammer, Wrench, Landmark, Handshake } from "lucide-react";
-import { INDICES } from "@/lib/data";
+import { useContent } from "@/components/VerticalProvider";
 import BuffettIndicator from "@/components/BuffettIndicator";
 
 const ICONS = {
@@ -12,15 +12,16 @@ const ICONS = {
   "Brokerages": Handshake,
 };
 
-// Stable list of every symbol on the page (INDICES is static).
-const SYMBOLS = INDICES.flatMap((c) => c.members.map((m) => m.ticker));
-
 export default function IndicesPage() {
+  const { INDICES = [] } = useContent();
   const [quotes, setQuotes] = useState({});
   const [live, setLive] = useState(false);
+  const symbols = INDICES.flatMap((c) => c.members.map((m) => m.ticker));
+  const symbolsKey = symbols.join(",");
 
   useEffect(() => {
-    fetch(`/api/quotes?symbols=${SYMBOLS.join(",")}`)
+    if (!symbolsKey) return;
+    fetch(`/api/quotes?symbols=${symbolsKey}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.quotes && Object.keys(d.quotes).length) {
@@ -29,7 +30,7 @@ export default function IndicesPage() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [symbolsKey]);
 
   // Merge live quotes over fallback values.
   const merged = (m) => ({
@@ -43,7 +44,7 @@ export default function IndicesPage() {
       <p className="kicker mb-3 flex items-center gap-2"><TrendingUp size={12} className="text-signal" /> Market Indices</p>
       <h1 className="headline text-4xl text-ink md:text-5xl">Housing-Economy Indices</h1>
       <p className="mt-3 max-w-2xl text-muted">
-        Public-market proxies for the forces moving multifamily — tracked across home builders, home improvement, lenders, and brokerages.
+        Public-market proxies for the forces moving the housing economy — tracked across home builders, home improvement, lenders, and brokerages.
       </p>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">

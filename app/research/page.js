@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { Sparkles, ArrowUp, Lock } from "lucide-react";
+import { useVertical } from "@/components/VerticalProvider";
+import { isPageReady } from "@/lib/verticals";
+import ComingSoonInline from "@/components/ComingSoonInline";
 
 const SUGGESTIONS = [
   "Where are we in the multifamily cycle right now?",
@@ -25,6 +28,12 @@ const PREVIEW =
   "Full natural-language research goes live once your account is provisioned and the intelligence model is connected. For now, try one of the suggested questions above for a sample of the analysis.";
 
 export default function ResearchPage() {
+  const vertical = useVertical();
+  if (!isPageReady(vertical, "research")) return <ComingSoonInline vertical={vertical} title="Research" />;
+  return <ResearchInner />;
+}
+
+function ResearchInner() {
   const [thread, setThread] = useState([]); // [{ q, a }]
   const [input, setInput] = useState("");
 

@@ -6,9 +6,9 @@ import { ArrowRight, Lock, Newspaper, ArrowUpRight, Building2, SlidersHorizontal
 import { toneColor, Sparkline, StatusPill } from "@/components/ui";
 import SignalCard from "@/components/SignalCard";
 import PerformanceTrends from "@/components/PerformanceTrends";
-import {
-  COMPOSITE, DASH_STATS, LEADING_CARDS, TRAILING_CARDS, TOP_MARKETS, SIGNALS, NEWS,
-} from "@/lib/data";
+import { useContent } from "@/components/VerticalProvider";
+
+const AUD_ICONS = { Building2, SlidersHorizontal, TrendingUp, Users };
 
 function IndicatorCard({ c }) {
   const color = toneColor(c.tone);
@@ -33,6 +33,10 @@ function IndicatorCard({ c }) {
 }
 
 export default function Home() {
+  const {
+    COMPOSITE = {}, DASH_STATS = [], LEADING_CARDS = [], TRAILING_CARDS = [],
+    TOP_MARKETS = [], SIGNALS = [], NEWS = [], COPY = {},
+  } = useContent();
   const [tab, setTab] = useState("leading");
   const cards = tab === "leading" ? LEADING_CARDS : TRAILING_CARDS;
   const compColor = toneColor(COMPOSITE.tone);
@@ -44,7 +48,7 @@ export default function Home() {
     const start = day % SIGNALS.length;
     const rotated = [...SIGNALS.slice(start), ...SIGNALS.slice(0, start)].slice(0, 4);
     setFeatured(rotated);
-  }, []);
+  }, [SIGNALS]);
 
   const [latestNews, setLatestNews] = useState(NEWS.slice(0, 3));
   useEffect(() => {
@@ -60,13 +64,13 @@ export default function Home() {
       <section className="fade-up relative pt-20 pb-16 md:pt-28">
         <p className="kicker mb-6 flex items-center gap-3">
           <span className="h-px w-8 bg-signal/60" />
-          Market Intelligence · Multifamily Real Estate
+          {COPY.heroKicker}
         </p>
         <h1 className="headline max-w-4xl text-5xl text-ink md:text-7xl">
           The signals the market<br />doesn&apos;t <span className="text-signal">broadcast.</span>
         </h1>
         <p className="mt-7 max-w-xl text-lg leading-relaxed text-muted">
-          Cignal System decodes the economic data moving multifamily real estate — separating the{" "}
+          Cignal System decodes the economic data moving {COPY.heroAsset} — separating the{" "}
           <span className="text-ink">leading indicators</span> that predict the next phase from the{" "}
           <span className="text-ink">trailing noise</span> everyone else reacts to.
         </p>
@@ -103,26 +107,22 @@ export default function Home() {
         <div className="relative">
           <p className="kicker mb-3">Who this is for</p>
           <h2 className="headline max-w-3xl text-3xl text-ink md:text-4xl">
-            Built for the people who live inside the multifamily cycle.
+            {COPY.whoHeadline}
           </h2>
           <p className="mt-3 max-w-2xl leading-relaxed text-muted">
-            Cignal System is market intelligence for multifamily real estate — it turns the economic data that
-            moves rents, occupancy, and values into a clear read on where the cycle is headed. If you own,
-            operate, invest in, or manage apartments, it&apos;s built for you.
+            {COPY.whoLead}
           </p>
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { icon: Building2, name: "Owners", desc: "Time acquisitions, refinances, and dispositions to the cycle — not the headlines." },
-              { icon: SlidersHorizontal, name: "Operators", desc: "See where rents, occupancy, and concessions are heading before they hit your P&L." },
-              { icon: TrendingUp, name: "Investors", desc: "Underwrite with leading indicators and spot the markets turning first." },
-              { icon: Users, name: "Management Firms", desc: "Give every property a cycle-aware read to guide pricing and strategy." },
-            ].map(({ icon: Icon, name, desc }) => (
-              <div key={name} className="card p-5">
-                <Icon size={20} className="text-signal" strokeWidth={1.8} />
-                <h3 className="mt-3 font-semibold text-ink">{name}</h3>
-                <p className="mt-1 text-sm leading-relaxed text-muted">{desc}</p>
-              </div>
-            ))}
+            {(COPY.audiences || []).map(({ icon, name, desc }) => {
+              const Icon = AUD_ICONS[icon] || Building2;
+              return (
+                <div key={name} className="card p-5">
+                  <Icon size={20} className="text-signal" strokeWidth={1.8} />
+                  <h3 className="mt-3 font-semibold text-ink">{name}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-muted">{desc}</p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -134,7 +134,7 @@ export default function Home() {
             <span className="h-1.5 w-1.5 animate-flicker rounded-full bg-signal" /> SYSTEM STATUS: ACTIVE
           </p>
           <h2 className="headline text-4xl text-ink md:text-5xl">Market Intelligence Dashboard</h2>
-          <p className="mt-3 max-w-xl text-muted">Real-time leading &amp; trailing economic indicators for multifamily real estate.</p>
+          <p className="mt-3 max-w-xl text-muted">{COPY.dashLead}</p>
         </div>
         <div className="card w-full p-6 md:w-72">
           <p className="kicker mb-3">Composite Signal</p>
@@ -248,7 +248,7 @@ export default function Home() {
                 <div key={m.city} className={`flex items-center justify-between py-3.5 ${i ? "border-t border-[var(--line)]" : ""}`}>
                   <div>
                     <p className="font-semibold text-ink">{m.city}</p>
-                    <p className="mono mt-0.5 text-[11px] text-muted">Rent: {m.rent} &nbsp; Vac: {m.vac}</p>
+                    <p className="mono mt-0.5 text-[11px] text-muted">{COPY.marketMetricA}: {m.rent} &nbsp; {COPY.marketMetricB}: {m.vac}</p>
                   </div>
                   <div className="flex items-center gap-5">
                     <span className="headline text-2xl" style={{ color: toneColor(m.tone) }}>{m.score}</span>

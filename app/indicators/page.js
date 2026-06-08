@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
-import { INDICATORS } from "@/lib/data";
+import { useContent } from "@/components/VerticalProvider";
 import { toneColor, StatusPill } from "@/components/ui";
 
 const TYPES = ["All Types", "Leading", "Trailing"];
@@ -73,6 +73,7 @@ function IndicatorTrend({ data, tone }) {
 }
 
 export default function IndicatorsPage() {
+  const { INDICATORS = [] } = useContent();
   const [type, setType] = useState("All Types");
   const [cat, setCat] = useState("All");
   const [open, setOpen] = useState({});

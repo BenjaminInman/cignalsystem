@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { Users, MessageSquare, ArrowBigUp, Facebook, Hash, Send } from "lucide-react";
+import { useVertical } from "@/components/VerticalProvider";
+import { isPageReady } from "@/lib/verticals";
+import ComingSoonInline from "@/components/ComingSoonInline";
 
 const CHANNELS = ["All", "Signals", "Market Cycle", "Deals", "Operations", "Intros"];
 
@@ -24,6 +27,12 @@ function initials(name) {
 }
 
 export default function CommunityPage() {
+  const vertical = useVertical();
+  if (!isPageReady(vertical, "community")) return <ComingSoonInline vertical={vertical} title="Community" />;
+  return <CommunityInner />;
+}
+
+function CommunityInner() {
   const [channel, setChannel] = useState("All");
   const [threads, setThreads] = useState(SEED);
   const [draft, setDraft] = useState("");

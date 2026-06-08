@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { TICKER } from "@/lib/data";
+import { useContent } from "@/components/VerticalProvider";
 
 function Item({ label, value, delta, dir, live }) {
   const color = dir === "up" ? "#5FB97C" : "#E5634D";
@@ -17,8 +17,13 @@ function Item({ label, value, delta, dir, live }) {
 }
 
 export default function Ticker() {
+  const { TICKER = [] } = useContent();
   const [items, setItems] = useState(TICKER);
   const [time, setTime] = useState("");
+
+  useEffect(() => {
+    setItems(TICKER);
+  }, [TICKER]);
 
   // pull live values and merge over the sample set
   useEffect(() => {
@@ -30,7 +35,7 @@ export default function Ticker() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [TICKER]);
 
   useEffect(() => {
     const fmt = () =>
