@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { TrendingUp, Hammer, Wrench, Landmark, Handshake, Building2 } from "lucide-react";
+import { TrendingUp, Hammer, Wrench, Landmark, Handshake, Building2, Building } from "lucide-react";
 import { useContent } from "@/components/VerticalProvider";
 import BuffettIndicator from "@/components/BuffettIndicator";
 
@@ -11,6 +11,7 @@ const ICONS = {
   "Lenders": Landmark,
   "Brokerages": Handshake,
   "Commercial Real Estate Services": Building2,
+  "Residential REITs and Operators": Building,
 };
 
 export default function IndicesPage() {
