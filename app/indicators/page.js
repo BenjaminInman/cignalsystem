@@ -7,7 +7,7 @@ import { toneColor, StatusPill } from "@/components/ui";
 
 const TYPES = ["All Types", "Leading", "Trailing"];
 const CATS = ["All", "Supply", "Demand", "Capital", "Macro", "Performance"];
-const QUARTERS = ["Q1 '23", "Q2 '23", "Q3 '23", "Q4 '23", "Q1 '24", "Q2 '24", "Q3 '24", "Q4 '24", "Q1 '25"];
+const DEFAULT_PERIODS = ["Q2 '24", "Q3 '24", "Q4 '24", "Q1 '25", "Q2 '25", "Q3 '25", "Q4 '25", "Q1 '26", "Q2 '26"];
 
 // 0-based axis with headroom above the peak (gives e.g. 0/150/300/450/600 for permits)
 function niceScaleZero(max, maxTicks = 4) {
@@ -37,11 +37,12 @@ function smooth(pts) {
   return d;
 }
 
-function IndicatorTrend({ data, tone }) {
+function IndicatorTrend({ data, tone, periods }) {
   const color = toneColor(tone);
   const W = 480, H = 140, padL = 42, padR = 12, padT = 10, padB = 22;
   const innerW = W - padL - padR, innerH = H - padT - padB;
   const { niceMax, ticks } = niceScaleZero(Math.max(...data), 4);
+  const labels = periods && periods.length === data.length ? periods : DEFAULT_PERIODS.slice(-data.length);
   const xAt = (i) => padL + (i / (data.length - 1)) * innerW;
   const yAt = (v) => padT + (1 - v / niceMax) * innerH;
   const pts = data.map((v, i) => ({ x: xAt(i), y: yAt(v) }));
@@ -65,9 +66,11 @@ function IndicatorTrend({ data, tone }) {
       ))}
       <path className="trend-fade" d={areaPath} fill={`url(#${gid})`} />
       <path className="draw-line" d={linePath} pathLength={1} style={{ strokeDasharray: 1, strokeDashoffset: 1 }} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
-      {QUARTERS.map((q, i) => (
-        <text key={q} x={xAt(i)} y={H - 9} textAnchor="middle" fontSize="9" fill="#AEB4BB" fontFamily="monospace">{q}</text>
-      ))}
+      {labels.map((q, i) =>
+        i % 2 === 0 || i === labels.length - 1 ? (
+          <text key={i} x={xAt(i)} y={H - 9} textAnchor="middle" fontSize="9" fill="#AEB4BB" fontFamily="monospace">{q}</text>
+        ) : null
+      )}
     </svg>
   );
 }
@@ -137,7 +140,7 @@ export default function IndicatorsPage() {
             <div>
               <p className="mono text-[10px] tracking-[0.18em] text-muted">HISTORICAL TREND</p>
               <div className="mt-2">
-                <IndicatorTrend data={r.trend} tone={r.tone} />
+                <IndicatorTrend data={r.trend} tone={r.tone} periods={r.periods} />
               </div>
             </div>
           </div>
