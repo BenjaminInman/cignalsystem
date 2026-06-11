@@ -7,8 +7,6 @@ import { useContent, useVertical } from "@/components/VerticalProvider";
 import { isPageReady } from "@/lib/verticals";
 import ComingSoonInline from "@/components/ComingSoonInline";
 
-const FILTERS = ["All", "Sun Belt", "Mountain West", "Gateway"];
-
 function BarChart({ all }) {
   const w = 1100, h = 230, pad = 30;
   const vals = all.map((m) => parseFloat(m.rent));
@@ -25,10 +23,13 @@ function BarChart({ all }) {
         const bwInner = bw * 0.64;
         const y = pad + ((max - Math.max(v, 0)) / span) * (h - pad * 2);
         const hgt = Math.abs((v / span) * (h - pad * 2));
+        const showLabel = all.length <= 12 || i % 2 === 0;
         return (
           <g key={m.city}>
             <rect x={x} y={v >= 0 ? y : zeroY} width={bwInner} height={hgt} rx="3" fill={toneColor(m.tone)} opacity="0.85" />
-            <text x={x + bwInner / 2} y={h + 14} textAnchor="middle" fontSize="11" fill="#797e85" fontFamily="IBM Plex Mono">{m.city.split(",")[0]}</text>
+            {showLabel && (
+              <text x={x + bwInner / 2} y={h + 14} textAnchor="middle" fontSize="11" fill="#797e85" fontFamily="IBM Plex Mono">{m.city.split(",")[0]}</text>
+            )}
           </g>
         );
       })}
@@ -46,7 +47,8 @@ function MarketMapsInner() {
   const { MARKET_GROUPS = [], COPY = {} } = useContent();
   const [f, setF] = useState("All");
   const labels = COPY.mmMetrics || ["Rent Growth", "Vacancy", "Cap Rate", "NOI Growth"];
-  const groups = MARKET_GROUPS.filter((g) => f === "All" || g.region === f.toUpperCase());
+  const filters = ["All", ...MARKET_GROUPS.map((g) => g.region)];
+  const groups = MARKET_GROUPS.filter((g) => f === "All" || g.region === f);
   const all = MARKET_GROUPS.flatMap((g) => g.markets).sort((a, b) => parseFloat(b.rent) - parseFloat(a.rent));
 
   return (
@@ -60,7 +62,7 @@ function MarketMapsInner() {
       </div>
 
       <div className="mt-8 flex flex-wrap gap-2">
-        {FILTERS.map((x) => (
+        {filters.map((x) => (
           <button key={x} onClick={() => setF(x)} className={`mono rounded-md border px-4 py-2 text-[12px] tracking-[0.04em] ${f === x ? "border-signal/40 bg-signal/10 text-signal" : "border-[var(--line)] text-muted hover:text-ink"}`}>{x}</button>
         ))}
       </div>
