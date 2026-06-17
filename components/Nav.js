@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
-import { Home, Newspaper, Radio, Info, LayoutDashboard, Activity, BarChart3, LineChart, TrendingUp, BookOpen, Briefcase, Users, Bell, ChevronDown, Terminal } from "lucide-react";
+import { Home, Newspaper, Radio, Info, LayoutDashboard, Activity, BarChart3, LineChart, TrendingUp, BookOpen, Briefcase, Users, Bell, ChevronDown, Terminal, LogOut } from "lucide-react";
 import { useVertical } from "@/components/VerticalProvider";
+import { createClient } from "@/lib/supabase/client";
 
 const PRIMARY = [
   { label: "Home", href: "/", icon: Home },
@@ -26,10 +27,29 @@ const SUITE = [
 
 export default function Nav() {
   const path = usePathname();
+  const router = useRouter();
   const vertical = useVertical();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const inSuite = SUITE.some((s) => s.href === path);
+
+  const [user, setUser] = useState(null);
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => setUser(data.user ?? null));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) =>
+      setUser(session?.user ?? null)
+    );
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  async function signOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    setUser(null);
+    router.push("/");
+    router.refresh();
+  }
 
   useEffect(() => {
     const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
@@ -97,10 +117,26 @@ export default function Nav() {
 
         <div className="flex items-center gap-3">
           <Bell size={18} className="hidden text-muted sm:block" strokeWidth={1.6} />
-          <Link href="/dashboard"
-            className="mono rounded-sm border border-signal/40 bg-signal/10 px-4 py-2 text-[12px] tracking-[0.08em] text-signal transition-all hover:bg-signal hover:text-bg">
-            Sign In
-          </Link>
+          {user ? (
+            <>
+              <span className="mono hidden max-w-[160px] truncate text-[11px] tracking-[0.04em] text-muted lg:inline-block">
+                {user.email}
+              </span>
+              <button
+                onClick={signOut}
+                className="mono flex items-center gap-1.5 rounded-sm border border-[var(--line-strong)] px-3 py-2 text-[12px] tracking-[0.08em] text-muted transition-colors hover:text-ink"
+              >
+                <LogOut size={13} strokeWidth={1.8} /> Sign Out
+              </button>
+            </>
+          ) : (
+            <Link
+              href="/login"
+              className="mono rounded-sm border border-signal/40 bg-signal/10 px-4 py-2 text-[12px] tracking-[0.08em] text-signal transition-all hover:bg-signal hover:text-bg"
+            >
+              Sign In
+            </Link>
+          )}
         </div>
       </div>
 
