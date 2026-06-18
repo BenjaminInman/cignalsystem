@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
+import { Mail, Lock, ArrowRight, Loader2, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 // mode: "signin" | "signup"
@@ -15,6 +15,7 @@ export default function AuthForm({ mode }) {
   const supabase = createClient();
 
   const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
@@ -36,7 +37,7 @@ export default function AuthForm({ mode }) {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: redirectTo },
+          options: { emailRedirectTo: redirectTo, data: { full_name: fullName.trim() } },
         });
         if (error) throw error;
         if (data.session) {
@@ -65,11 +66,19 @@ export default function AuthForm({ mode }) {
       setError("Enter your email first, then request the link.");
       return;
     }
+    if (isSignup && !fullName.trim()) {
+      setError("Enter your name first, then request the link.");
+      return;
+    }
     setBusy(true);
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: redirectTo, shouldCreateUser: isSignup },
+        options: {
+          emailRedirectTo: redirectTo,
+          shouldCreateUser: isSignup,
+          ...(isSignup ? { data: { full_name: fullName.trim() } } : {}),
+        },
       });
       if (error) throw error;
       setSent(true);
@@ -110,6 +119,17 @@ export default function AuthForm({ mode }) {
       </p>
 
       <form onSubmit={handlePassword} className="space-y-3">
+        {isSignup && (
+          <Field
+            icon={User}
+            type="text"
+            label="Full name"
+            value={fullName}
+            onChange={setFullName}
+            placeholder="Jane Investor"
+            autoComplete="name"
+          />
+        )}
         <Field
           icon={Mail}
           type="email"
