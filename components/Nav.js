@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
-import { Home, Newspaper, Radio, Info, LayoutDashboard, Activity, BarChart3, LineChart, TrendingUp, BookOpen, Briefcase, Users, Bell, ChevronDown, Terminal, LogOut, ShieldCheck } from "lucide-react";
+import { Home, Newspaper, Radio, Info, LayoutDashboard, Activity, BarChart3, LineChart, TrendingUp, BookOpen, Briefcase, Users, Bell, ChevronDown, Terminal, LogOut, ShieldCheck, Lock } from "lucide-react";
 import { useVertical } from "@/components/VerticalProvider";
 import { createClient } from "@/lib/supabase/client";
+import { FREE_PAGES } from "@/lib/access";
 
 const PRIMARY = [
   { label: "Home", href: "/", icon: Home },
@@ -35,6 +36,7 @@ export default function Nav() {
 
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [tier, setTier] = useState("free");
   useEffect(() => {
     const supabase = createClient();
     const load = (u) => {
@@ -42,12 +44,16 @@ export default function Nav() {
       if (u) {
         supabase
           .from("profiles")
-          .select("is_admin")
+          .select("is_admin, tier")
           .eq("id", u.id)
           .single()
-          .then(({ data }) => setIsAdmin(!!data?.is_admin));
+          .then(({ data }) => {
+            setIsAdmin(!!data?.is_admin);
+            setTier(data?.tier || "free");
+          });
       } else {
         setIsAdmin(false);
+        setTier("free");
       }
     };
     supabase.auth.getUser().then(({ data }) => load(data.user));
@@ -117,10 +123,14 @@ export default function Nav() {
                 <p className="kicker px-3 py-2">Subscriber Suite</p>
                 {SUITE.map(({ label, href, icon: Icon }) => {
                   const active = path === href;
+                  const slug = href.replace(/^\//, "");
+                  const locked = !isAdmin && tier !== "pro" && !FREE_PAGES.includes(slug);
                   return (
                     <Link key={label} href={href} onClick={() => setOpen(false)}
                       className={`mono flex items-center gap-2.5 rounded-md px-3 py-2.5 text-[12px] tracking-[0.04em] transition-colors ${active ? "bg-signal/10 text-signal" : "text-muted hover:bg-white/[0.04] hover:text-ink"}`}>
-                      <Icon size={14} strokeWidth={1.8} />{label}
+                      <Icon size={14} strokeWidth={1.8} />
+                      <span className="flex-1">{label}</span>
+                      {locked && <Lock size={12} className="text-muted/70" />}
                     </Link>
                   );
                 })}
