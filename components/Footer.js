@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Facebook, Youtube, Instagram } from "lucide-react";
+import { getActiveContent } from "@/lib/active-vertical";
 
 const COLS = [
   { title: "PLATFORM", links: [["Dashboard", "/"], ["Indicators", "/indicators"], ["Market Maps", "/market-maps"], ["Signals", "/signals"]] },
@@ -8,6 +9,7 @@ const COLS = [
 ];
 
 export default function Footer() {
+  const { COPY = {} } = getActiveContent();
   return (
     <footer className="relative z-10 border-t border-[var(--line)] bg-bg/60">
       <div className="mx-auto max-w-[1400px] px-6 py-14">
@@ -22,7 +24,7 @@ export default function Footer() {
               <span className="mono text-sm tracking-[0.16em] text-ink">CIGNAL<span className="text-signal">·</span>SYSTEM</span>
             </div>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">
-              Economic intelligence for multifamily real estate owners, operators, and investors.
+              {COPY.footerTagline || "Military Grade Economic Intelligence for Multifamily Real Estate Owners, Operators, Investors and Property Management Teams."}
             </p>
             <div className="mt-5 flex items-center gap-2">
               <a href="#" aria-label="Facebook" className="flex h-9 w-9 items-center justify-center rounded-md border border-[var(--line)] text-muted transition-colors hover:border-signal/40 hover:text-signal">
