@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
-import { Home, Newspaper, Radio, Info, LayoutDashboard, Activity, BarChart3, LineChart, TrendingUp, BookOpen, Briefcase, Users, Bell, ChevronDown, Terminal, LogOut } from "lucide-react";
+import { Home, Newspaper, Radio, Info, LayoutDashboard, Activity, BarChart3, LineChart, TrendingUp, BookOpen, Briefcase, Users, Bell, ChevronDown, Terminal, LogOut, ShieldCheck } from "lucide-react";
 import { useVertical } from "@/components/VerticalProvider";
 import { createClient } from "@/lib/supabase/client";
 
@@ -34,11 +34,25 @@ export default function Nav() {
   const inSuite = SUITE.some((s) => s.href === path);
 
   const [user, setUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => setUser(data.user ?? null));
+    const load = (u) => {
+      setUser(u ?? null);
+      if (u) {
+        supabase
+          .from("profiles")
+          .select("is_admin")
+          .eq("id", u.id)
+          .single()
+          .then(({ data }) => setIsAdmin(!!data?.is_admin));
+      } else {
+        setIsAdmin(false);
+      }
+    };
+    supabase.auth.getUser().then(({ data }) => load(data.user));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) =>
-      setUser(session?.user ?? null)
+      load(session?.user)
     );
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -119,6 +133,14 @@ export default function Nav() {
           <Bell size={18} className="hidden text-muted sm:block" strokeWidth={1.6} />
           {user ? (
             <>
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className="mono flex items-center gap-1.5 rounded-sm border border-signal/30 px-3 py-2 text-[12px] tracking-[0.08em] text-signal transition-colors hover:bg-signal/10"
+                >
+                  <ShieldCheck size={13} strokeWidth={1.8} /> Admin
+                </Link>
+              )}
               <span className="mono hidden max-w-[160px] truncate text-[11px] tracking-[0.04em] text-muted lg:inline-block">
                 {user.email}
               </span>
