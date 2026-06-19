@@ -11,6 +11,32 @@ import { fetchTeaserSignals } from "@/lib/signals";
 
 const AUD_ICONS = { Building2, SlidersHorizontal, TrendingUp, Users };
 
+// Map a teaser card to its live indicator (by the name getLiveIndicators uses).
+function mergeLiveCard(card, live) {
+  const map = {
+    "Multifamily Permit Activity": "Multifamily Building Permits",
+    "Lease-Up Absorption Rate": "Net Absorption Rate",
+    "Net Renter Migration Index": "Net Renter Migration Index",
+    "National Vacancy Rate": "National Vacancy Rate",
+    "Effective Rent Growth": "Effective Rent Growth",
+    "Cap Rate (National Avg)": "Cap Rate (National Avg)",
+    "Debt Service Coverage": "Debt Service Coverage",
+  };
+  const key = map[card.name];
+  const L = key && live[key];
+  if (!L) return card;
+  const delta = (L.change || "").replace(/\s*(MoM|QoQ|WoW|YoY|vs prior).*$/, "").trim() || card.delta;
+  const dir = (L.change || "").trim().startsWith("-") ? "down" : "up";
+  return {
+    ...card,
+    value: L.value ?? card.value,
+    delta,
+    dir,
+    tone: L.tone ?? card.tone,
+    series: L.trend && L.trend.length ? L.trend : card.series,
+  };
+}
+
 function IndicatorCard({ c }) {
   const color = toneColor(c.tone);
   const arrow = c.dir === "up" ? "↑" : "↓";
@@ -39,13 +65,22 @@ export default function Home() {
     TOP_MARKETS = [], SIGNALS = [], NEWS = [], COPY = {},
   } = useContent();
   const [tab, setTab] = useState("leading");
-  const cards = tab === "leading" ? LEADING_CARDS : TRAILING_CARDS;
+  const [liveInd, setLiveInd] = useState({});
+  const cards = (tab === "leading" ? LEADING_CARDS : TRAILING_CARDS).map((c) => mergeLiveCard(c, liveInd));
   const compColor = toneColor(COMPOSITE.tone);
 
   // Public teaser signals (live from the DB) to entice sign-ups.
   const [featured, setFeatured] = useState([]);
   useEffect(() => {
     fetchTeaserSignals(4).then(setFeatured);
+  }, []);
+
+  // Live indicator values for the teaser tiles.
+  useEffect(() => {
+    fetch("/api/indicators")
+      .then((r) => r.json())
+      .then((d) => { if (d?.items) setLiveInd(d.items); })
+      .catch(() => {});
   }, []);
 
   const [latestNews, setLatestNews] = useState(NEWS.slice(0, 3));
