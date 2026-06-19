@@ -112,11 +112,18 @@ export default function AuthForm({ mode }) {
       kicker={isSignup ? "Request clearance" : "Subscriber terminal"}
       title={isSignup ? "Create your account" : "Access the terminal"}
     >
-      <p className="mb-6 text-sm leading-relaxed text-muted">
+      <p className={`text-sm leading-relaxed text-muted ${isSignup ? "mb-6" : "mb-3"}`}>
         {isSignup
           ? "Set up access to the indicators, maps, forecasts, and signals behind Cignal System."
           : "Sign in to your subscriber suite — indicators, market maps, forecasts, and signals."}
       </p>
+
+      {!isSignup && (
+        <p className="mb-6 text-sm leading-relaxed text-muted">
+          Don&apos;t have an account?{" "}
+          <Link href="/register" className="text-signal hover-line">Create an account here</Link>.
+        </p>
+      )}
 
       <form onSubmit={handlePassword} className="space-y-3">
         {isSignup && (
