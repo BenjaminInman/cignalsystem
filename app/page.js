@@ -7,6 +7,7 @@ import { toneColor, Sparkline, StatusPill } from "@/components/ui";
 import SignalCard from "@/components/SignalCard";
 import PerformanceTrends from "@/components/PerformanceTrends";
 import { useContent } from "@/components/VerticalProvider";
+import { fetchTeaserSignals } from "@/lib/signals";
 
 const AUD_ICONS = { Building2, SlidersHorizontal, TrendingUp, Users };
 
@@ -41,14 +42,11 @@ export default function Home() {
   const cards = tab === "leading" ? LEADING_CARDS : TRAILING_CARDS;
   const compColor = toneColor(COMPOSITE.tone);
 
-  // Featured signals rotate daily to entice sign-ups (stable within a day).
-  const [featured, setFeatured] = useState(SIGNALS.slice(0, 4));
+  // Public teaser signals (live from the DB) to entice sign-ups.
+  const [featured, setFeatured] = useState([]);
   useEffect(() => {
-    const day = Math.floor(Date.now() / 86400000);
-    const start = day % SIGNALS.length;
-    const rotated = [...SIGNALS.slice(start), ...SIGNALS.slice(0, start)].slice(0, 4);
-    setFeatured(rotated);
-  }, [SIGNALS]);
+    fetchTeaserSignals(4).then(setFeatured);
+  }, []);
 
   const [latestNews, setLatestNews] = useState(NEWS.slice(0, 3));
   useEffect(() => {
@@ -223,9 +221,9 @@ export default function Home() {
           </div>
           <div className="mt-4 flex flex-col items-center gap-3 rounded-lg border border-dashed border-[var(--line-strong)] p-5 text-center sm:flex-row sm:justify-between sm:text-left">
             <p className="text-sm text-muted">
-              These rotate daily. <span className="text-ink">Sign up to unlock the full signal feed</span> and set custom alerts.
+              These are public highlights. <span className="text-ink">Sign up to unlock the full signal feed</span> and set custom alerts.
             </p>
-            <Link href="/dashboard" className="mono shrink-0 rounded-sm bg-signal px-5 py-2.5 text-[12px] tracking-[0.08em] text-bg hover:opacity-90">UNLOCK ALL SIGNALS →</Link>
+            <Link href="/register" className="mono shrink-0 rounded-sm bg-signal px-5 py-2.5 text-[12px] tracking-[0.08em] text-bg hover:opacity-90">UNLOCK ALL SIGNALS →</Link>
           </div>
         </div>
       </section>
