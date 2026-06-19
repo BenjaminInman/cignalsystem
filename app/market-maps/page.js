@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, Building2, ChevronDown, Truck } from "lucide-react";
+import { MapPin, Building2, ChevronDown, Truck, Package } from "lucide-react";
 import { toneColor } from "@/components/ui";
 import { useContent, useVertical } from "@/components/VerticalProvider";
 import { isPageReady } from "@/lib/verticals";
 import ComingSoonInline from "@/components/ComingSoonInline";
 import { UHAUL } from "@/lib/uhaul";
+import { PODS } from "@/lib/pods";
 
 function BarChart({ all }) {
   const w = 1100, h = 230, pad = 30;
@@ -90,6 +91,7 @@ function MarketMapsInner() {
       ))}
 
       <MigrationTrends />
+      <PodsTrends />
     </div>
   );
 }
@@ -144,6 +146,62 @@ function MigrationTrends() {
 
       <p className="mt-5 text-[11px] leading-relaxed text-muted">
         Source: U-Haul Growth Index ({UHAUL.year}), compiled from 2.5M+ annual one-way transactions across the U.S. and Canada. U-Haul notes rankings may not correlate directly to population or economic growth. <a href={UHAUL.source} target="_blank" rel="noopener noreferrer" className="text-signal hover:underline">uhaul.com/about/migration</a>
+      </p>
+    </div>
+  );
+}
+
+const PODS_TABS = [
+  { key: "movein", label: "Moving To", n: "Top 20", risingGood: true },
+  { key: "moveout", label: "Leaving", n: "Top 20", risingGood: false },
+];
+
+function podsMoveMeta(prev, rank, risingGood) {
+  if (prev == null) return { label: "NEW", tone: "signal" };
+  const d = prev - rank; // > 0 = climbed toward #1
+  if (d === 0) return { label: "\u2014", tone: "muted" };
+  const arrow = d > 0 ? "\u25B2" : "\u25BC";
+  const tone = (d > 0) === risingGood ? "bull" : "bear";
+  return { label: `${arrow} ${Math.abs(d)}`, tone };
+}
+
+function PodsTrends() {
+  const [tab, setTab] = useState("movein");
+  const cfg = PODS_TABS.find((t) => t.key === tab) || PODS_TABS[0];
+  const rows = PODS[tab] || [];
+  return (
+    <div className="mt-14">
+      <p className="kicker mb-2 flex items-center gap-2"><Package size={13} className="text-signal" /> Migration Intelligence</p>
+      <h2 className="headline text-2xl text-ink md:text-3xl">PODS Moving Trends — {PODS.year}</h2>
+      <p className="mt-2 max-w-2xl text-sm text-muted">
+        PODS container-move customer data ranking the markets gaining and losing the most movers. {PODS.year} report, released {PODS.released}. Movement is vs. the prior year — green means improving (more inflow or lighter outflow), red means worsening; on the Leaving list a higher rank means heavier outflow. A customer-move gauge, not Census net migration.
+      </p>
+
+      <div className="mt-6 flex flex-wrap gap-2">
+        {PODS_TABS.map((t) => (
+          <button key={t.key} onClick={() => setTab(t.key)} className={`mono rounded-md border px-4 py-2 text-[12px] tracking-[0.04em] ${tab === t.key ? "border-signal/40 bg-signal/10 text-signal" : "border-[var(--line)] text-muted hover:text-ink"}`}>
+            {t.label} <span className="opacity-50">{t.n}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-6 grid gap-x-8 sm:grid-cols-2">
+        {rows.map(([name, prev], i) => {
+          const rank = i + 1;
+          const mv = podsMoveMeta(prev, rank, cfg.risingGood);
+          const c = mv.tone === "muted" ? "#797e85" : toneColor(mv.tone);
+          return (
+            <div key={name} className="flex items-center gap-3 border-b border-[var(--line)] py-3">
+              <span className="mono w-7 shrink-0 text-right text-[13px] text-muted">{rank}</span>
+              <span className="flex-1 font-semibold text-ink">{name}</span>
+              <span className="mono rounded px-2 py-0.5 text-[11px]" style={{ color: c, backgroundColor: `${c}1a` }}>{mv.label}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="mt-5 text-[11px] leading-relaxed text-muted">
+        Source: PODS Moving Trends Report ({PODS.year}), based on PODS customer relocations and paired with its Moving Mindset survey. A directional read on container-move customers. <a href={PODS.source} target="_blank" rel="noopener noreferrer" className="text-signal hover:underline">pods.com/blog/moving-trends</a>
       </p>
     </div>
   );
