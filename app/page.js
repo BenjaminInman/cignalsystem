@@ -66,8 +66,9 @@ export default function Home() {
   } = useContent();
   const [tab, setTab] = useState("leading");
   const [liveInd, setLiveInd] = useState({});
+  const [composite, setComposite] = useState(COMPOSITE);
   const cards = (tab === "leading" ? LEADING_CARDS : TRAILING_CARDS).map((c) => mergeLiveCard(c, liveInd));
-  const compColor = toneColor(COMPOSITE.tone);
+  const compColor = toneColor(composite.tone);
 
   // Public teaser signals (live from the DB) to entice sign-ups.
   const [featured, setFeatured] = useState([]);
@@ -80,6 +81,14 @@ export default function Home() {
     fetch("/api/indicators")
       .then((r) => r.json())
       .then((d) => { if (d?.items) setLiveInd(d.items); })
+      .catch(() => {});
+  }, []);
+
+  // Live composite signal (weighted from the signal feed).
+  useEffect(() => {
+    fetch("/api/composite")
+      .then((r) => r.json())
+      .then((d) => { if (d?.composite) setComposite({ label: d.composite.label, confidence: d.composite.confidence, tone: d.composite.tone }); })
       .catch(() => {});
   }, []);
 
@@ -170,8 +179,8 @@ export default function Home() {
         <div className="card w-full p-6 md:w-72">
           <p className="kicker mb-3">Composite Signal</p>
           <div className="flex items-end justify-between">
-            <span className="headline text-4xl" style={{ color: compColor }}>{COMPOSITE.label}</span>
-            <span className="text-right"><span className="headline text-2xl text-ink">{COMPOSITE.confidence}%</span><br /><span className="mono text-[10px] text-muted">confidence</span></span>
+            <span className="headline text-4xl" style={{ color: compColor }}>{composite.label}</span>
+            <span className="text-right"><span className="headline text-2xl text-ink">{composite.confidence}%</span><br /><span className="mono text-[10px] text-muted">confidence</span></span>
           </div>
           <div className="mt-4 h-1.5 w-full rounded-full" style={{ background: "linear-gradient(to right,#E5634D,#E8B04B,#5FB97C)" }} />
           <div className="mono mt-2 flex justify-between text-[10px] text-muted"><span>BEAR</span><span>NEUTRAL</span><span>BULL</span></div>
