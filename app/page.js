@@ -11,6 +11,8 @@ import { fetchTeaserSignals } from "@/lib/signals";
 
 const AUD_ICONS = { Building2, SlidersHorizontal, TrendingUp, Users };
 
+const fmtK = (n) => (n >= 1000 ? `${Math.round(n / 1000)}K` : `${n}`);
+
 // Map a teaser card to its live indicator (by the name getLiveIndicators uses).
 function mergeLiveCard(card, live) {
   const map = {
@@ -67,6 +69,7 @@ export default function Home() {
   const [tab, setTab] = useState("leading");
   const [liveInd, setLiveInd] = useState({});
   const [composite, setComposite] = useState(COMPOSITE);
+  const [stats, setStats] = useState(DASH_STATS);
   const cards = (tab === "leading" ? LEADING_CARDS : TRAILING_CARDS).map((c) => mergeLiveCard(c, liveInd));
   const compColor = toneColor(composite.tone);
 
@@ -89,6 +92,24 @@ export default function Home() {
     fetch("/api/composite")
       .then((r) => r.json())
       .then((d) => { if (d?.composite) setComposite({ label: d.composite.label, confidence: d.composite.confidence, tone: d.composite.tone }); })
+      .catch(() => {});
+  }, []);
+
+  // Live platform stats strip.
+  useEffect(() => {
+    fetch("/api/stats")
+      .then((r) => r.json())
+      .then((d) => {
+        const s = d?.stats;
+        if (!s) return;
+        const total = (s.bull_count || 0) + (s.bear_count || 0) + (s.neutral_count || 0);
+        setStats([
+          { label: "BULLISH SIGNALS", value: String(s.bull_count ?? 0), unit: total ? `/${total}` : "", tone: "bull" },
+          { label: "BEARISH SIGNALS", value: String(s.bear_count ?? 0), unit: total ? `/${total}` : "", tone: "bear" },
+          { label: "MARKETS TRACKED", value: String(s.msa_count ?? 0), unit: "MSAs", tone: "ink" },
+          { label: "DATA POINTS", value: fmtK(s.obs_count ?? 0), unit: "live", tone: "signal" },
+        ]);
+      })
       .catch(() => {});
   }, []);
 
@@ -189,7 +210,7 @@ export default function Home() {
 
       {/* STAT CARDS */}
       <section className="mt-8 grid gap-px overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--line)] sm:grid-cols-2 lg:grid-cols-4">
-        {DASH_STATS.map((s) => (
+        {stats.map((s) => (
           <div key={s.label} className="bg-bg2 p-6">
             <p className="kicker mb-4">{s.label}</p>
             <p className="headline text-4xl" style={{ color: toneColor(s.tone) }}>
