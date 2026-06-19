@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, Building2, ChevronDown } from "lucide-react";
+import { MapPin, Building2, ChevronDown, Truck } from "lucide-react";
 import { toneColor } from "@/components/ui";
 import { useContent, useVertical } from "@/components/VerticalProvider";
 import { isPageReady } from "@/lib/verticals";
 import ComingSoonInline from "@/components/ComingSoonInline";
+import { UHAUL } from "@/lib/uhaul";
 
 function BarChart({ all }) {
   const w = 1100, h = 230, pad = 30;
@@ -87,6 +88,63 @@ function MarketMapsInner() {
           </div>
         </div>
       ))}
+
+      <MigrationTrends />
+    </div>
+  );
+}
+
+const UHAUL_TABS = [
+  { key: "metros", label: "Metros", n: "Top 25" },
+  { key: "states", label: "States", n: "All 50" },
+  { key: "cities", label: "Cities", n: "Top 25" },
+];
+
+function moveMeta(prev, rank) {
+  if (prev == null) return { label: "NEW", tone: "signal" };
+  const d = prev - rank;
+  if (d > 0) return { label: `\u25B2 ${d}`, tone: "bull" };
+  if (d < 0) return { label: `\u25BC ${Math.abs(d)}`, tone: "bear" };
+  return { label: "\u2014", tone: "muted" };
+}
+
+function MigrationTrends() {
+  const [tab, setTab] = useState("metros");
+  const rows = UHAUL[tab] || [];
+  return (
+    <div className="mt-14">
+      <p className="kicker mb-2 flex items-center gap-2"><Truck size={13} className="text-signal" /> Migration Intelligence</p>
+      <h2 className="headline text-2xl text-ink md:text-3xl">U-Haul Growth Index — {UHAUL.year}</h2>
+      <p className="mt-2 max-w-2xl text-sm text-muted">
+        Net gain or loss of one-way U-Haul moves (truck, trailer &amp; U-Box) — a directional read on where movers are actually heading. Full-year {UHAUL.year} ranking, released {UHAUL.released}. The chip shows each market&apos;s movement vs. the prior year. A migration gauge, not Census net migration.
+      </p>
+
+      <div className="mt-6 flex flex-wrap gap-2">
+        {UHAUL_TABS.map((t) => (
+          <button key={t.key} onClick={() => setTab(t.key)} className={`mono rounded-md border px-4 py-2 text-[12px] tracking-[0.04em] ${tab === t.key ? "border-signal/40 bg-signal/10 text-signal" : "border-[var(--line)] text-muted hover:text-ink"}`}>
+            {t.label} <span className="opacity-50">{t.n}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-6 grid gap-x-8 sm:grid-cols-2">
+        {rows.map(([name, prev], i) => {
+          const rank = i + 1;
+          const mv = moveMeta(prev, rank);
+          const c = mv.tone === "muted" ? "#797e85" : toneColor(mv.tone);
+          return (
+            <div key={name} className="flex items-center gap-3 border-b border-[var(--line)] py-3">
+              <span className="mono w-7 shrink-0 text-right text-[13px] text-muted">{rank}</span>
+              <span className="flex-1 font-semibold text-ink">{name}</span>
+              <span className="mono rounded px-2 py-0.5 text-[11px]" style={{ color: c, backgroundColor: `${c}1a` }}>{mv.label}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="mt-5 text-[11px] leading-relaxed text-muted">
+        Source: U-Haul Growth Index ({UHAUL.year}), compiled from 2.5M+ annual one-way transactions across the U.S. and Canada. U-Haul notes rankings may not correlate directly to population or economic growth. <a href={UHAUL.source} target="_blank" rel="noopener noreferrer" className="text-signal hover:underline">uhaul.com/about/migration</a>
+      </p>
     </div>
   );
 }
