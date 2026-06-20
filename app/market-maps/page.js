@@ -111,17 +111,25 @@ function moveMeta(prev, rank) {
 }
 
 function MigrationTrends() {
+  const [open, setOpen] = useState(false);
   const [tab, setTab] = useState("metros");
   const rows = UHAUL[tab] || [];
   return (
     <div className="mt-14">
-      <p className="kicker mb-2 flex items-center gap-2"><Truck size={13} className="text-signal" /> Migration Intelligence</p>
-      <h2 className="headline text-2xl text-ink md:text-3xl">U-Haul Growth Index — {UHAUL.year}</h2>
-      <p className="mt-2 max-w-2xl text-sm text-muted">
-        Net gain or loss of one-way U-Haul moves (truck, trailer &amp; U-Box) — a directional read on where movers are actually heading. Full-year {UHAUL.year} ranking, released {UHAUL.released}. The chip shows each market&apos;s movement vs. the prior year. A migration gauge, not Census net migration.
-      </p>
+      <div role="button" tabIndex={0} aria-expanded={open} onClick={() => setOpen((v) => !v)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen((v) => !v); } }} className="card flex w-full cursor-pointer items-start gap-4 p-6 text-left transition hover:border-signal/30">
+        <div className="flex-1">
+          <p className="kicker mb-2 flex items-center gap-2"><Truck size={13} className="text-signal" /> Migration Intelligence</p>
+          <h2 className="headline text-2xl text-ink md:text-3xl">U-Haul Growth Index — {UHAUL.year}</h2>
+          <p className="mt-2 max-w-2xl text-sm text-muted">
+            Net gain or loss of one-way U-Haul moves (truck, trailer &amp; U-Box) — a directional read on where movers are actually heading. Full-year {UHAUL.year} ranking, released {UHAUL.released}. The chip shows each market&apos;s movement vs. the prior year. A migration gauge, not Census net migration.
+          </p>
+        </div>
+        <ChevronDown size={20} className={`mt-1 shrink-0 text-muted transition-transform ${open ? "rotate-180" : ""}`} />
+      </div>
 
-      <div className="mt-6 flex flex-wrap gap-2">
+      {open && (
+      <div className="mt-6">
+      <div className="flex flex-wrap gap-2">
         {UHAUL_TABS.map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)} className={`mono rounded-md border px-4 py-2 text-[12px] tracking-[0.04em] ${tab === t.key ? "border-signal/40 bg-signal/10 text-signal" : "border-[var(--line)] text-muted hover:text-ink"}`}>
             {t.label} <span className="opacity-50">{t.n}</span>
@@ -147,6 +155,8 @@ function MigrationTrends() {
       <p className="mt-5 text-[11px] leading-relaxed text-muted">
         Source: U-Haul Growth Index ({UHAUL.year}), compiled from 2.5M+ annual one-way transactions across the U.S. and Canada. U-Haul notes rankings may not correlate directly to population or economic growth. <a href={UHAUL.source} target="_blank" rel="noopener noreferrer" className="text-signal hover:underline">uhaul.com/about/migration</a>
       </p>
+      </div>
+      )}
     </div>
   );
 }
@@ -166,18 +176,26 @@ function podsMoveMeta(prev, rank, risingGood) {
 }
 
 function PodsTrends() {
+  const [open, setOpen] = useState(false);
   const [tab, setTab] = useState("movein");
   const cfg = PODS_TABS.find((t) => t.key === tab) || PODS_TABS[0];
   const rows = PODS[tab] || [];
   return (
     <div className="mt-14">
-      <p className="kicker mb-2 flex items-center gap-2"><Package size={13} className="text-signal" /> Migration Intelligence</p>
-      <h2 className="headline text-2xl text-ink md:text-3xl">PODS Moving Trends — {PODS.year}</h2>
-      <p className="mt-2 max-w-2xl text-sm text-muted">
-        PODS container-move customer data ranking the markets gaining and losing the most movers. {PODS.year} report, released {PODS.released}. Movement is vs. the prior year — green means improving (more inflow or lighter outflow), red means worsening; on the Leaving list a higher rank means heavier outflow. A customer-move gauge, not Census net migration.
-      </p>
+      <div role="button" tabIndex={0} aria-expanded={open} onClick={() => setOpen((v) => !v)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen((v) => !v); } }} className="card flex w-full cursor-pointer items-start gap-4 p-6 text-left transition hover:border-signal/30">
+        <div className="flex-1">
+          <p className="kicker mb-2 flex items-center gap-2"><Package size={13} className="text-signal" /> Migration Intelligence</p>
+          <h2 className="headline text-2xl text-ink md:text-3xl">PODS Moving Trends — {PODS.year}</h2>
+          <p className="mt-2 max-w-2xl text-sm text-muted">
+            PODS container-move customer data ranking the markets gaining and losing the most movers. {PODS.year} report, released {PODS.released}. Movement is vs. the prior year — green means improving (more inflow or lighter outflow), red means worsening; on the Leaving list a higher rank means heavier outflow. A customer-move gauge, not Census net migration.
+          </p>
+        </div>
+        <ChevronDown size={20} className={`mt-1 shrink-0 text-muted transition-transform ${open ? "rotate-180" : ""}`} />
+      </div>
 
-      <div className="mt-6 flex flex-wrap gap-2">
+      {open && (
+      <div className="mt-6">
+      <div className="flex flex-wrap gap-2">
         {PODS_TABS.map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)} className={`mono rounded-md border px-4 py-2 text-[12px] tracking-[0.04em] ${tab === t.key ? "border-signal/40 bg-signal/10 text-signal" : "border-[var(--line)] text-muted hover:text-ink"}`}>
             {t.label} <span className="opacity-50">{t.n}</span>
@@ -203,6 +221,8 @@ function PodsTrends() {
       <p className="mt-5 text-[11px] leading-relaxed text-muted">
         Source: PODS Moving Trends Report ({PODS.year}), based on PODS customer relocations and paired with its Moving Mindset survey. A directional read on container-move customers. <a href={PODS.source} target="_blank" rel="noopener noreferrer" className="text-signal hover:underline">pods.com/blog/moving-trends</a>
       </p>
+      </div>
+      )}
     </div>
   );
 }
