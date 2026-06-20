@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
-import { Home, Newspaper, Radio, Info, LayoutDashboard, Activity, BarChart3, LineChart, TrendingUp, BookOpen, Briefcase, Users, Bell, ChevronDown, Terminal, LogOut, ShieldCheck, Lock } from "lucide-react";
+import { Home, Newspaper, Radio, Info, Gauge, LayoutDashboard, Activity, BarChart3, LineChart, TrendingUp, BookOpen, Briefcase, Users, Bell, ChevronDown, Terminal, LogOut, ShieldCheck, Lock } from "lucide-react";
 import { useVertical } from "@/components/VerticalProvider";
 import { createClient } from "@/lib/supabase/client";
 import { FREE_PAGES } from "@/lib/access";
@@ -13,6 +13,7 @@ const PRIMARY = [
   { label: "About", href: "/about", icon: Info },
   { label: "News", href: "/news", icon: Newspaper },
   { label: "Signals", href: "/signals", icon: Radio },
+  { label: "Cignal Score", href: "/cignalscore", icon: Gauge },
 ];
 
 const SUITE = [

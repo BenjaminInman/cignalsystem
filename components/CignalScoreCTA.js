@@ -1,7 +1,6 @@
 import { ArrowRight } from "lucide-react";
 
-// Update this when the assessment site is live.
-const SCORE_URL = "https://cignalscore.com";
+const SCORE_URL = "/cignalscore";
 
 function arc(cx, cy, r, fromDeg, toDeg, steps = 60) {
   const pts = [];
@@ -39,17 +38,17 @@ export default function CignalScoreCTA() {
       <ScoreArc />
       <h2 className="headline mt-1 text-xl text-ink">What&apos;s your Cignal Score?</h2>
       <p className="mt-2 text-sm leading-relaxed text-muted">
-        A free 3-minute diagnostic that reveals how well you read the market cycle — across phase awareness, signal
-        reading, strategic adaptation, and full-cycle readiness.
+        A free 5-minute diagnostic that reveals how clearly you read the market cycle — across phase positioning,
+        indicator literacy, behavioral discipline, timing, and signal sourcing.
       </p>
       <div className="mono mt-4 flex items-center justify-center gap-2 text-[10px] tracking-[0.12em] text-muted">
-        <span>10 QUESTIONS</span>
+        <span>18 QUESTIONS</span>
         <span className="text-[var(--line-strong)]">·</span>
-        <span>4 CATEGORIES</span>
+        <span>5 CATEGORIES</span>
         <span className="text-[var(--line-strong)]">·</span>
-        <span>3 MIN</span>
+        <span>5 MIN</span>
       </div>
-      <a href={SCORE_URL} target="_blank" rel="noopener noreferrer" className="mono mt-4 flex w-full items-center justify-center gap-2 rounded-sm bg-signal px-4 py-2.5 text-[12px] tracking-[0.08em] text-bg hover:opacity-90">
+      <a href={SCORE_URL} className="mono mt-4 flex w-full items-center justify-center gap-2 rounded-sm bg-signal px-4 py-2.5 text-[12px] tracking-[0.08em] text-bg hover:opacity-90">
         Take the free assessment <ArrowRight size={14} />
       </a>
     </div>
