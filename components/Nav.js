@@ -104,9 +104,12 @@ export default function Nav() {
         <nav className="hidden items-center gap-1 md:flex">
           {PRIMARY.map(({ label, href, icon: Icon }) => {
             const active = path === href;
+            const pop = href === "/cignalscore";
+            const cls = pop
+              ? `mono flex items-center gap-2 rounded-md border px-3 py-2 text-[12px] tracking-[0.06em] transition-all ${active ? "border-signal bg-signal text-bg" : "border-signal/50 bg-signal/10 text-signal hover:bg-signal hover:text-bg"}`
+              : `mono flex items-center gap-2 rounded-md px-3 py-2 text-[12px] tracking-[0.06em] transition-colors ${active ? "bg-signal/10 text-signal" : "text-muted hover:text-ink"}`;
             return (
-              <Link key={label} href={href}
-                className={`mono flex items-center gap-2 rounded-md px-3 py-2 text-[12px] tracking-[0.06em] transition-colors ${active ? "bg-signal/10 text-signal" : "text-muted hover:text-ink"}`}>
+              <Link key={label} href={href} className={cls}>
                 <Icon size={14} strokeWidth={1.8} />{label}
               </Link>
             );
@@ -177,9 +180,12 @@ export default function Nav() {
       <nav className="flex items-center gap-1 overflow-x-auto border-t border-[var(--line)] px-3 py-2 md:hidden">
         {[...PRIMARY, ...SUITE].map(({ label, href }) => {
           const active = path === href;
+          const pop = href === "/cignalscore";
+          const cls = pop
+            ? `mono shrink-0 rounded-md border px-3 py-1.5 text-[11px] tracking-[0.06em] ${active ? "border-signal bg-signal text-bg" : "border-signal/50 bg-signal/10 text-signal"}`
+            : `mono shrink-0 rounded-md px-3 py-1.5 text-[11px] tracking-[0.06em] ${active ? "bg-signal/10 text-signal" : "text-muted"}`;
           return (
-            <Link key={label} href={href}
-              className={`mono shrink-0 rounded-md px-3 py-1.5 text-[11px] tracking-[0.06em] ${active ? "bg-signal/10 text-signal" : "text-muted"}`}>
+            <Link key={label} href={href} className={cls}>
               {label}
             </Link>
           );

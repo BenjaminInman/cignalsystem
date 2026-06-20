@@ -2,13 +2,23 @@
 
 import { useState, useEffect } from "react";
 import { Lock, ShieldCheck, ArrowRight, ArrowLeft, ScanLine, Check, FileWarning, Mail } from "lucide-react";
-import {
-  QUESTIONS, DIMS, BIAS_COPY, TIERS,
-  recommendedTierKey, ascensionHeadline, bandBlurb,
-} from "@/lib/cignalscore";
+import { QUESTIONS, DIMS, BIAS_COPY, bandBlurb } from "@/lib/cignalscore";
 
-// TODO: point these at the Econiq Method enrollment pages once live.
-const TRAINING_URL = "#";
+// Platform ascension ladder. Training tiers (Recon/Special Ops/Commander) get
+// wired in once those pages exist; for now we ascend free -> Pro.
+const PLATFORM = [
+  { key: "free", name: "Cignal Dashboard", price: "Free", line: "Indicators, market maps, and indices — the core terminal to start reading the cycle." },
+  { key: "pro", name: "Cignal Pro", price: "$79/mo", line: "Everything in Free, plus forecasts, the research desk, portfolio, and community." },
+];
+
+function platformHeadline(level, score) {
+  return {
+    1: `You scored ${score}. Start seeing the signals you're missing — free.`,
+    2: `You scored ${score}. Get the live signals in front of you every day.`,
+    3: `You scored ${score}. You read the cycle — now operate on live data.`,
+    4: `You scored ${score}. Few reach this. Cignal Pro keeps you ahead in real time.`,
+  }[level];
+}
 
 const TONE_HEX = { up: "#5FB97C", signal: "#F5B544", down: "#E5634D" };
 const TONE_TEXT = { up: "text-up", signal: "text-signal", down: "text-down" };
@@ -23,7 +33,6 @@ const COPY = {
   gateHead: "Your Cignal Score has been calculated.",
   gateSub: "Enter your email to unlock your results instantly — your score, your full signal breakdown, and the single blind spot costing you most.",
   gateMicro: "We'll use this to send you cycle intelligence and your ascension path. No spam. Unsubscribe anytime.",
-  fallbackLead: "Not ready for the training? Keep reading the cycle with the platform:",
 };
 
 export default function CignalScorePage() {
@@ -222,8 +231,7 @@ function Gate({ email, setEmail, touched, emailValid, loading, error, onSubmit, 
 function Results({ result, revealed }) {
   const { score, band, dominant_bias, dimension_scores } = result;
   const bias = dominant_bias ? BIAS_COPY[dominant_bias] : null;
-  const recKey = recommendedTierKey(band.level);
-  const recName = TIERS.find((t) => t.key === recKey).name;
+  const recPlatform = band.level >= 3 ? "pro" : "free";
 
   return (
     <div className="fade-up">
@@ -272,20 +280,19 @@ function Results({ result, revealed }) {
         </div>
       )}
 
-      {/* Ascension path */}
+      {/* Ascension path — platform (training tiers come later) */}
       <div className="mt-8 rounded-xl border border-signal/30 bg-gradient-to-b from-signal/[0.06] to-transparent p-6 md:p-7">
-        <p className="kicker">Your ascension path</p>
-        <h3 className="headline mt-3 text-2xl leading-snug text-ink">{ascensionHeadline(band.level, score)}</h3>
+        <p className="kicker">Your next move</p>
+        <h3 className="headline mt-3 text-2xl leading-snug text-ink">{platformHeadline(band.level, score)}</h3>
         <div className="mt-5 grid gap-2.5">
-          {TIERS.map((t) => {
-            const rec = t.key === recKey;
+          {PLATFORM.map((t) => {
+            const rec = t.key === recPlatform;
             return (
               <div key={t.key} className={`flex items-center gap-4 rounded-lg border p-4 ${rec ? "border-signal bg-signal/[0.07]" : "border-[var(--line)] bg-bg2"}`}>
                 <div className="flex-1">
                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                     <span className="text-lg text-ink">{t.name}</span>
-                    <span className="mono text-[10px] tracking-[0.16em] text-muted">{t.cert}</span>
-                    {rec && <span className="mono rounded bg-signal px-1.5 py-0.5 text-[9px] tracking-[0.14em] text-bg">RECOMMENDED START</span>}
+                    {rec && <span className="mono rounded bg-signal px-1.5 py-0.5 text-[9px] tracking-[0.14em] text-bg">RECOMMENDED</span>}
                   </div>
                   <p className="mt-1 text-[13px] leading-snug text-muted">{t.line}</p>
                 </div>
@@ -294,20 +301,12 @@ function Results({ result, revealed }) {
             );
           })}
         </div>
-        <a href={TRAINING_URL} className="mono mt-6 inline-flex items-center gap-2 rounded-md bg-signal px-6 py-3 text-[13px] tracking-[0.08em] text-bg transition-opacity hover:opacity-90">
-          Start at {recName} <ArrowRight size={16} />
-        </a>
-      </div>
-
-      {/* Fallback fork */}
-      <div className="card mt-4 p-6">
-        <p className="mb-4 text-[14px] leading-relaxed text-muted">{COPY.fallbackLead}</p>
-        <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
-          <a href="/register" className="mono inline-flex items-center justify-center gap-2 rounded-md border border-signal bg-transparent px-5 py-3 text-[13px] tracking-[0.04em] text-signal transition-colors hover:bg-signal hover:text-bg">
-            <Check size={15} /> Create a free dashboard account
+        <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
+          <a href="/register" className={`mono inline-flex items-center justify-center gap-2 rounded-md px-6 py-3 text-[13px] tracking-[0.08em] transition-colors ${recPlatform === "free" ? "bg-signal text-bg hover:opacity-90" : "border border-signal/40 text-signal hover:bg-signal hover:text-bg"}`}>
+            <Check size={15} /> Create your free account
           </a>
-          <a href="/upgrade" className="mono inline-flex items-center justify-center gap-2 rounded-md border border-[var(--line-strong)] px-5 py-3 text-[13px] tracking-[0.04em] text-muted transition-colors hover:text-ink">
-            Explore Cignal System membership <ArrowRight size={15} />
+          <a href="/upgrade" className={`mono inline-flex items-center justify-center gap-2 rounded-md px-6 py-3 text-[13px] tracking-[0.08em] transition-colors ${recPlatform === "pro" ? "bg-signal text-bg hover:opacity-90" : "border border-signal/40 text-signal hover:bg-signal hover:text-bg"}`}>
+            Go Pro — $79/mo <ArrowRight size={16} />
           </a>
         </div>
       </div>
