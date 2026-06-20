@@ -63,7 +63,7 @@ function ResearchInner() {
 
       {/* Prominent ask */}
       <div className="mt-12 flex flex-col items-center text-center">
-        <h2 className="headline text-2xl text-ink md:text-3xl">Ask a Research Question</h2>
+        <h2 className="headline text-2xl text-ink md:text-3xl">Ask a Question</h2>
         <p className="mt-2 max-w-xl text-muted">Pose anything about the cycle, the signals, or a specific market.</p>
 
         <div className="mt-6 w-full max-w-2xl">
@@ -75,7 +75,7 @@ function ResearchInner() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && ask(input)}
                 disabled={loading}
-                placeholder="Ask a research question…"
+                placeholder="Ask a question…"
                 className="flex-1 bg-transparent text-base text-ink placeholder:text-muted/60 outline-none disabled:opacity-60"
               />
               <button onClick={() => ask(input)} disabled={loading} className="mono flex shrink-0 items-center gap-1.5 rounded-md bg-up px-4 py-2.5 text-[12px] tracking-[0.08em] text-bg transition-opacity hover:opacity-90 disabled:opacity-50">
