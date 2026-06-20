@@ -13,20 +13,6 @@ const SUGGESTIONS = [
   "Is rent growth bottoming?",
 ];
 
-const ANSWERS = {
-  "Where are we in the multifamily cycle right now?":
-    "The composite signal reads BULLISH at 60% confidence — consistent with Phase II (Expansion). Leading indicators (permits down 6.1%, absorption up 1.2%) point to tightening supply meeting steady demand, while trailing indicators like cap rates (+12bps) still reflect the prior repricing. Net read: fundamentals are improving faster than the lagging capital-markets data suggests.",
-  "Which markets show the strongest leading indicators?":
-    "Austin (88), Nashville (84), and Atlanta (79) lead on the fundamentals that move first — rent growth, absorption, and in-migration. The Sun Belt broadly screens strongest; Gateway markets like San Francisco (52) and Chicago (45) lag on both demand and pricing power.",
-  "What's the risk from the debt maturity wall?":
-    "Roughly $32B in floating-rate multifamily debt matures in H2 2025. 2021-vintage acquisitions refinancing at current rates may need 15–25% equity recapitalization, creating forced-seller risk — and an entry opportunity for well-capitalized buyers. Treat it as a leading risk signal for distressed pricing into late 2025–2026.",
-  "Is rent growth bottoming?":
-    "Effective rent growth sits at +3.8% YoY, down from a +14.6% peak in Q3 2022 — but the rate of deceleration is slowing, suggesting a floor near +3.0–3.5%. With permits falling and absorption rising, the leading indicators argue the trough is close rather than ahead.",
-};
-
-const PREVIEW =
-  "Full natural-language research goes live once your account is provisioned and the intelligence model is connected. For now, try one of the suggested questions above for a sample of the analysis.";
-
 export default function ResearchPage() {
   const vertical = useVertical();
   if (!isPageReady(vertical, "research")) return <ComingSoonInline vertical={vertical} title="Research" />;
@@ -34,15 +20,36 @@ export default function ResearchPage() {
 }
 
 function ResearchInner() {
-  const [thread, setThread] = useState([]); // [{ q, a }]
+  const [thread, setThread] = useState([]); // [{ id, q, a, error, upgrade, pending }]
   const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const ask = (q) => {
+  const ask = async (q) => {
     const text = (q || "").trim();
-    if (!text) return;
-    const a = ANSWERS[text] || PREVIEW;
-    setThread((t) => [{ q: text, a }, ...t]);
+    if (!text || loading) return;
     setInput("");
+    setLoading(true);
+    const id = Date.now();
+    setThread((t) => [{ id, q: text, pending: true }, ...t]);
+    try {
+      const r = await fetch("/api/research", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ question: text }),
+      });
+      const d = await r.json().catch(() => ({}));
+      setThread((t) =>
+        t.map((it) =>
+          it.id === id
+            ? { id, q: text, a: r.ok ? d.answer : null, error: r.ok ? null : d.error || "Something went wrong. Please try again.", upgrade: d.upgrade }
+            : it
+        )
+      );
+    } catch {
+      setThread((t) => t.map((it) => (it.id === id ? { id, q: text, error: "Network error. Please try again." } : it)));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -67,11 +74,12 @@ function ResearchInner() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && ask(input)}
+                disabled={loading}
                 placeholder="Ask a research question…"
-                className="flex-1 bg-transparent text-base text-ink placeholder:text-muted/60 outline-none"
+                className="flex-1 bg-transparent text-base text-ink placeholder:text-muted/60 outline-none disabled:opacity-60"
               />
-              <button onClick={() => ask(input)} className="mono flex shrink-0 items-center gap-1.5 rounded-md bg-up px-4 py-2.5 text-[12px] tracking-[0.08em] text-bg transition-opacity hover:opacity-90">
-                ASK <ArrowUp size={14} />
+              <button onClick={() => ask(input)} disabled={loading} className="mono flex shrink-0 items-center gap-1.5 rounded-md bg-up px-4 py-2.5 text-[12px] tracking-[0.08em] text-bg transition-opacity hover:opacity-90 disabled:opacity-50">
+                {loading ? "…" : <>ASK <ArrowUp size={14} /></>}
               </button>
             </div>
           </div>
@@ -79,7 +87,7 @@ function ResearchInner() {
           {/* suggestions */}
           <div className="mt-4 flex flex-wrap justify-center gap-2">
             {SUGGESTIONS.map((s) => (
-              <button key={s} onClick={() => ask(s)} className="rounded-full border border-[var(--line)] bg-bg px-4 py-2 text-[13px] text-muted transition-colors hover:border-up/40 hover:text-ink">
+              <button key={s} onClick={() => ask(s)} disabled={loading} className="rounded-full border border-[var(--line)] bg-bg px-4 py-2 text-[13px] text-muted transition-colors hover:border-up/40 hover:text-ink disabled:opacity-50">
                 {s}
               </button>
             ))}
@@ -90,12 +98,25 @@ function ResearchInner() {
       {/* thread */}
       {thread.length > 0 && (
         <div className="mx-auto mt-10 max-w-3xl space-y-4">
-          {thread.map((item, i) => (
-            <div key={i} className="card p-5">
+          {thread.map((item) => (
+            <div key={item.id} className="card p-5">
               <p className="font-medium text-ink">{item.q}</p>
               <div className="mt-3 border-t border-[var(--line)] pt-3">
                 <span className="mono text-[10px] tracking-[0.16em] text-signal">CIGNAL DESK</span>
-                <p className="mt-1 text-sm leading-relaxed text-muted">{item.a}</p>
+                {item.pending ? (
+                  <p className="mono mt-2 animate-pulse text-[12px] text-muted">Analyzing live signals…</p>
+                ) : item.error ? (
+                  <div className="mt-1">
+                    <p className="text-sm leading-relaxed text-muted">{item.error}</p>
+                    {item.upgrade && (
+                      <a href="/upgrade?page=research" className="mono mt-2 inline-block rounded-md bg-signal/15 px-3 py-1.5 text-[12px] tracking-[0.06em] text-signal hover:bg-signal/25">
+                        UPGRADE TO PRO
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-muted">{item.a}</p>
+                )}
               </div>
             </div>
           ))}
@@ -103,7 +124,7 @@ function ResearchInner() {
       )}
 
       <p className="mono mt-10 flex items-center justify-center gap-1.5 text-[11px] tracking-[0.06em] text-muted">
-        <Lock size={11} /> Preview — connects to a live intelligence model once provisioned.
+        <Lock size={11} /> Cignal Pro — answers are grounded in your live indicators, signals, and migration data.
       </p>
     </div>
   );
