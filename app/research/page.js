@@ -67,9 +67,9 @@ function ResearchInner() {
         <p className="mt-2 max-w-xl text-muted">Pose anything about the cycle, the signals, or a specific market.</p>
 
         <div className="mt-6 w-full max-w-2xl">
-          <div className="pulse-green rounded-2xl border border-up/40 bg-up/[0.05] p-2">
+          <div className="pulse-gold rounded-2xl border border-signal/40 bg-signal/[0.05] p-2">
             <div className="flex items-center gap-3 rounded-xl bg-bg2 px-4 py-3.5">
-              <Sparkles size={20} className="shrink-0 text-up" strokeWidth={1.8} />
+              <Sparkles size={20} className="shrink-0 text-signal" strokeWidth={1.8} />
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -78,7 +78,7 @@ function ResearchInner() {
                 placeholder="Ask a question…"
                 className="flex-1 bg-transparent text-base text-ink placeholder:text-muted/60 outline-none disabled:opacity-60"
               />
-              <button onClick={() => ask(input)} disabled={loading} className="mono flex shrink-0 items-center gap-1.5 rounded-md bg-up px-4 py-2.5 text-[12px] tracking-[0.08em] text-bg transition-opacity hover:opacity-90 disabled:opacity-50">
+              <button onClick={() => ask(input)} disabled={loading} className="mono flex shrink-0 items-center gap-1.5 rounded-md bg-signal px-4 py-2.5 text-[12px] tracking-[0.08em] text-bg transition-opacity hover:opacity-90 disabled:opacity-50">
                 {loading ? "…" : <>ASK <ArrowUp size={14} /></>}
               </button>
             </div>
@@ -87,7 +87,7 @@ function ResearchInner() {
           {/* suggestions */}
           <div className="mt-4 flex flex-wrap justify-center gap-2">
             {SUGGESTIONS.map((s) => (
-              <button key={s} onClick={() => ask(s)} disabled={loading} className="rounded-full border border-[var(--line)] bg-bg px-4 py-2 text-[13px] text-muted transition-colors hover:border-up/40 hover:text-ink disabled:opacity-50">
+              <button key={s} onClick={() => ask(s)} disabled={loading} className="rounded-full border border-[var(--line)] bg-bg px-4 py-2 text-[13px] text-muted transition-colors hover:border-signal/40 hover:text-ink disabled:opacity-50">
                 {s}
               </button>
             ))}
