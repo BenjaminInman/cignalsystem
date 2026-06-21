@@ -29,11 +29,15 @@ SERIES = [
      "name": "Zillow Observed Rent Index — Metro (SFR+Condo+MF, smoothed, SA)",
      "source_series": "Metro_zori_uc_sfrcondomfr_sm_sa_month",
      "url": f"{ZORI_BASE}/Metro_zori_uc_sfrcondomfr_sm_sa_month.csv"},
+    {"slug": "zori_national", "region_type": "national", "region_filter": "country", "code_override": "US",
+     "name": "Zillow Observed Rent Index — National (SFR+Condo+MF, smoothed, SA)",
+     "source_series": "Metro_zori_uc_sfrcondomfr_sm_sa_month[US]",
+     "url": f"{ZORI_BASE}/Metro_zori_uc_sfrcondomfr_sm_sa_month.csv"},
 ]
 ID_COLS = ["RegionID","SizeRank","RegionName","RegionType","StateName","State","City","Metro","CountyName"]
 
 
-def download_and_melt(url, region_filter=None):
+def download_and_melt(url, region_filter=None, code_override=None):
     r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=180)
     r.raise_for_status()
     df = pd.read_csv(io.StringIO(r.text))
@@ -45,6 +49,8 @@ def download_and_melt(url, region_filter=None):
     long["obs_date"]  = pd.to_datetime(long["obs_date"]).dt.date
     long["zillow_id"] = long["RegionID"].astype("int64")
     long["code"]      = long["RegionName"].astype(str)
+    if code_override:                                          # national row -> match the existing US region
+        long["code"] = code_override
     print(f"  -> {len(long):,} obs ({long['obs_date'].min()}..{long['obs_date'].max()}), "
           f"{long['zillow_id'].nunique():,} regions")
     return long[["zillow_id", "code", "obs_date", "value"]]
@@ -114,7 +120,7 @@ def main():
         with conn.cursor() as cur:
             for s in SERIES:
                 print(f"\n[{s['slug']}]")
-                long = download_and_melt(s["url"], s.get("region_filter"))
+                long = download_and_melt(s["url"], s.get("region_filter"), s.get("code_override"))
                 ind  = ensure_indicator(cur, s)
                 upsert_regions(cur, s["region_type"], long)
                 n = load_series(cur, ind, s["region_type"], long, release)
