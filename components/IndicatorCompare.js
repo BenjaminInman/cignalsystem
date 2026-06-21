@@ -9,35 +9,24 @@ import { SLUG_BY_NAME } from "@/lib/indicator-slugs";
 const SERIES_COLORS = ["#F5B544", "#5FB97C", "#6FA8DC", "#E5634D", "#B68FD6"];
 const CHART_TYPES = ["Line", "Area", "Bar"];
 const SCALE_MODES = [
+  { key: "native", label: "Native units" },
   { key: "indexed", label: "Indexed to 100" },
-  { key: "yoy", label: "YoY %" },
-  { key: "raw", label: "Raw value" },
 ];
 const ALL_RANGES = [10, 20, 40];
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const yrLab = (ts) => String(new Date(ts).getUTCFullYear());
 const monLab = (ts) => { const d = new Date(ts); return `${MON[d.getUTCMonth()]} '${String(d.getUTCFullYear()).slice(2)}`; };
 
-/* ---------- transforms (computed client-side from raw points) ---------- */
-function transform(points, scale) {
-  if (!points || !points.length) return [];
-  const pts = points.map((p) => ({ t: Date.parse(p.d), v: p.v })).filter((p) => Number.isFinite(p.t));
-  if (scale === "raw") return pts.map((p) => ({ t: p.t, y: p.v }));
-  if (scale === "indexed") {
-    const base = pts[0].v;
-    if (!base) return pts.map((p) => ({ t: p.t, y: p.v }));
-    return pts.map((p) => ({ t: p.t, y: (p.v / base) * 100 }));
-  }
-  // yoy: for each point find the value ~1 year earlier (<= t - 360d)
-  const YEAR = 364 * 86400000;
-  const out = [];
-  for (let i = 0; i < pts.length; i++) {
-    const target = pts[i].t - YEAR;
-    let prior = null;
-    for (let j = i - 1; j >= 0; j--) { if (pts[j].t <= target + 20 * 86400000) { prior = pts[j]; break; } }
-    if (prior && prior.v) out.push({ t: pts[i].t, y: (pts[i].v / prior.v - 1) * 100 });
-  }
-  return out;
+const GROUP_AXIS = { pct: "%", count: "K", days: "days", index: "index" };
+
+function fmtValue(line, v, scale) {
+  if (v == null || !Number.isFinite(v)) return "—";
+  if (scale === "indexed") return v.toFixed(1);
+  const s = v.toFixed(line.round ?? 1);
+  if (line.group === "pct") return (line.unit || "").includes("pp") ? `${s}pp` : `${s}%`;
+  if (line.group === "count") return `${s}K`;
+  if (line.group === "days") return `${s}d`;
+  return s;
 }
 
 function niceTicks(min, max, count = 4) {
@@ -66,11 +55,11 @@ function smooth(pts) {
   return d;
 }
 
-/* ---------- the chart ---------- */
-function CompareChart({ lines, scale, chartType }) {
+/* ---------- chart ---------- */
+function CompareChart({ lines, scale, chartType, yLabel }) {
   const [hoverX, setHoverX] = useState(null);
   const wrapRef = useRef(null);
-  const W = 940, H = 380, padL = 50, padR = 16, padT = 16, padB = 30;
+  const W = 940, H = 380, padL = 54, padR = 16, padT = 16, padB = 30;
   const innerW = W - padL - padR, innerH = H - padT - padB;
 
   const drawn = lines.filter((l) => l.data.length > 0);
@@ -81,7 +70,6 @@ function CompareChart({ lines, scale, chartType }) {
       if (p.y < yMin) yMin = p.y; if (p.y > yMax) yMax = p.y;
     }));
     if (scale === "indexed") { yMin = Math.min(yMin, 100); yMax = Math.max(yMax, 100); }
-    if (scale === "yoy") { yMin = Math.min(yMin, 0); yMax = Math.max(yMax, 0); }
     const pad = (yMax - yMin) * 0.08 || 1;
     return { tMin, tMax, yMin: yMin - pad, yMax: yMax + pad };
   }, [drawn, scale]);
@@ -94,34 +82,30 @@ function CompareChart({ lines, scale, chartType }) {
   const xAt = (t) => padL + ((t - tMin) / (tMax - tMin || 1)) * innerW;
   const yAt = (v) => padT + (1 - (v - yMin) / (yMax - yMin || 1)) * innerH;
   const yticks = niceTicks(yMin, yMax, 4);
-  const baseline = scale === "indexed" ? 100 : scale === "yoy" ? 0 : null;
+  const baseline = scale === "indexed" ? 100 : (yMin < 0 && yMax > 0 ? 0 : null);
 
-  // x year gridlines
   const y0 = new Date(tMin).getUTCFullYear(), y1 = new Date(tMax).getUTCFullYear();
   const yearSpan = y1 - y0;
   const xStep = yearSpan > 24 ? 5 : yearSpan > 12 ? 2 : 1;
   const xLabels = [];
   for (let y = Math.ceil(y0 / xStep) * xStep; y <= y1; y += xStep) xLabels.push(Date.UTC(y, 0, 1));
 
-  // hover: nearest time across union
   const allTimes = Array.from(new Set(drawn.flatMap((l) => l.data.map((p) => p.t)))).sort((a, b) => a - b);
   let hoverT = null;
-  if (hoverX != null) {
+  if (hoverX != null && allTimes.length) {
     const t = tMin + ((hoverX - padL) / innerW) * (tMax - tMin);
     hoverT = allTimes.reduce((best, cur) => (Math.abs(cur - t) < Math.abs(best - t) ? cur : best), allTimes[0]);
   }
   const valAt = (data, t) => { const hit = data.find((p) => p.t === t); return hit ? hit.y : null; };
-
   const onMove = (e) => {
     const rect = wrapRef.current.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * W;
     setHoverX(Math.max(padL, Math.min(W - padR, x)));
   };
 
-  const fmt = (v) => (v == null ? "—" : scale === "yoy" ? `${v >= 0 ? "+" : ""}${v.toFixed(1)}%` : v.toFixed(scale === "indexed" ? 1 : 2));
-
   return (
     <div>
+      <div className="mb-2 mono text-[10px] tracking-[0.16em] text-muted">{yLabel}</div>
       <div ref={wrapRef} onMouseMove={onMove} onMouseLeave={() => setHoverX(null)} style={{ width: "100%" }}>
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: "auto" }}>
           {yticks.map((v) => (
@@ -131,7 +115,7 @@ function CompareChart({ lines, scale, chartType }) {
             </g>
           ))}
           {baseline != null && baseline >= yMin && baseline <= yMax && (
-            <line x1={padL} y1={yAt(baseline)} x2={W - padR} y2={yAt(baseline)} stroke="#797E85" strokeOpacity="0.45" strokeWidth="1" />
+            <line x1={padL} y1={yAt(baseline)} x2={W - padR} y2={yAt(baseline)} stroke="#797E85" strokeOpacity="0.5" strokeWidth="1" />
           )}
           {xLabels.map((t) => (
             <text key={t} x={xAt(t)} y={H - 10} textAnchor="middle" fontSize="10" fill="#797E85" fontFamily="'IBM Plex Mono', monospace">{yrLab(t)}</text>
@@ -169,14 +153,13 @@ function CompareChart({ lines, scale, chartType }) {
         </svg>
       </div>
 
-      {/* readout */}
       <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-[var(--line)] pt-3">
         <span className="mono text-[11px] tracking-[0.06em] text-muted">{hoverT != null ? monLab(hoverT) : "Hover the chart"}</span>
         {drawn.map((l) => (
           <span key={l.slug} className="mono flex items-center gap-1.5 text-[11px]">
             <span className="h-2 w-2 rounded-sm" style={{ background: l.color }} />
             <span className="text-muted">{l.name}</span>
-            <span className="text-ink">{hoverT != null ? fmt(valAt(l.data, hoverT)) : ""}</span>
+            <span className="text-ink">{hoverT != null ? fmtValue(l, valAt(l.data, hoverT), scale) : ""}</span>
           </span>
         ))}
       </div>
@@ -184,7 +167,7 @@ function CompareChart({ lines, scale, chartType }) {
   );
 }
 
-/* ---------- the tool ---------- */
+/* ---------- tool ---------- */
 export default function IndicatorCompare() {
   const { INDICATORS = [] } = useContent();
   const options = useMemo(
@@ -196,22 +179,22 @@ export default function IndicatorCompare() {
   const [selected, setSelected] = useState([]);
   const [years, setYears] = useState(10);
   const [chartType, setChartType] = useState("Line");
-  const [scale, setScale] = useState("indexed");
+  const [scale, setScale] = useState("native");
   const [picker, setPicker] = useState(false);
-  const [raw, setRaw] = useState({}); // slug -> points
+  const [raw, setRaw] = useState({}); // slug -> { points, unit, group, round }
   const [loading, setLoading] = useState(false);
 
   const caps = tier === "pro" ? { maxSlugs: 5, years: ALL_RANGES } : { maxSlugs: 2, years: [10] };
 
-  // default selection once options load (a leading/trailing pair)
+  // default: Inflation vs Interest Rates (same unit, the pair that exposed the bug)
   useEffect(() => {
     if (!options.length || selected.length) return;
-    const lead = options.find((o) => o.slug === "permits_5plus") || options.find((o) => o.type === "LEADING") || options[0];
-    const trail = options.find((o) => o.slug === "rental_vacancy") || options.find((o) => o.type === "TRAILING") || options[1];
-    setSelected([lead, trail].filter(Boolean));
+    const inflation = options.find((o) => o.slug === "cpi_headline");
+    const rates = options.find((o) => o.slug === "fed_funds");
+    const fallback = options.slice(0, 2);
+    setSelected([inflation, rates].filter(Boolean).length === 2 ? [inflation, rates] : fallback);
   }, [options]); // eslint-disable-line
 
-  // read tier client-side (same source the nav uses)
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => {
@@ -223,13 +206,11 @@ export default function IndicatorCompare() {
     });
   }, []);
 
-  // clamp when tier changes
   useEffect(() => {
     setSelected((s) => s.slice(0, caps.maxSlugs));
     if (!caps.years.includes(years)) setYears(caps.years[caps.years.length - 1]);
   }, [tier]); // eslint-disable-line
 
-  // fetch on selection / range change
   useEffect(() => {
     if (!selected.length) { setRaw({}); return; }
     let on = true;
@@ -241,7 +222,7 @@ export default function IndicatorCompare() {
         if (!on) return;
         if (d?.tier && d.tier !== tier) setTier(d.tier);
         const map = {};
-        (d?.series || []).forEach((s) => { map[s.slug] = s.points || []; });
+        (d?.series || []).forEach((s) => { map[s.slug] = { points: s.points || [], unit: s.unit, group: s.group, round: s.round }; });
         setRaw(map);
       })
       .catch(() => {})
@@ -249,10 +230,28 @@ export default function IndicatorCompare() {
     return () => { on = false; };
   }, [selected, years]); // eslint-disable-line
 
-  const lines = selected.map((s, i) => ({
-    slug: s.slug, name: s.name, type: s.type, color: SERIES_COLORS[i],
-    data: transform(raw[s.slug], scale),
-  }));
+  // Indexed is only meaningful when every selected series stays strictly positive.
+  const canIndex = selected.length > 0 && selected.every((s) => {
+    const pts = raw[s.slug]?.points || [];
+    return pts.length > 0 && pts.every((p) => p.v > 0);
+  });
+  const effScale = scale === "indexed" && canIndex ? "indexed" : "native";
+
+  const groups = Array.from(new Set(selected.map((s) => raw[s.slug]?.group).filter(Boolean)));
+  const mixedUnits = effScale === "native" && groups.length > 1;
+  const yLabel = effScale === "indexed"
+    ? "Index · 100 = window start"
+    : groups.length === 1 ? (GROUP_AXIS[groups[0]] || "value") : "native units (mixed)";
+
+  const lines = selected.map((s, i) => {
+    const meta = raw[s.slug] || {};
+    let data = (meta.points || []).map((p) => ({ t: Date.parse(`${p.d}T00:00:00Z`), y: p.v })).filter((p) => Number.isFinite(p.t));
+    if (effScale === "indexed" && data.length) {
+      const base = data.find((p) => p.y > 0)?.y;
+      if (base) data = data.map((p) => ({ t: p.t, y: (p.y / base) * 100 }));
+    }
+    return { slug: s.slug, name: s.name, color: SERIES_COLORS[i], group: meta.group, unit: meta.unit, round: meta.round, data };
+  });
 
   const atCap = selected.length >= caps.maxSlugs;
   const isSel = (slug) => selected.some((s) => s.slug === slug);
@@ -270,18 +269,19 @@ export default function IndicatorCompare() {
         {tier !== "pro" && <span className="mono text-[10px] tracking-[0.14em] text-muted">FREE · 2 SERIES · 10Y</span>}
       </div>
       <p className="mt-3 max-w-2xl text-sm text-muted">
-        Overlay indicators to read how leading series move ahead of trailing ones across the cycle. Indexed view rebases each
-        line to 100 at the window start so different units compare directly.
+        Overlay indicators to read how leading series move ahead of trailing ones across the cycle. Each line is shown the
+        same way it appears on the tab above — rates as rates, inflation and rent as year-over-year. Use Indexed to compare
+        shape when units differ.
       </p>
 
       <div className="card mt-5 p-5">
-        {/* selected chips + add */}
         <div className="flex flex-wrap items-center gap-2">
           {selected.map((s, i) => (
             <span key={s.slug} className="mono inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-[12px]"
               style={{ borderColor: `${SERIES_COLORS[i]}66`, color: "#ECEDEF" }}>
               <span className="h-2 w-2 rounded-sm" style={{ background: SERIES_COLORS[i] }} />
               {s.name}
+              {raw[s.slug]?.unit && <span className="text-[10px] text-muted">{raw[s.slug].unit}</span>}
               <button onClick={() => remove(s.slug)} className="text-muted hover:text-ink"><X size={12} /></button>
             </span>
           ))}
@@ -310,7 +310,6 @@ export default function IndicatorCompare() {
           )}
         </div>
 
-        {/* controls */}
         <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-[var(--line)] pt-4">
           <div className="flex items-center gap-2">
             <span className="mono text-[10px] tracking-[0.16em] text-muted">RANGE</span>
@@ -345,12 +344,18 @@ export default function IndicatorCompare() {
           {loading && <span className="mono animate-pulse text-[11px] text-muted">loading…</span>}
         </div>
 
-        {/* chart */}
+        {scale === "indexed" && !canIndex && (
+          <p className="mono mt-3 text-[11px] text-muted/80">Indexed view needs strictly positive series — a selection crosses zero, so native units are shown.</p>
+        )}
+        {mixedUnits && (
+          <p className="mono mt-3 text-[11px] text-muted/80">These indicators use different units. Switch to Indexed to compare their shape on one scale.</p>
+        )}
+
         <div className="mt-5">
           {selected.length === 0 ? (
             <div className="mono flex h-[300px] items-center justify-center text-[12px] text-muted">Add an indicator to begin.</div>
           ) : (
-            <CompareChart lines={lines} scale={scale} chartType={chartType} />
+            <CompareChart lines={lines} scale={effScale} chartType={chartType} yLabel={yLabel} />
           )}
         </div>
       </div>
