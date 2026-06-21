@@ -262,7 +262,23 @@ export default function IndicatorCompare() {
     `mono rounded px-3 py-1.5 text-[12px] tracking-[0.04em] transition-colors ${active ? "bg-signal/15 text-signal" : "text-muted hover:text-ink"}`;
 
   return (
-    <section className="mt-14">
+    <section className="relative mt-14 overflow-hidden rounded-2xl border border-[var(--line)] bg-gradient-to-b from-bg2/70 via-bg2/30 to-bg/10 px-6 py-8 md:px-10">
+      <svg className="pointer-events-none absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 1200 400" aria-hidden="true">
+        <defs>
+          <radialGradient id="compareGlow" cx="85%" cy="0%" r="70%">
+            <stop offset="0%" stopColor="#F5B544" stopOpacity="0.10" />
+            <stop offset="100%" stopColor="#F5B544" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <rect width="1200" height="400" fill="url(#compareGlow)" />
+        <path d="M0,92 C150,60 250,124 400,88 C550,54 650,122 800,82 C950,46 1050,112 1200,76" fill="none" stroke="#F5B544" strokeOpacity="0.10" strokeWidth="2" />
+        <g fill="#F5B544" fillOpacity="0.32">
+          <circle cx="400" cy="88" r="3" />
+          <circle cx="800" cy="82" r="3" />
+          <circle cx="1200" cy="76" r="3" />
+        </g>
+      </svg>
+      <div className="relative">
       <div className="flex items-center gap-3">
         <span className="h-px w-8 bg-signal/60" />
         <h2 className="mono text-[12px] tracking-[0.2em] text-signal">INDICATOR COMPARISON</h2>
@@ -274,7 +290,7 @@ export default function IndicatorCompare() {
         shape when units differ.
       </p>
 
-      <div className="card mt-5 p-5">
+      <div className="mt-5">
         <div className="flex flex-wrap items-center gap-2">
           {selected.map((s, i) => (
             <span key={s.slug} className="mono inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-[12px]"
@@ -370,6 +386,7 @@ export default function IndicatorCompare() {
           </a>
         </div>
       )}
+      </div>
     </section>
   );
 }
