@@ -20,7 +20,7 @@ function mergeLiveCard(card, live) {
     "Lease-Up Absorption Rate": "Net Absorption Rate",
     "Net Renter Migration Index": "Net Renter Migration Index",
     "National Vacancy Rate": "National Vacancy Rate",
-    "Effective Rent Growth": "Effective Rent Growth",
+    "Market Rent Growth": "Market Rent Growth",
     "Cap Rate (National Avg)": "Cap Rate (National Avg)",
     "Debt Service Coverage": "Debt Service Coverage",
   };
