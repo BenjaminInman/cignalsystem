@@ -94,7 +94,7 @@ function NewsletterSignup() {
 
   if (status === "done") {
     return (
-      <div className="card mt-8 flex items-center gap-4 p-6">
+      <div className="relative mt-8 overflow-hidden rounded-2xl border border-signal/30 bg-gradient-to-br from-signal/[0.08] via-bg2/40 to-bg/20 flex items-center gap-4 p-6">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-signal/15">
           <Check size={18} className="text-signal" />
         </div>
@@ -109,7 +109,7 @@ function NewsletterSignup() {
   }
 
   return (
-    <div className="card mt-8 p-6 md:p-7">
+    <div className="relative mt-8 overflow-hidden rounded-2xl border border-signal/30 bg-gradient-to-br from-signal/[0.08] via-bg2/40 to-bg/20 p-6 md:p-7">
       <div className="grid gap-6 md:grid-cols-[1fr_1.2fr] md:items-center">
         <div>
           <p className="kicker mb-2 flex items-center gap-2"><Mail size={12} className="text-signal" /> Newsletter</p>
