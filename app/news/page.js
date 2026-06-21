@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Newspaper, ArrowUpRight } from "lucide-react";
+import { Newspaper, ArrowUpRight, Mail, Check } from "lucide-react";
 import { useContent } from "@/components/VerticalProvider";
 import CommunityCTA from "@/components/CommunityCTA";
 import CignalScoreCTA from "@/components/CignalScoreCTA";
@@ -29,6 +29,8 @@ export default function NewsPage() {
         Headlines aggregated from The Real Deal, Multifamily Dive, Multi-Housing News, and MultifamilyBiz — refreshed throughout the day.
       </p>
 
+      <NewsletterSignup />
+
       <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_300px]">
         <div>
           {items === null ? (
@@ -50,6 +52,117 @@ export default function NewsPage() {
             </div>
           </div>
         </aside>
+      </div>
+    </div>
+  );
+}
+
+function NewsletterSignup() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [freq, setFreq] = useState("weekly");
+  const [status, setStatus] = useState("idle"); // idle | loading | done | error
+  const [msg, setMsg] = useState("");
+
+  const submit = async () => {
+    if (status === "loading") return;
+    const e = email.trim();
+    if (!e || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) {
+      setStatus("error");
+      setMsg("Please enter a valid email address.");
+      return;
+    }
+    setStatus("loading");
+    setMsg("");
+    try {
+      const r = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), email: e, frequency: freq }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok) setStatus("done");
+      else {
+        setStatus("error");
+        setMsg(d.error || "Something went wrong. Please try again.");
+      }
+    } catch {
+      setStatus("error");
+      setMsg("Network error. Please try again.");
+    }
+  };
+
+  if (status === "done") {
+    return (
+      <div className="card mt-8 flex items-center gap-4 p-6">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-signal/15">
+          <Check size={18} className="text-signal" />
+        </div>
+        <div>
+          <p className="font-semibold text-ink">You&apos;re on the list.</p>
+          <p className="mt-0.5 text-sm text-muted">
+            You&apos;ll receive {freq === "daily" ? "the daily industry brief" : "the weekly industry summary"} at {email}.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card mt-8 p-6 md:p-7">
+      <div className="grid gap-6 md:grid-cols-[1fr_1.2fr] md:items-center">
+        <div>
+          <p className="kicker mb-2 flex items-center gap-2"><Mail size={12} className="text-signal" /> Newsletter</p>
+          <h2 className="headline text-2xl text-ink">Get the industry brief in your inbox</h2>
+          <p className="mt-2 text-sm text-muted">
+            Curated multifamily and real-estate headlines — choose a daily delivery or a weekly summary.
+          </p>
+        </div>
+
+        <div>
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Name"
+              className="rounded-md border border-[var(--line)] bg-bg2 px-3 py-2.5 text-sm text-ink placeholder:text-muted/60 outline-none focus:border-signal/40"
+            />
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && submit()}
+              type="email"
+              placeholder="Email address"
+              className="rounded-md border border-[var(--line)] bg-bg2 px-3 py-2.5 text-sm text-ink placeholder:text-muted/60 outline-none focus:border-signal/40"
+            />
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="mono text-[10px] tracking-[0.12em] text-muted">DELIVERY</span>
+            {[
+              { k: "daily", label: "Daily" },
+              { k: "weekly", label: "Weekly summary" },
+            ].map((o) => (
+              <button
+                key={o.k}
+                onClick={() => setFreq(o.k)}
+                className={`mono rounded-md border px-3 py-1.5 text-[11px] tracking-[0.04em] ${freq === o.k ? "border-signal/40 bg-signal/10 text-signal" : "border-[var(--line)] text-muted hover:text-ink"}`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={submit}
+            disabled={status === "loading"}
+            className="mono mt-3 w-full rounded-md bg-signal px-4 py-2.5 text-[12px] tracking-[0.08em] text-bg transition-opacity hover:opacity-90 disabled:opacity-50 sm:w-auto sm:px-6"
+          >
+            {status === "loading" ? "SUBSCRIBING…" : "SUBSCRIBE"}
+          </button>
+
+          {status === "error" && <p className="mt-2 text-[12px] text-down">{msg}</p>}
+        </div>
       </div>
     </div>
   );
