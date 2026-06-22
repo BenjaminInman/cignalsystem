@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, Users, Crown, ShieldCheck, Loader2 } from "lucide-react";
+import { Search, Users, Crown, ShieldCheck, Loader2, ChevronDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 const STATUSES = ["active", "suspended", "cancelled"];
@@ -12,6 +12,7 @@ export default function AdminUsers({ initialUsers }) {
   const [q, setQ] = useState("");
   const [savingId, setSavingId] = useState(null);
   const [error, setError] = useState("");
+  const [showList, setShowList] = useState(false);
 
   const stats = useMemo(
     () => ({
@@ -65,8 +66,29 @@ export default function AdminUsers({ initialUsers }) {
         <Stat icon={ShieldCheck} label="Admins" value={stats.admins} />
       </div>
 
-      {/* Search */}
-      <div className="relative mt-8 max-w-sm">
+      {/* Collapsible subscriber list */}
+      <button
+        type="button"
+        onClick={() => setShowList((s) => !s)}
+        aria-expanded={showList}
+        aria-controls="admin-subscriber-list"
+        className="mt-8 flex w-full items-center justify-between rounded-lg border border-[var(--line)] bg-bg2 px-5 py-3.5 text-left transition-colors hover:border-signal/40"
+      >
+        <span className="kicker flex items-center gap-2">
+          <Users size={12} className="text-signal" /> All subscribers · {stats.total}
+        </span>
+        <ChevronDown
+          size={16}
+          className={`transition-transform duration-200 ${
+            showList ? "rotate-180 text-signal" : "text-muted"
+          }`}
+        />
+      </button>
+
+      {showList && (
+        <div id="admin-subscriber-list">
+          {/* Search */}
+          <div className="relative mt-2 max-w-sm">
         <Search size={15} strokeWidth={1.8} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
         <input
           value={q}
@@ -168,6 +190,8 @@ export default function AdminUsers({ initialUsers }) {
         Tier and status write live to the <span className="text-ink">profiles</span> table.
         When billing is wired, Stripe will own the tier field instead.
       </p>
+        </div>
+      )}
     </div>
   );
 }

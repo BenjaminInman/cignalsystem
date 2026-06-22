@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import {
   Database,
   Building2,
@@ -10,6 +13,7 @@ import {
   Truck,
   Package,
   UserCog,
+  ChevronDown,
 } from "lucide-react";
 
 // Maps the string keys we pass from the server to real icon components.
@@ -35,6 +39,7 @@ const fmt = (n) => (typeof n === "number" ? n.toLocaleString() : "—");
 export default function AdminDataCoverage({ coverage }) {
   const { msa, zip, obs, indicators, migrationRows, geographies, sources } =
     coverage;
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="pt-12">
@@ -60,49 +65,75 @@ export default function AdminDataCoverage({ coverage }) {
         {fmt(geographies)} geographies
       </p>
 
-      {/* Source list */}
-      <div className="card mt-8 overflow-hidden p-0">
-        <div className="hidden grid-cols-[1.4fr_2fr_0.9fr_0.9fr] gap-4 border-b border-[var(--line)] px-5 py-3 md:grid">
-          <Th>Source</Th>
-          <Th>What it feeds</Th>
-          <Th>Volume</Th>
-          <Th>Cadence</Th>
-        </div>
+      {/* Collapsible source feeds */}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-controls="admin-source-feeds"
+        className="mt-8 flex w-full items-center justify-between rounded-lg border border-[var(--line)] bg-bg2 px-5 py-3.5 text-left transition-colors hover:border-signal/40"
+      >
+        <span className="kicker flex items-center gap-2">
+          <Radio size={12} className="text-signal" /> Source feeds · {sources.length}
+        </span>
+        <ChevronDown
+          size={16}
+          className={`transition-transform duration-200 ${
+            open ? "rotate-180 text-signal" : "text-muted"
+          }`}
+        />
+      </button>
 
-        {sources.map((s) => {
-          const Icon = ICONS[s.icon] || Database;
-          return (
-            <div
-              key={s.name}
-              className="grid grid-cols-1 gap-2 border-b border-[var(--line)] px-5 py-4 last:border-0 md:grid-cols-[1.4fr_2fr_0.9fr_0.9fr] md:items-center md:gap-4"
-            >
-              <div className="flex min-w-0 items-center gap-2.5">
-                <Icon size={15} strokeWidth={1.8} className="shrink-0 text-muted" />
-                <span className="truncate text-[14px] text-ink">{s.name}</span>
-              </div>
-              <p className="mono truncate text-[12px] text-muted">{s.desc}</p>
-              <p className="mono text-[12px] text-muted">{s.volume}</p>
-              <div>
-                <span
-                  className={`mono inline-flex rounded-full border px-3 py-1 text-[11px] tracking-[0.06em] ${
-                    TONES[s.tone] || TONES.manual
-                  }`}
-                >
-                  {s.cadence}
-                </span>
-              </div>
+      {open && (
+        <div id="admin-source-feeds">
+          <div className="card mt-2 overflow-hidden p-0">
+            <div className="hidden grid-cols-[1.4fr_2fr_0.9fr_0.9fr] gap-4 border-b border-[var(--line)] px-5 py-3 md:grid">
+              <Th>Source</Th>
+              <Th>What it feeds</Th>
+              <Th>Volume</Th>
+              <Th>Cadence</Th>
             </div>
-          );
-        })}
-      </div>
 
-      <p className="mono mt-4 text-[11px] tracking-[0.04em] text-muted">
-        Counts read live from <span className="text-ink">indicators</span>,{" "}
-        <span className="text-ink">regions</span>,{" "}
-        <span className="text-ink">observations</span> and{" "}
-        <span className="text-ink">migration_rankings</span>. Cadence and feed
-        labels are maintained in code.
-      </p>
+            {sources.map((s) => {
+              const Icon = ICONS[s.icon] || Database;
+              return (
+                <div
+                  key={s.name}
+                  className="grid grid-cols-1 gap-2 border-b border-[var(--line)] px-5 py-4 last:border-0 md:grid-cols-[1.4fr_2fr_0.9fr_0.9fr] md:items-center md:gap-4"
+                >
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <Icon
+                      size={15}
+                      strokeWidth={1.8}
+                      className="shrink-0 text-muted"
+                    />
+                    <span className="truncate text-[14px] text-ink">{s.name}</span>
+                  </div>
+                  <p className="mono truncate text-[12px] text-muted">{s.desc}</p>
+                  <p className="mono text-[12px] text-muted">{s.volume}</p>
+                  <div>
+                    <span
+                      className={`mono inline-flex rounded-full border px-3 py-1 text-[11px] tracking-[0.06em] ${
+                        TONES[s.tone] || TONES.manual
+                      }`}
+                    >
+                      {s.cadence}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <p className="mono mt-4 text-[11px] tracking-[0.04em] text-muted">
+            Counts read live from <span className="text-ink">indicators</span>,{" "}
+            <span className="text-ink">regions</span>,{" "}
+            <span className="text-ink">observations</span> and{" "}
+            <span className="text-ink">migration_rankings</span>. Cadence and feed
+            labels are maintained in code.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
