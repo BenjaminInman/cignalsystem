@@ -123,14 +123,18 @@ function CycleGauge({ cycle }) {
 
       <p className="mt-6 max-w-3xl text-sm leading-relaxed text-muted">{cycle.summary}</p>
 
-      <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        {cycle.signals.map((s) => (
-          <div key={s.label} className="rounded-md border border-[var(--line)] p-3" style={{ borderLeft: `3px solid ${toneColor(s.tone)}` }}>
-            <p className="mono text-[10px] tracking-[0.06em] text-muted">{s.label.toUpperCase()}</p>
-            <p className="mt-1 text-sm font-semibold" style={{ color: toneColor(s.tone) }}>{s.read}</p>
+      <div className="mt-5 grid gap-2 sm:grid-cols-3">
+        {(cycle.pillars || []).map((p) => (
+          <div key={p.label} className={`rounded-md border border-[var(--line)] p-3 ${p.live === false ? "opacity-60" : ""}`} style={{ borderLeft: `3px solid ${toneColor(p.tone)}` }}>
+            <p className="mono text-[10px] tracking-[0.06em] text-muted">{p.label.toUpperCase()}{p.live === false ? " · PENDING FEED" : ""}</p>
+            <p className="mt-1 text-sm font-semibold" style={{ color: p.live === false ? "#797e85" : toneColor(p.tone) }}>{p.read}</p>
           </div>
         ))}
       </div>
+
+      {cycle.basis && (
+        <p className="mono mt-4 border-t border-[var(--line)] pt-3 text-[10px] leading-relaxed tracking-[0.03em] text-muted">{cycle.basis} Concessions data is not yet wired (RealPage/CoStar/Yardi); phase currently reads from occupancy and rent direction.</p>
+      )}
     </div>
   );
 }

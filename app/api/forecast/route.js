@@ -12,7 +12,6 @@ async function sb(path) {
   return r.ok ? r.json() : null;
 }
 
-// National cycle basket. kind = position in the When-first framework.
 const BASKET = [
   { slug: "mf_starts", label: "Multifamily Starts", kind: "leading", unit: "K SAAR", pct: true, good: "down" },
   { slug: "permits_5plus", label: "Permits (5+ units)", kind: "leading", unit: "K SAAR", pct: true, good: "down" },
@@ -26,7 +25,6 @@ const BASKET = [
   { slug: "cpi_shelter", label: "Shelter CPI", kind: "trailing", unit: "index", pct: true, good: "down" },
 ];
 
-// Curated markets → ZORI metro region_code + Norada tier (drives provisional confidence).
 const CITIES = [
   { city: "Dallas, TX", metro: "Dallas, TX", tier: "Top" },
   { city: "Jersey City, NJ", metro: "New York, NY", tier: "Top" },
@@ -51,14 +49,31 @@ const CITIES = [
 ];
 const TIER_CONF = { Top: 80, "Sun Belt": 72, Secondary: 66 };
 
-function pctYoY(value, yoy) {
-  const prior = value - yoy;
-  return prior ? (yoy / prior) * 100 : null;
+const pctYoY = (value, yoy) => { const p = value - yoy; return p ? (yoy / p) * 100 : null; };
+
+// Phases keyed to the operator framework (concessions, occupancy, rents — by direction).
+const PHASE_POS = { "Recovery": 12, "Expansion": 38, "Hypersupply / Peak": 62, "Contraction / Recession": 85 };
+const PHASE_ARCH = { "Recovery": "Irrational Desperation", "Expansion": "Exuberance", "Hypersupply / Peak": "Denial", "Contraction / Recession": "Fear" };
+
+// rentDir: declining | stabilizing | increasing   vacDir: decreasing | stabilizing | increasing
+// concDir (optional): growing | shrinking | none | null
+function classifyPhase(rentDir, vacDir, concDir) {
+  if (vacDir === "increasing") {
+    return rentDir === "declining" ? "Contraction / Recession" : "Hypersupply / Peak";
+  }
+  if (vacDir === "decreasing") {
+    return rentDir === "increasing" ? "Expansion" : "Recovery";
+  }
+  // vacancy stabilizing
+  if (rentDir === "increasing") return "Expansion";
+  // rents stabilizing or declining with occupancy no longer worsening = bottoming/turn.
+  // concessions, when known, confirm: still growing = late contraction, shrinking = recovery.
+  if (concDir === "growing") return "Contraction / Recession";
+  return "Recovery";
 }
 
 export async function GET() {
   try {
-    // ---- 1. National basket (latest per slug within ~400 days) ----
     const cutoff = new Date(Date.now() - 400 * 86400000).toISOString().slice(0, 10);
     const slugs = BASKET.map((b) => b.slug).join(",");
     const rows =
@@ -76,76 +91,70 @@ export async function GET() {
       const yoy = r.yoy_change == null ? null : Number(r.yoy_change);
       const yoyPct = b.pct && yoy != null ? pctYoY(value, yoy) : null;
       const dir = yoy == null ? 0 : Math.sign(yoy);
-      // tone: does the current direction read constructive for multifamily?
       let tone = "neutral";
-      if (dir !== 0) {
-        const improving = (b.good === "up" && dir > 0) || (b.good === "down" && dir < 0);
-        tone = improving ? "bull" : "bear";
-      }
-      return {
-        slug: b.slug, label: b.label, kind: b.kind, unit: b.unit,
-        value, yoy, yoyPct,
-        z: r.zscore_12 == null ? null : Number(r.zscore_12),
-        asOf: r.obs_date, tone,
-      };
+      if (dir !== 0) tone = ((b.good === "up" && dir > 0) || (b.good === "down" && dir < 0)) ? "bull" : "bear";
+      return { slug: b.slug, label: b.label, kind: b.kind, unit: b.unit, value, yoy, yoyPct, z: r.zscore_12 == null ? null : Number(r.zscore_12), asOf: r.obs_date, tone };
     }).filter(Boolean);
 
     const get = (s) => latest[s] ? { v: Number(latest[s].value), yoy: latest[s].yoy_change == null ? null : Number(latest[s].yoy_change), z: latest[s].zscore_12 == null ? null : Number(latest[s].zscore_12), d: latest[s].obs_date } : null;
 
-    // ---- 2. Cycle phase (transparent rule set over leading + confirming signals) ----
-    const rent = get("zori_national_mf");
-    const vac = get("rental_vacancy");
-    const starts = get("mf_starts");
-    const permits = get("permits_5plus");
-    const emp = get("employment");
+    // ---- Cycle phase: operator framework (concessions · occupancy · rents), by direction ----
+    const rentHist = (await sb(`v_indicator_analytics?slug=eq.zori_national_mf&region_type=eq.national&select=obs_date,value&order=obs_date.desc&limit=7`)) || [];
+    const vacHist = (await sb(`v_indicator_analytics?slug=eq.rental_vacancy&region_type=eq.national&select=obs_date,value&order=obs_date.desc&limit=5`)) || [];
 
-    const rentPct = rent ? pctYoY(rent.v, rent.yoy) : null;
-    const vacRising = vac && vac.yoy != null ? vac.yoy > 0 : false;
-    const startsPct = starts ? pctYoY(starts.v, starts.yoy) : null;
-    const empGrowing = emp && emp.yoy != null ? emp.yoy > 0 : true;
-
-    let phase, archetype, position;
-    if (rentPct != null && rentPct < 0 && vacRising && !empGrowing) {
-      phase = "Contraction / Recession"; archetype = "Fear"; position = 85;
-    } else if (vacRising && rentPct != null && rentPct < 3) {
-      phase = "Hypersupply / Peak"; archetype = "Denial"; position = 62;
-    } else if (rentPct != null && rentPct >= 3 && !vacRising) {
-      phase = "Expansion"; archetype = "Exuberance"; position = 38;
-    } else {
-      phase = "Recovery"; archetype = "Irrational Desperation"; position = 12;
+    // Rents: 3-month annualized change of the smoothed ZORI MF index.
+    let rentRate = null, rentDir = "stabilizing";
+    if (rentHist.length >= 4) {
+      const now = Number(rentHist[0].value), prior3 = Number(rentHist[3].value);
+      rentRate = prior3 ? (now / prior3 - 1) * 4 * 100 : null;
+      rentDir = rentRate == null ? "stabilizing" : rentRate < -1.0 ? "declining" : rentRate >= 2.0 ? "increasing" : "stabilizing";
     }
+    // Vacancy: change across ~3 quarters (rising vacancy = occupancy declining).
+    let vacDelta = null, vacDir = "stabilizing", vacNow = null;
+    if (vacHist.length >= 4) {
+      vacNow = Number(vacHist[0].value);
+      vacDelta = vacNow - Number(vacHist[3].value);
+      vacDir = vacDelta > 0.15 ? "increasing" : vacDelta < -0.15 ? "decreasing" : "stabilizing";
+    } else if (vacHist.length) {
+      vacNow = Number(vacHist[0].value);
+    }
+    // Concessions: no live feed yet (RealPage/CoStar/Yardi). Excluded from the decision until wired.
+    const concDir = null;
 
-    const cycleSignals = [
-      rent && { label: "MF Rent Growth", read: rentPct != null ? `${rentPct >= 0 ? "+" : ""}${rentPct.toFixed(1)}% YoY` : "—", tone: rentPct >= 3 ? "bull" : rentPct >= 0 ? "neutral" : "bear" },
-      vac && { label: "Rental Vacancy", read: `${vac.v.toFixed(1)}% · ${vacRising ? "rising" : "falling"}`, tone: vacRising ? "bear" : "bull" },
-      starts && { label: "MF Starts", read: startsPct != null ? `${startsPct >= 0 ? "+" : ""}${startsPct.toFixed(0)}% YoY` : "—", tone: startsPct < 0 ? "bull" : "neutral" },
-      emp && { label: "Employment", read: emp.yoy != null ? `${emp.yoy >= 0 ? "+" : ""}${(emp.yoy / 1000).toFixed(2)}M YoY` : "—", tone: empGrowing ? "bull" : "bear" },
-    ].filter(Boolean);
+    const phase = classifyPhase(rentDir, vacDir, concDir);
+    const occWord = vacDir === "increasing" ? "declining" : vacDir === "decreasing" ? "improving" : "stabilizing";
+    const rentWord = rentDir === "increasing" ? "rising" : rentDir === "declining" ? "declining" : "leveling";
 
     const cycle = {
-      phase, archetype, position,
-      asOf: rent?.d || starts?.d || null,
+      phase, archetype: PHASE_ARCH[phase], position: PHASE_POS[phase],
+      asOf: rentHist[0]?.obs_date || null,
+      basis: "Phased on the direction of three operator signals — concessions, occupancy, and rents — not absolute levels.",
       summary:
-        `MF rent growth ${rentPct != null ? `${rentPct >= 0 ? "+" : ""}${rentPct.toFixed(1)}%` : "—"} and vacancy ${vac ? `${vac.v.toFixed(1)}% (${vacRising ? "rising" : "easing"})` : "—"} place the market in ${phase.toLowerCase()}. ` +
-        `Starts ${startsPct != null ? `${startsPct >= 0 ? "+" : ""}${startsPct.toFixed(0)}% YoY` : "—"} mean the forward supply pipeline is ${startsPct != null && startsPct < 0 ? "thinning — seeding the next tightening 18–24 months out" : "still building"}.`,
-      signals: cycleSignals,
+        `Occupancy is ${occWord} (vacancy ${vacNow != null ? vacNow.toFixed(1) + "%" : "—"}${vacDelta != null ? `, ${vacDelta >= 0 ? "+" : ""}${vacDelta.toFixed(1)}pp over 3 quarters` : ""}) and rents are ${rentWord}${rentRate != null ? ` (${rentRate >= 0 ? "+" : ""}${rentRate.toFixed(1)}% annualized)` : ""}. ` +
+        `With occupancy ${occWord} while rents have ${rentDir === "declining" ? "turned down" : "lost their climb but held positive"}, the read is ${phase.toLowerCase()}.`,
+      pillars: [
+        { label: "Concessions", dir: "pending", read: "Pending feed", tone: "neutral", live: false },
+        { label: "Occupancy", dir: vacDir, read: vacNow != null ? `Vacancy ${vacNow.toFixed(1)}% · ${vacDir}` : "—", tone: vacDir === "increasing" ? "bear" : vacDir === "decreasing" ? "bull" : "neutral", live: true },
+        { label: "Rents", dir: rentDir, read: rentRate != null ? `${rentRate >= 0 ? "+" : ""}${rentRate.toFixed(1)}% ann. · ${rentDir}` : "—", tone: rentDir === "increasing" ? "bull" : rentDir === "declining" ? "bear" : "neutral", live: true },
+      ],
     };
 
-    // ---- 3. Supply pipeline forecast ----
+    // ---- Supply pipeline (context, not a phase determinant) ----
+    const starts = get("mf_starts"); const permits = get("permits_5plus");
+    const startsPct = starts ? pctYoY(starts.v, starts.yoy) : null;
     const supply = {
       permits: permits ? { value: permits.v, yoyPct: pctYoY(permits.v, permits.yoy), z: permits.z, asOf: permits.d } : null,
       starts: starts ? { value: starts.v, yoyPct: startsPct, z: starts.z, asOf: starts.d } : null,
       leadMonths: "18–24",
-      read:
-        starts && startsPct != null
-          ? `Multifamily starts at ${starts.v.toFixed(0)}K SAAR, ${startsPct >= 0 ? "+" : ""}${startsPct.toFixed(0)}% YoY${starts.z != null ? ` (${starts.z >= 0 ? "+" : ""}${starts.z.toFixed(1)}σ)` : ""}. ` +
-            (startsPct < 0
-              ? "Fewer starts today means fewer deliveries in 2027–28 — a tightening setup that supports occupancy and pricing power."
-              : "A rising pipeline points to heavier deliveries ahead — watch for pressure on occupancy and rents.")
-          : "Supply pipeline data unavailable.",
+      read: starts && startsPct != null
+        ? `Multifamily starts at ${starts.v.toFixed(0)}K SAAR, ${startsPct >= 0 ? "+" : ""}${startsPct.toFixed(0)}% YoY${starts.z != null ? ` (${starts.z >= 0 ? "+" : ""}${starts.z.toFixed(1)}σ)` : ""}. ` +
+          (startsPct < 0
+            ? "Fewer starts today means fewer deliveries in 2027–28 — pointing toward the next tightening even as today's pipeline keeps occupancy soft."
+            : "A rising pipeline points to heavier deliveries ahead — watch occupancy and rents.")
+        : "Supply pipeline data unavailable.",
     };
 
-    // ---- 4. Market forward-signal table (live ZORI metro momentum + migration) ----
+    // ---- Market forward-signal table ----
     let markets = [];
     const mLatest = await sb(`v_indicator_analytics?slug=eq.zori_metro&region_type=eq.metro&select=obs_date&order=obs_date.desc&limit=1`);
     if (mLatest?.length) {
@@ -153,10 +162,8 @@ export async function GET() {
       const mrows = (await sb(`v_indicator_analytics?slug=eq.zori_metro&obs_date=eq.${md}&select=region_code,value,yoy_change,zscore_12`)) || [];
       const byCode = {};
       for (const r of mrows) byCode[r.region_code] = r;
-
       const mig = (await sb(`migration_rankings?select=market&order=report_year.desc`)) || [];
       const migSet = new Set(mig.map((m) => (m.market || "").split(",")[0].trim().toLowerCase()));
-
       markets = CITIES.map((c) => {
         const r = byCode[c.metro];
         const yoyPct = r && r.yoy_change != null ? pctYoY(Number(r.value), Number(r.yoy_change)) : null;
@@ -164,16 +171,8 @@ export async function GET() {
         const trend = z == null ? "flat" : z > 0.3 ? "accelerating" : z < -0.3 ? "cooling" : "flat";
         const inMigration = migSet.has(c.city.split(",")[0].trim().toLowerCase());
         let signal = "neutral";
-        if (yoyPct != null) {
-          if (yoyPct > 0.5 && trend !== "cooling") signal = "bull";
-          else if (yoyPct < 0 || trend === "cooling") signal = "bear";
-        }
-        return {
-          city: c.city, tier: c.tier,
-          rentYoY: yoyPct == null ? null : Math.round(yoyPct * 10) / 10,
-          trend, migration: inMigration, signal,
-          conf: TIER_CONF[c.tier],
-        };
+        if (yoyPct != null) { if (yoyPct > 0.5 && trend !== "cooling") signal = "bull"; else if (yoyPct < 0 || trend === "cooling") signal = "bear"; }
+        return { city: c.city, tier: c.tier, rentYoY: yoyPct == null ? null : Math.round(yoyPct * 10) / 10, trend, migration: inMigration, signal, conf: TIER_CONF[c.tier] };
       }).sort((a, b) => (b.rentYoY ?? -99) - (a.rentYoY ?? -99));
     }
 
