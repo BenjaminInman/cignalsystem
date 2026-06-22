@@ -41,22 +41,34 @@ SERIES = [
      "name": "Zillow Observed Rent Index — National (Multifamily, smoothed, SA)",
      "source_series": "Metro_zori_uc_mfr_sm_sa_month[US]",
      "url": f"{ZORI_BASE}/Metro_zori_uc_mfr_sm_sa_month.csv"},
+    {"slug": "zori_city", "region_type": "city", "region_filter": "city", "code_with_state": True,
+     "name": "Zillow Observed Rent Index — City (SFR+Condo+MF, smoothed, SA)",
+     "source_series": "City_zori_uc_sfrcondomfr_sm_sa_month",
+     "url": f"{ZORI_BASE}/City_zori_uc_sfrcondomfr_sm_sa_month.csv"},
+    {"slug": "zori_county", "region_type": "county", "region_filter": "county", "code_with_state": True,
+     "name": "Zillow Observed Rent Index — County (SFR+Condo+MF, smoothed, SA)",
+     "source_series": "County_zori_uc_sfrcondomfr_sm_sa_month",
+     "url": f"{ZORI_BASE}/County_zori_uc_sfrcondomfr_sm_sa_month.csv"},
 ]
-ID_COLS = ["RegionID","SizeRank","RegionName","RegionType","StateName","State","City","Metro","CountyName"]
+ID_COLS = ["RegionID","SizeRank","RegionName","RegionType","StateName","State","City","Metro","CountyName","StateCodeFIPS","MunicipalCodeFIPS"]
 
 
-def download_and_melt(url, region_filter=None, code_override=None):
+def download_and_melt(url, region_filter=None, code_override=None, code_with_state=False):
     r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=180)
     r.raise_for_status()
     df = pd.read_csv(io.StringIO(r.text))
     if region_filter and "RegionType" in df.columns:           # e.g. metro -> 'msa' only (drop national row)
         df = df[df["RegionType"] == region_filter]
-    months = [c for c in df.columns if c not in ID_COLS]
-    long = df.melt(id_vars=["RegionID", "RegionName"], value_vars=months,
+    if code_with_state and "State" in df.columns:              # city/county: disambiguate by state -> "Name, ST"
+        df = df.assign(_code=df["RegionName"].astype(str) + ", " + df["State"].astype(str))
+    else:
+        df = df.assign(_code=df["RegionName"].astype(str))
+    months = [c for c in df.columns if c not in ID_COLS and c != "_code"]
+    long = df.melt(id_vars=["RegionID", "_code"], value_vars=months,
                    var_name="obs_date", value_name="value").dropna(subset=["value"])
     long["obs_date"]  = pd.to_datetime(long["obs_date"]).dt.date
     long["zillow_id"] = long["RegionID"].astype("int64")
-    long["code"]      = long["RegionName"].astype(str)
+    long["code"]      = long["_code"].astype(str)
     if code_override:                                          # national row -> match the existing US region
         long["code"] = code_override
     print(f"  -> {len(long):,} obs ({long['obs_date'].min()}..{long['obs_date'].max()}), "
@@ -128,7 +140,7 @@ def main():
         with conn.cursor() as cur:
             for s in SERIES:
                 print(f"\n[{s['slug']}]")
-                long = download_and_melt(s["url"], s.get("region_filter"), s.get("code_override"))
+                long = download_and_melt(s["url"], s.get("region_filter"), s.get("code_override"), s.get("code_with_state", False))
                 ind  = ensure_indicator(cur, s)
                 upsert_regions(cur, s["region_type"], long)
                 n = load_series(cur, ind, s["region_type"], long, release)
