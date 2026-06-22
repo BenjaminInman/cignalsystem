@@ -2,53 +2,80 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 async function sb(path) {
   const r = await fetch(`${SUPA}/rest/v1/${path}`, {
-    headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
+    headers: { apikey: KEY, Authorization: `Bearer ${KEY}` },
     cache: "no-store",
   });
-  if (!r.ok) return null;
-  return r.json();
+  return r.ok ? r.json() : null;
 }
 
-function monthLabel(d) {
-  const dt = new Date(d + "T00:00:00Z");
-  return dt.toLocaleString("en-US", { month: "short", year: "2-digit", timeZone: "UTC" }).replace(" ", " '");
+async function fetchSeries(slug, code, ci = false) {
+  const op = ci ? "ilike" : "eq";
+  const enc = encodeURIComponent(code);
+  const rows = await sb(`v_indicator_analytics?slug=eq.${slug}&region_code=${op}.${enc}&select=obs_date,value,yoy_change&order=obs_date.desc&limit=13`);
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  const latest = rows[0];
+  const rent = Math.round(latest.value);
+  const yoyAbs = latest.yoy_change;
+  const prior = yoyAbs != null ? latest.value - yoyAbs : null;
+  const yoyPct = prior && prior !== 0 ? Math.round((yoyAbs / prior) * 1000) / 10 : null;
+  return { rent, yoyPct, asOf: latest.obs_date, trend: rows.slice().reverse().map((x) => Math.round(x.value)) };
+}
+
+const STATES = { alabama: "AL", alaska: "AK", arizona: "AZ", arkansas: "AR", california: "CA", colorado: "CO", connecticut: "CT", delaware: "DE", florida: "FL", georgia: "GA", hawaii: "HI", idaho: "ID", illinois: "IL", indiana: "IN", iowa: "IA", kansas: "KS", kentucky: "KY", louisiana: "LA", maine: "ME", maryland: "MD", massachusetts: "MA", michigan: "MI", minnesota: "MN", mississippi: "MS", missouri: "MO", montana: "MT", nebraska: "NE", nevada: "NV", "new hampshire": "NH", "new jersey": "NJ", "new mexico": "NM", "new york": "NY", "north carolina": "NC", "north dakota": "ND", ohio: "OH", oklahoma: "OK", oregon: "OR", pennsylvania: "PA", "rhode island": "RI", "south carolina": "SC", "south dakota": "SD", tennessee: "TN", texas: "TX", utah: "UT", vermont: "VT", virginia: "VA", washington: "WA", "west virginia": "WV", wisconsin: "WI", wyoming: "WY", "district of columbia": "DC" };
+
+function parseCityState(s) {
+  s = s.trim().replace(/\s+/g, " ");
+  let city, st;
+  if (s.includes(",")) { const i = s.lastIndexOf(","); city = s.slice(0, i).trim(); st = s.slice(i + 1).trim(); }
+  else { const i = s.lastIndexOf(" "); if (i < 0) return null; city = s.slice(0, i).trim(); st = s.slice(i + 1).trim(); }
+  const low = st.toLowerCase();
+  if (STATES[low]) st = STATES[low];
+  else if (/^[A-Za-z]{2}$/.test(st)) st = st.toUpperCase();
+  else return null;
+  if (!city) return null;
+  return { code: `${city}, ${st}` };
 }
 
 export async function GET(req) {
-  const zip = (new URL(req.url).searchParams.get("zip") || "").trim();
-  if (!/^\d{5}$/.test(zip)) return Response.json({ error: "Enter a valid 5-digit ZIP code." }, { status: 400 });
+  const { searchParams } = new URL(req.url);
+  const q = (searchParams.get("q") || searchParams.get("zip") || "").trim();
+  if (!q) return Response.json({ error: "Enter a ZIP code or City, State." }, { status: 400 });
 
-  // 1) resolve the ZIP region
-  const regions = await sb(`regions?region_type=eq.zip&code=eq.${zip}&select=id,code,name&limit=1`);
-  if (!Array.isArray(regions) || regions.length === 0)
-    return Response.json({ found: false, zip });
-  const region = regions[0];
+  try {
+    // ZIP path
+    if (/^\d{5}$/.test(q)) {
+      const zip = q;
+      const z = await fetchSeries("zori_zip", zip);
+      if (z) return Response.json({ found: true, grain: "zip", label: `ZIP ${zip}`, query: zip, ...z });
+      const xw = (await sb(`zip_crosswalk?zip=eq.${zip}&select=*`))?.[0];
+      if (xw) {
+        const ladder = [
+          ["city", "zori_city", xw.city_label],
+          ["county", "zori_county", xw.county_label],
+          ["metro", "zori_metro", xw.metro_label],
+        ];
+        for (const [grain, slug, code] of ladder) {
+          if (!code) continue;
+          const res = await fetchSeries(slug, code);
+          if (res) return Response.json({ found: true, grain, label: grain === "metro" ? `${code} metro` : code, query: zip, rolledUp: true, rolledFrom: `ZIP ${zip}`, ...res });
+        }
+      }
+      return Response.json({ found: false, query: zip, kind: "zip" });
+    }
 
-  // 2) pull ZORI rent history for this ZIP (newest first)
-  const rows = await sb(
-    `v_indicator_analytics?slug=eq.zori_zip&region_id=eq.${region.id}&order=obs_date.desc&limit=13&select=obs_date,value,yoy_change`
-  );
-  if (!Array.isArray(rows) || rows.length === 0)
-    return Response.json({ found: true, zip, rent: null });
-
-  const latest = rows[0];
-  const value = Number(latest.value);
-  const yoyAbs = latest.yoy_change == null ? null : Number(latest.yoy_change);
-  const yearAgo = yoyAbs == null ? null : value - yoyAbs;
-  const yoyPct = yearAgo && yearAgo !== 0 ? (yoyAbs / yearAgo) * 100 : null;
-
-  const ordered = [...rows].reverse(); // oldest -> newest for the trend line
-  return Response.json({
-    found: true,
-    zip,
-    rent: Math.round(value),
-    yoyPct: yoyPct == null ? null : Math.round(yoyPct * 10) / 10,
-    asOf: monthLabel(latest.obs_date),
-    trend: ordered.map((r) => Number(r.value)),
-    periods: ordered.map((r) => monthLabel(r.obs_date)),
-  });
+    // City, State path
+    const parsed = parseCityState(q);
+    if (!parsed) return Response.json({ found: false, query: q, kind: "parse", message: 'Try a format like "Austin, TX".' });
+    for (const [grain, slug] of [["city", "zori_city"], ["metro", "zori_metro"], ["county", "zori_county"]]) {
+      const res = await fetchSeries(slug, parsed.code, true);
+      if (res) return Response.json({ found: true, grain, label: grain === "metro" ? `${parsed.code} metro` : parsed.code, query: q, ...res });
+    }
+    return Response.json({ found: false, query: q, kind: "city" });
+  } catch {
+    return Response.json({ error: "Lookup failed. Please try again." }, { status: 502 });
+  }
 }

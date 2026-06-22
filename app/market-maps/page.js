@@ -318,17 +318,17 @@ function Metric({ label, value, tone }) {
 }
 
 function ZipLookup() {
-  const [zip, setZip] = useState("");
+  const [q, setQ] = useState("");
   const [data, setData] = useState(null);
   const [status, setStatus] = useState("idle"); // idle | loading | error
   const [msg, setMsg] = useState("");
 
   const search = async () => {
-    const z = zip.trim();
-    if (!/^\d{5}$/.test(z)) { setStatus("error"); setMsg("Enter a valid 5-digit ZIP code."); setData(null); return; }
+    const v = q.trim();
+    if (!v) { setStatus("error"); setMsg("Enter a ZIP code or City, State."); setData(null); return; }
     setStatus("loading"); setMsg(""); setData(null);
     try {
-      const r = await fetch(`/api/zip?zip=${z}`);
+      const r = await fetch(`/api/zip?q=${encodeURIComponent(v)}`);
       const d = await r.json();
       if (!r.ok) { setStatus("error"); setMsg(d.error || "Lookup failed. Please try again."); return; }
       setData(d); setStatus("idle");
@@ -337,23 +337,23 @@ function ZipLookup() {
     }
   };
 
-  const hasRent = data?.found && data.rent != null;
+  const GRAIN = { zip: "ZIP", city: "CITY", county: "COUNTY", metro: "METRO" };
+  const up = data?.found && (data.yoyPct == null || data.yoyPct >= 0);
 
   return (
     <section className="relative mt-8 overflow-hidden rounded-2xl border border-signal/30 bg-gradient-to-br from-signal/[0.07] via-bg2/40 to-bg/20 p-6 md:p-7">
-      <p className="kicker mb-2 flex items-center gap-2"><Search size={13} className="text-signal" /> ZIP Lookup</p>
-      <h2 className="headline text-2xl text-ink md:text-3xl">Look up any ZIP code</h2>
+      <p className="kicker mb-2 flex items-center gap-2"><Search size={13} className="text-signal" /> Market Lookup</p>
+      <h2 className="headline text-2xl text-ink md:text-3xl">Look up any ZIP or city</h2>
       <p className="mt-2 max-w-2xl text-sm text-muted">
-        Type a 5-digit ZIP to pull its current rent and year-over-year trend from Zillow&apos;s rent index. Demographics, occupancy, and local market context are coming next.
+        Enter a 5-digit ZIP or a City, State. You get the most precise rent read available — and if a ZIP isn&apos;t covered, it rolls up to the city, county, or metro, always clearly labeled.
       </p>
 
       <div className="mt-5 flex max-w-md gap-2">
         <input
-          value={zip}
-          onChange={(e) => setZip(e.target.value.replace(/\D/g, "").slice(0, 5))}
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && search()}
-          inputMode="numeric"
-          placeholder="e.g. 10001"
+          placeholder="ZIP code or City, State"
           className="flex-1 rounded-md border border-[var(--line)] bg-bg2 px-4 py-2.5 text-sm text-ink placeholder:text-muted/60 outline-none focus:border-signal/40"
         />
         <button onClick={search} disabled={status === "loading"} className="mono rounded-md bg-signal px-5 py-2.5 text-[12px] tracking-[0.08em] text-bg transition-opacity hover:opacity-90 disabled:opacity-50">
@@ -363,18 +363,22 @@ function ZipLookup() {
       {status === "error" && <p className="mt-2 text-[12px] text-down">{msg}</p>}
 
       {data && !data.found && (
-        <p className="mt-5 text-sm text-muted">No rent data for ZIP <span className="text-ink">{data.zip}</span>. Zillow doesn&apos;t publish a rent index for every ZIP — try a nearby one.</p>
-      )}
-      {data && data.found && data.rent == null && (
-        <p className="mt-5 text-sm text-muted">ZIP <span className="text-ink">{data.zip}</span> is recognized, but Zillow has no rent series for it yet.</p>
+        <p className="mt-5 text-sm text-muted">
+          {data.kind === "parse"
+            ? (data.message || "Couldn't read that. Try a format like \"Austin, TX\".")
+            : <>No rent data for <span className="text-ink">{data.query}</span> — Zillow doesn&apos;t cover every area. Try a nearby ZIP or a larger city.</>}
+        </p>
       )}
 
-      {hasRent && (
+      {data?.found && (
         <div className="mt-5 rounded-xl border border-[var(--line)] bg-bg2/60 p-5">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="mono text-[11px] tracking-[0.12em] text-muted">ZIP {data.zip} · OBSERVED RENT</p>
-              <p className="mt-1 text-3xl font-semibold text-ink">${data.rent.toLocaleString()}<span className="ml-1 text-sm text-muted">/mo</span></p>
+              <p className="mono flex flex-wrap items-center gap-2 text-[11px] tracking-[0.12em] text-muted">
+                <span className="rounded bg-signal/15 px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-signal">{GRAIN[data.grain]}</span>
+                {data.label} · OBSERVED RENT
+              </p>
+              <p className="mt-1.5 text-3xl font-semibold text-ink">${data.rent.toLocaleString()}<span className="ml-1 text-sm text-muted">/mo</span></p>
               <p className="mt-1 text-sm">
                 {data.yoyPct == null ? (
                   <span className="text-muted">Not enough history for a year-over-year read yet.</span>
@@ -384,12 +388,19 @@ function ZipLookup() {
               </p>
             </div>
             {data.trend?.length > 1 && (
-              <Sparkline series={data.trend} color={data.yoyPct >= 0 ? "#5FB97C" : "#E5634D"} w={170} h={46} />
+              <Sparkline series={data.trend} color={up ? "#5FB97C" : "#E5634D"} w={170} h={46} />
             )}
           </div>
-          <p className="mono mt-3 text-[10px] tracking-[0.08em] text-muted">As of {data.asOf} · Zillow Observed Rent Index (SFR+Condo+MF, smoothed)</p>
+
+          {data.rolledUp && (
+            <p className="mono mt-3 rounded-md border border-signal/20 bg-signal/[0.06] px-3 py-2 text-[10px] leading-relaxed tracking-[0.04em] text-muted">
+              No ZIP-level series for {data.rolledFrom} — showing the closest covered area ({data.label}).
+            </p>
+          )}
+
+          <p className="mono mt-3 text-[10px] tracking-[0.08em] text-muted">As of {data.asOf} · Zillow Observed Rent Index (all rental types, smoothed)</p>
           <div className="mt-4 border-t border-[var(--line)] pt-3">
-            <p className="mono text-[10px] tracking-[0.1em] text-muted">COMING NEXT FOR THIS ZIP</p>
+            <p className="mono text-[10px] tracking-[0.1em] text-muted">COMING NEXT FOR THIS AREA</p>
             <p className="mt-1 text-[12px] leading-relaxed text-muted">Renter share, occupancy &amp; vacancy, median income and household counts (Census ACS) · local job growth, building permits &amp; news at the county/metro level.</p>
           </div>
         </div>
