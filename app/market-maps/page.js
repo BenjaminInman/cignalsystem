@@ -6,6 +6,7 @@ import { toneColor, Sparkline } from "@/components/ui";
 import { useContent, useVertical } from "@/components/VerticalProvider";
 import { isPageReady } from "@/lib/verticals";
 import ComingSoonInline from "@/components/ComingSoonInline";
+import EmergingMarkets from "@/components/EmergingMarkets";
 
 function fmtMonth(d) {
   if (!d) return "";
@@ -154,6 +155,7 @@ function MarketMapsInner() {
 
       <MigrationTrends data={mig?.uhaul} />
       <PodsTrends data={mig?.pods} />
+      <EmergingMarkets />
     </div>
   );
 }
