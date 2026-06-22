@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MapPin, Building2, ChevronDown, Truck, Package } from "lucide-react";
-import { toneColor } from "@/components/ui";
+import { MapPin, Building2, ChevronDown, Truck, Package, Search } from "lucide-react";
+import { toneColor, Sparkline } from "@/components/ui";
 import { useContent, useVertical } from "@/components/VerticalProvider";
 import { isPageReady } from "@/lib/verticals";
 import ComingSoonInline from "@/components/ComingSoonInline";
@@ -59,6 +59,8 @@ function MarketMapsInner() {
     <div className="pt-12 pb-10">
       <h1 className="headline text-4xl text-ink md:text-5xl">Market Maps</h1>
       <p className="mt-3 max-w-2xl text-muted">{COPY.mmSubtitle || "Fundamentals scored and ranked across top U.S. metros."}</p>
+
+      <ZipLookup />
 
       <div className="card mt-8 p-6">
         <h2 className="mb-4 font-semibold text-ink">{labels[0]} Comparison — Top Markets</h2>
@@ -251,5 +253,86 @@ function Metric({ label, value, tone }) {
       <p className="mono text-[10px] tracking-[0.12em] text-muted">{label}</p>
       <p className="mono mt-1 text-sm" style={{ color: tone ? toneColor(tone) : "#eceeef" }}>{value}</p>
     </div>
+  );
+}
+
+function ZipLookup() {
+  const [zip, setZip] = useState("");
+  const [data, setData] = useState(null);
+  const [status, setStatus] = useState("idle"); // idle | loading | error
+  const [msg, setMsg] = useState("");
+
+  const search = async () => {
+    const z = zip.trim();
+    if (!/^\d{5}$/.test(z)) { setStatus("error"); setMsg("Enter a valid 5-digit ZIP code."); setData(null); return; }
+    setStatus("loading"); setMsg(""); setData(null);
+    try {
+      const r = await fetch(`/api/zip?zip=${z}`);
+      const d = await r.json();
+      if (!r.ok) { setStatus("error"); setMsg(d.error || "Lookup failed. Please try again."); return; }
+      setData(d); setStatus("idle");
+    } catch {
+      setStatus("error"); setMsg("Lookup failed. Please try again.");
+    }
+  };
+
+  const hasRent = data?.found && data.rent != null;
+
+  return (
+    <section className="relative mt-8 overflow-hidden rounded-2xl border border-signal/30 bg-gradient-to-br from-signal/[0.07] via-bg2/40 to-bg/20 p-6 md:p-7">
+      <p className="kicker mb-2 flex items-center gap-2"><Search size={13} className="text-signal" /> ZIP Lookup</p>
+      <h2 className="headline text-2xl text-ink md:text-3xl">Look up any ZIP code</h2>
+      <p className="mt-2 max-w-2xl text-sm text-muted">
+        Type a 5-digit ZIP to pull its current rent and year-over-year trend from Zillow&apos;s rent index. Demographics, occupancy, and local market context are coming next.
+      </p>
+
+      <div className="mt-5 flex max-w-md gap-2">
+        <input
+          value={zip}
+          onChange={(e) => setZip(e.target.value.replace(/\D/g, "").slice(0, 5))}
+          onKeyDown={(e) => e.key === "Enter" && search()}
+          inputMode="numeric"
+          placeholder="e.g. 10001"
+          className="flex-1 rounded-md border border-[var(--line)] bg-bg2 px-4 py-2.5 text-sm text-ink placeholder:text-muted/60 outline-none focus:border-signal/40"
+        />
+        <button onClick={search} disabled={status === "loading"} className="mono rounded-md bg-signal px-5 py-2.5 text-[12px] tracking-[0.08em] text-bg transition-opacity hover:opacity-90 disabled:opacity-50">
+          {status === "loading" ? "…" : "SEARCH"}
+        </button>
+      </div>
+      {status === "error" && <p className="mt-2 text-[12px] text-down">{msg}</p>}
+
+      {data && !data.found && (
+        <p className="mt-5 text-sm text-muted">No rent data for ZIP <span className="text-ink">{data.zip}</span>. Zillow doesn&apos;t publish a rent index for every ZIP — try a nearby one.</p>
+      )}
+      {data && data.found && data.rent == null && (
+        <p className="mt-5 text-sm text-muted">ZIP <span className="text-ink">{data.zip}</span> is recognized, but Zillow has no rent series for it yet.</p>
+      )}
+
+      {hasRent && (
+        <div className="mt-5 rounded-xl border border-[var(--line)] bg-bg2/60 p-5">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="mono text-[11px] tracking-[0.12em] text-muted">ZIP {data.zip} · OBSERVED RENT</p>
+              <p className="mt-1 text-3xl font-semibold text-ink">${data.rent.toLocaleString()}<span className="ml-1 text-sm text-muted">/mo</span></p>
+              <p className="mt-1 text-sm">
+                {data.yoyPct == null ? (
+                  <span className="text-muted">Not enough history for a year-over-year read yet.</span>
+                ) : (
+                  <span style={{ color: toneColor(data.yoyPct >= 0 ? "bull" : "bear") }}>{data.yoyPct >= 0 ? "+" : ""}{data.yoyPct}% YoY</span>
+                )}
+              </p>
+            </div>
+            {data.trend?.length > 1 && (
+              <Sparkline series={data.trend} color={data.yoyPct >= 0 ? "#5FB97C" : "#E5634D"} w={170} h={46} />
+            )}
+          </div>
+          <p className="mono mt-3 text-[10px] tracking-[0.08em] text-muted">As of {data.asOf} · Zillow Observed Rent Index (SFR+Condo+MF, smoothed)</p>
+          <div className="mt-4 border-t border-[var(--line)] pt-3">
+            <p className="mono text-[10px] tracking-[0.1em] text-muted">COMING NEXT FOR THIS ZIP</p>
+            <p className="mt-1 text-[12px] leading-relaxed text-muted">Renter share, occupancy &amp; vacancy, median income and household counts (Census ACS) · local job growth, building permits &amp; news at the county/metro level.</p>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
