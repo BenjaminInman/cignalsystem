@@ -33,6 +33,14 @@ SERIES = [
      "name": "Zillow Observed Rent Index — National (SFR+Condo+MF, smoothed, SA)",
      "source_series": "Metro_zori_uc_sfrcondomfr_sm_sa_month[US]",
      "url": f"{ZORI_BASE}/Metro_zori_uc_sfrcondomfr_sm_sa_month.csv"},
+    {"slug": "zori_metro_mf", "region_type": "metro", "region_filter": "msa",
+     "name": "Zillow Observed Rent Index — Metro (Multifamily, smoothed, SA)",
+     "source_series": "Metro_zori_uc_mfr_sm_sa_month",
+     "url": f"{ZORI_BASE}/Metro_zori_uc_mfr_sm_sa_month.csv"},
+    {"slug": "zori_national_mf", "region_type": "national", "region_filter": "country", "code_override": "US",
+     "name": "Zillow Observed Rent Index — National (Multifamily, smoothed, SA)",
+     "source_series": "Metro_zori_uc_mfr_sm_sa_month[US]",
+     "url": f"{ZORI_BASE}/Metro_zori_uc_mfr_sm_sa_month.csv"},
 ]
 ID_COLS = ["RegionID","SizeRank","RegionName","RegionType","StateName","State","City","Metro","CountyName"]
 
