@@ -106,7 +106,8 @@ function MarketMapsInner() {
   const filters = ["All", ...MARKET_GROUPS.map((g) => g.region)];
   const groups = groupsAll.filter((g) => f === "All" || g.region === f);
   const flat = groupsAll.flatMap((g) => g.markets);
-  const all = (loaded ? flat.filter((m) => m.live) : flat).sort((a, b) => b.rentVal - a.rentVal);
+  // Rent Growth Comparison chart shows positive-growth markets only (prefers live ZORI data).
+  const all = flat.filter((m) => (loaded ? m.live : true) && m.rentVal > 0).sort((a, b) => b.rentVal - a.rentVal);
 
   return (
     <div className="pt-12 pb-10">
