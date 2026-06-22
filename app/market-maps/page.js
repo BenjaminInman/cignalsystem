@@ -7,32 +7,72 @@ import { useContent, useVertical } from "@/components/VerticalProvider";
 import { isPageReady } from "@/lib/verticals";
 import ComingSoonInline from "@/components/ComingSoonInline";
 
+function fmtMonth(d) {
+  if (!d) return "";
+  const x = new Date(d + "T00:00:00Z");
+  return x.toLocaleString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
+}
+
 function BarChart({ all }) {
+  const [hi, setHi] = useState(null);
   const w = 1100, h = 230, pad = 30;
-  const vals = all.map((m) => parseFloat(m.rent));
+  const vals = all.map((m) => m.rentVal);
   const max = Math.max(...vals, 6), min = Math.min(...vals, -2);
   const span = max - min || 1;
   const bw = (w - pad * 2) / Math.max(all.length, 1);
-  const zeroY = pad + ((max - 0) / span) * (h - pad * 2);
+  const yOf = (v) => pad + ((max - v) / span) * (h - pad * 2);
+  const zeroY = yOf(0);
+  const showLabels = all.length <= 12;
+
   return (
-    <svg viewBox={`0 0 ${w} ${h + 30}`} className="w-full">
+    <svg viewBox={`0 0 ${w} ${h + 30}`} className="w-full" onMouseLeave={() => setHi(null)}>
       <line x1={pad} y1={zeroY} x2={w - pad} y2={zeroY} stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
       {all.map((m, i) => {
-        const v = parseFloat(m.rent);
+        const v = m.rentVal;
         const x = pad + i * bw + bw * 0.18;
         const bwInner = bw * 0.64;
-        const y = pad + ((max - Math.max(v, 0)) / span) * (h - pad * 2);
-        const hgt = Math.abs((v / span) * (h - pad * 2));
-        const showLabel = all.length <= 12 || i % 2 === 0;
+        const y = v >= 0 ? yOf(v) : zeroY;
+        const hgt = Math.max(Math.abs(yOf(v) - zeroY), 1);
+        const isHi = hi === i;
+        const showLabel = (showLabels || i % 2 === 0) && !isHi;
         return (
-          <g key={m.city}>
-            <rect x={x} y={v >= 0 ? y : zeroY} width={bwInner} height={hgt} rx="3" fill={toneColor(m.tone)} opacity="0.85" />
+          <g key={m.city} onMouseEnter={() => setHi(i)} style={{ cursor: "pointer" }}>
+            <rect x={pad + i * bw} y={pad} width={bw} height={h - pad} fill="transparent" />
+            <rect
+              x={x} y={y} width={bwInner} height={hgt} rx="3"
+              fill={toneColor(m.rentTone || m.tone)} opacity={isHi ? 1 : 0.85}
+              style={{
+                transition: "transform .18s ease, opacity .18s ease",
+                transformBox: "fill-box",
+                transformOrigin: v >= 0 ? "center bottom" : "center top",
+                transform: isHi ? "scaleY(1.09)" : "none",
+              }}
+            />
             {showLabel && (
               <text x={x + bwInner / 2} y={h + 14} textAnchor="middle" fontSize="11" fill="#797e85" fontFamily="IBM Plex Mono">{m.city.split(",")[0]}</text>
             )}
           </g>
         );
       })}
+      {hi != null && all[hi] && (() => {
+        const m = all[hi];
+        const v = m.rentVal;
+        const cx = pad + hi * bw + bw * 0.5;
+        const pctTxt = `${v >= 0 ? "+" : ""}${v}%`;
+        const label = `${m.city}   ${pctTxt}`;
+        const tw = label.length * 6.6 + 22;
+        const tx = Math.max(pad, Math.min(cx - tw / 2, w - pad - tw));
+        const ty = Math.max(yOf(Math.max(v, 0)) - 40, 2);
+        return (
+          <g pointerEvents="none">
+            <rect x={tx} y={ty} width={tw} height={28} rx="6" fill="#0E0F11" stroke="rgba(245,181,68,0.55)" strokeWidth="1" />
+            <text x={tx + tw / 2} y={ty + 18} textAnchor="middle" fontSize="12.5" fontFamily="IBM Plex Mono">
+              <tspan fill="#ECEDEF">{m.city}</tspan>
+              <tspan fill={toneColor(m.rentTone || m.tone)}>{"   " + pctTxt}</tspan>
+            </text>
+          </g>
+        );
+      })()}
     </svg>
   );
 }
@@ -47,13 +87,25 @@ function MarketMapsInner() {
   const { MARKET_GROUPS = [], COPY = {} } = useContent();
   const [f, setF] = useState("All");
   const [mig, setMig] = useState(null);
+  const [growth, setGrowth] = useState(null);
   useEffect(() => {
     fetch("/api/migration").then((r) => r.json()).then(setMig).catch(() => setMig({}));
+    fetch("/api/metro-growth").then((r) => r.json()).then(setGrowth).catch(() => setGrowth({ growth: {} }));
   }, []);
   const labels = COPY.mmMetrics || ["Rent Growth", "Vacancy", "Cap Rate", "NOI Growth"];
+  const gmap = growth?.growth || {};
+  const loaded = growth != null;
+  const withLive = (m) => {
+    const g = gmap[m.city];
+    if (g == null) return { ...m, rentVal: parseFloat(m.rent), rentTone: m.tone, live: false };
+    const rentTone = g > 0.15 ? "bull" : g < -0.15 ? "bear" : "neutral";
+    return { ...m, rent: `${g >= 0 ? "+" : ""}${g}%`, rentVal: g, rentTone, live: true };
+  };
+  const groupsAll = MARKET_GROUPS.map((g) => ({ ...g, markets: g.markets.map(withLive) }));
   const filters = ["All", ...MARKET_GROUPS.map((g) => g.region)];
-  const groups = MARKET_GROUPS.filter((g) => f === "All" || g.region === f);
-  const all = MARKET_GROUPS.flatMap((g) => g.markets).sort((a, b) => parseFloat(b.rent) - parseFloat(a.rent));
+  const groups = groupsAll.filter((g) => f === "All" || g.region === f);
+  const flat = groupsAll.flatMap((g) => g.markets);
+  const all = (loaded ? flat.filter((m) => m.live) : flat).sort((a, b) => b.rentVal - a.rentVal);
 
   return (
     <div className="pt-12 pb-10">
@@ -63,8 +115,14 @@ function MarketMapsInner() {
       <ZipLookup />
 
       <div className="card mt-8 p-6">
-        <h2 className="mb-4 font-semibold text-ink">{labels[0]} Comparison — Top Markets</h2>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-semibold text-ink">{labels[0]} Comparison — Top Markets</h2>
+          <span className="mono text-[10px] tracking-[0.08em] text-muted">
+            {growth?.asOf ? <><span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-up align-middle" />LIVE · ZORI YoY · as of {fmtMonth(growth.asOf)}</> : "Loading live data…"}
+          </span>
+        </div>
         <BarChart all={all} />
+        <p className="mono mt-2 text-[10px] tracking-[0.06em] text-muted">Hover a bar for the metro and its year-over-year rent growth · sorted high to low.</p>
       </div>
 
       <div className="mt-8 flex flex-wrap gap-2">
@@ -80,7 +138,7 @@ function MarketMapsInner() {
             {g.markets.map((m, i) => (
               <div key={m.city} className={`grid grid-cols-2 items-center gap-4 px-6 py-5 md:grid-cols-[1.4fr_repeat(4,1fr)_auto] bg-bg2 ${i ? "border-t border-[var(--line)]" : ""}`}>
                 <p className="flex items-center gap-2 font-semibold text-ink"><MapPin size={14} className="text-muted" /> {m.city}</p>
-                <Metric label={labels[0]} value={m.rent} tone={m.tone} />
+                <Metric label={labels[0]} value={m.rent} tone={m.rentTone} />
                 <Metric label={labels[1]} value={m.vac} />
                 <Metric label={labels[2]} value={m.cap} />
                 <Metric label={labels[3]} value={m.noi} tone={m.tone} />
