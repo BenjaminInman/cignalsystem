@@ -79,3 +79,15 @@ html, body {
   .draw-line { animation: none; stroke-dashoffset: 0 !important; }
   .trend-fade { animation: none; opacity: 1 !important; }
 }
+
+/* Cignal Room notification toast (macOS-style) */
+@keyframes notifIn {
+  from { opacity: 0; transform: translateX(28px) scale(0.97); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes notifOut {
+  from { opacity: 1; transform: translateX(0) scale(1); }
+  to   { opacity: 0; transform: translateX(28px) scale(0.97); }
+}
+.notif-in  { animation: notifIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.notif-out { animation: notifOut 0.3s ease forwards; }

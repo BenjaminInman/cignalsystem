@@ -4,6 +4,7 @@ import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import ComingSoon from "@/components/ComingSoon";
 import { VerticalProvider } from "@/components/VerticalProvider";
+import CommunityNotifier from "@/components/CommunityNotifier";
 import { getActiveVertical, getActiveContent } from "@/lib/active-vertical";
 
 export function generateMetadata() {
@@ -27,6 +28,7 @@ export default function RootLayout({ children }) {
               <Nav />
               <main className="mx-auto max-w-[1400px] px-5 pb-4">{children}</main>
               <Footer />
+              <CommunityNotifier />
             </VerticalProvider>
           ) : (
             <ComingSoon vertical={vertical} />
