@@ -1,4 +1,4 @@
-name: Ingest BLS (metro employment)
+name: Ingest BLS (metro employment + unemployment + rent CPI)
 on:
   schedule:
     - cron: '0 17 22 * *'   # monthly; CES metro release lands mid-to-late month
