@@ -321,22 +321,25 @@ function ZipLookup() {
   const [q, setQ] = useState("");
   const [data, setData] = useState(null);
   const [demo, setDemo] = useState(null); // ZIP-level Census demographics
+  const [signals, setSignals] = useState(null); // metro-level signals (jobs, RPP, rent CPI…)
   const [status, setStatus] = useState("idle"); // idle | loading | error
   const [msg, setMsg] = useState("");
 
   const search = async () => {
     const v = q.trim();
     if (!v) { setStatus("error"); setMsg("Enter a ZIP code or City, State."); setData(null); return; }
-    setStatus("loading"); setMsg(""); setData(null); setDemo(null);
+    setStatus("loading"); setMsg(""); setData(null); setDemo(null); setSignals(null);
     const isZip = /^\d{5}$/.test(v);
     try {
-      const [zr, dr] = await Promise.all([
+      const [zr, dr, sr] = await Promise.all([
         fetch(`/api/zip?q=${encodeURIComponent(v)}`).then((r) => r.json().then((d) => ({ ok: r.ok, d }))),
         isZip ? fetch(`/api/zip-demographics?zip=${v}`).then((r) => r.json()).catch(() => null) : Promise.resolve(null),
+        isZip ? fetch(`/api/metro-signals?zip=${v}`).then((r) => r.json()).catch(() => null) : Promise.resolve(null),
       ]);
       if (!zr.ok) { setStatus("error"); setMsg(zr.d.error || "Lookup failed. Please try again."); return; }
       setData(zr.d);
       if (dr?.found) setDemo(dr);
+      if (sr?.found) setSignals(sr);
       setStatus("idle");
     } catch {
       setStatus("error"); setMsg("Lookup failed. Please try again.");
@@ -405,7 +408,7 @@ function ZipLookup() {
           )}
 
           <p className="mono mt-3 text-[10px] tracking-[0.08em] text-muted">As of {data.asOf} · Zillow Observed Rent Index (all rental types, smoothed)</p>
-          {demo ? (
+          {demo && (
             <div className="mt-4 border-t border-[var(--line)] pt-4">
               <p className="mono text-[10px] tracking-[0.1em] text-muted">ZIP DEMOGRAPHICS · CENSUS ACS</p>
               <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -425,7 +428,37 @@ function ZipLookup() {
               </div>
               <p className="mono mt-3 text-[10px] tracking-[0.08em] text-muted">Census ACS 5-Year · vintage {String(demo.asOf).slice(0, 4)} · rent burden = median gross rent ÷ income</p>
             </div>
-          ) : (
+          )}
+
+          {signals && (
+            <div className="mt-4 border-t border-[var(--line)] pt-4">
+              <p className="mono text-[10px] tracking-[0.1em] text-muted">
+                METRO SIGNALS{signals.metroName ? ` · ${signals.metroName.replace(/ \(Metropolitan.*\)$/, "")}` : ""}
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {(() => {
+                  const s = signals.signals;
+                  const cards = [];
+                  if (s.employment) cards.push(["Job Growth (YoY)", s.employment.yoyPct != null ? `${s.employment.yoyPct >= 0 ? "+" : ""}${s.employment.yoyPct}%` : `${Math.round(s.employment.value)}K`, s.employment.yoyPct]);
+                  if (s.unemployment) cards.push(["Unemployment", `${s.unemployment.value}%`, null]);
+                  if (s.rentsRPP) cards.push(["Rent Price Level", `${Math.round(s.rentsRPP.value)}`, null, "US = 100"]);
+                  if (s.cpiRent) cards.push(["Rent CPI (YoY)", s.cpiRent.yoyPct != null ? `${s.cpiRent.yoyPct >= 0 ? "+" : ""}${s.cpiRent.yoyPct}%` : `${Math.round(s.cpiRent.value)}`, s.cpiRent.yoyPct]);
+                  if (s.vacancy) cards.push(["Apt Vacancy", `${Number(s.vacancy.value).toFixed(1)}%`, null]);
+                  if (s.daysOnMarket) cards.push(["Days on Market", `${Math.round(s.daysOnMarket.value)} days`, null]);
+                  return cards.map(([k, v, tone, sub]) => (
+                    <div key={k} className="rounded-lg border border-[var(--line)] bg-bg2/40 p-3">
+                      <p className="mono text-[9px] tracking-[0.08em] text-muted">{k.toUpperCase()}</p>
+                      <p className="mt-1 text-lg font-semibold" style={{ color: tone == null ? "var(--ink)" : toneColor(tone >= 0 ? "bull" : "bear") }}>{v}</p>
+                      {sub && <p className="mono text-[8px] tracking-[0.08em] text-muted">{sub}</p>}
+                    </div>
+                  ));
+                })()}
+              </div>
+              <p className="mono mt-3 text-[10px] tracking-[0.08em] text-muted">Metro level (CBSA) · BLS jobs &amp; unemployment, BEA rent price parity, Apartment List vacancy &amp; days-on-market</p>
+            </div>
+          )}
+
+          {!demo && !signals && (
             <div className="mt-4 border-t border-[var(--line)] pt-3">
               <p className="mono text-[10px] tracking-[0.1em] text-muted">COMING NEXT FOR THIS AREA</p>
               <p className="mt-1 text-[12px] leading-relaxed text-muted">Local job growth, building permits &amp; news at the county/metro level.</p>
