@@ -11,7 +11,7 @@ import { toneColor } from "@/components/ui";
 
 const SUITE = [
   { name: "Indicators", href: "/indicators", icon: Activity, desc: "Leading & trailing metrics across every major metro." },
-  { name: "Market Maps", href: "/market-maps", icon: BarChart3, desc: "Fundamentals scored and ranked across 42 MSAs." },
+  { name: "Market Maps", href: "/market-maps", icon: BarChart3, desc: "Fundamentals scored and ranked across 390+ MSAs." },
   { name: "Forecasts", href: "/forecasts", icon: LineChart, desc: "5-year forward projections and scenario models." },
   { name: "Signals", href: "/signals", icon: Radio, desc: "Synthesized alerts when a market shifts cycle phase." },
   { name: "Research", href: "/research", icon: BookOpen, desc: "In-depth briefings that turn data into a thesis." },

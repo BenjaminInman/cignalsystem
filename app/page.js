@@ -346,7 +346,7 @@ export default function Home() {
           <div className="max-w-xl">
             <p className="kicker mb-3 flex items-center gap-2"><Lock size={12} className="text-signal" /> Pro Intelligence</p>
             <h3 className="headline text-3xl text-ink">Go deeper with Cignal Pro</h3>
-            <p className="mt-3 text-muted">Access submarket-level indicators, custom alert thresholds, portfolio stress testing, and quarterly forecast models across 200+ MSAs.</p>
+            <p className="mt-3 text-muted">Access submarket-level indicators, custom alert thresholds, portfolio stress testing, and quarterly forecast models across 390+ MSAs.</p>
           </div>
           <div className="flex shrink-0 gap-3">
             <Link href="/signals" className="mono flex items-center gap-2 rounded-sm bg-signal px-5 py-3 text-[12px] tracking-[0.08em] text-bg hover:opacity-90">View Live Signals <ArrowRight size={14} /></Link>
