@@ -1,0 +1,17 @@
+name: Ingest HUD (FMR + ZIP-CBSA crosswalk)
+on:
+  schedule:
+    - cron: '0 15 8 * *'   # monthly; picks up quarterly crosswalk + annual (Oct) FMR refresh
+  workflow_dispatch: {}
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: pip install psycopg2-binary requests
+      - env:
+          HUD_API_TOKEN: ${{ secrets.HUD_API_TOKEN }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: python ingest_hud.py
