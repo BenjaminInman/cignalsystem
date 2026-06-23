@@ -186,7 +186,8 @@ function ForecastsInner() {
       <p className="mt-3 max-w-2xl text-muted">{COPY.fcSubtitle || "5-year forward projections across leading indicators."}</p>
 
       {/* Cycle gauge (live centerpiece) */}
-      {fc?.cycle && <CycleGauge cycle={fc.cycle} />}
+      {/* Cycle Position gauge temporarily removed — reconnect once concessions + correct
+          indicators are live. To restore: {fc?.cycle && <CycleGauge cycle={fc.cycle} />} */}
 
       {/* Scenario projection chart */}
       <div className="mt-8 flex flex-wrap items-center gap-6">
