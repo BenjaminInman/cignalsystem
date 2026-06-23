@@ -126,7 +126,7 @@ def main():
                             else:
                                 skip += 1
             print(f"Census ACS — inserted {ins}, unchanged {skip}")
-            cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_indicator_analytics;")
+            cur.execute("REFRESH MATERIALIZED VIEW mv_indicator_analytics;")
         conn.commit()
     finally:
         conn.close()

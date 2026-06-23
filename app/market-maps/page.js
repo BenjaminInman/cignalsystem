@@ -320,18 +320,24 @@ function Metric({ label, value, tone }) {
 function ZipLookup() {
   const [q, setQ] = useState("");
   const [data, setData] = useState(null);
+  const [demo, setDemo] = useState(null); // ZIP-level Census demographics
   const [status, setStatus] = useState("idle"); // idle | loading | error
   const [msg, setMsg] = useState("");
 
   const search = async () => {
     const v = q.trim();
     if (!v) { setStatus("error"); setMsg("Enter a ZIP code or City, State."); setData(null); return; }
-    setStatus("loading"); setMsg(""); setData(null);
+    setStatus("loading"); setMsg(""); setData(null); setDemo(null);
+    const isZip = /^\d{5}$/.test(v);
     try {
-      const r = await fetch(`/api/zip?q=${encodeURIComponent(v)}`);
-      const d = await r.json();
-      if (!r.ok) { setStatus("error"); setMsg(d.error || "Lookup failed. Please try again."); return; }
-      setData(d); setStatus("idle");
+      const [zr, dr] = await Promise.all([
+        fetch(`/api/zip?q=${encodeURIComponent(v)}`).then((r) => r.json().then((d) => ({ ok: r.ok, d }))),
+        isZip ? fetch(`/api/zip-demographics?zip=${v}`).then((r) => r.json()).catch(() => null) : Promise.resolve(null),
+      ]);
+      if (!zr.ok) { setStatus("error"); setMsg(zr.d.error || "Lookup failed. Please try again."); return; }
+      setData(zr.d);
+      if (dr?.found) setDemo(dr);
+      setStatus("idle");
     } catch {
       setStatus("error"); setMsg("Lookup failed. Please try again.");
     }
@@ -399,10 +405,32 @@ function ZipLookup() {
           )}
 
           <p className="mono mt-3 text-[10px] tracking-[0.08em] text-muted">As of {data.asOf} · Zillow Observed Rent Index (all rental types, smoothed)</p>
-          <div className="mt-4 border-t border-[var(--line)] pt-3">
-            <p className="mono text-[10px] tracking-[0.1em] text-muted">COMING NEXT FOR THIS AREA</p>
-            <p className="mt-1 text-[12px] leading-relaxed text-muted">Renter share, occupancy &amp; vacancy, median income and household counts (Census ACS) · local job growth, building permits &amp; news at the county/metro level.</p>
-          </div>
+          {demo ? (
+            <div className="mt-4 border-t border-[var(--line)] pt-4">
+              <p className="mono text-[10px] tracking-[0.1em] text-muted">ZIP DEMOGRAPHICS · CENSUS ACS</p>
+              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {[
+                  ["Median Rent", demo.medianRent != null ? `$${demo.medianRent.toLocaleString()}` : "—"],
+                  ["Renter Share", demo.renterShare != null ? `${demo.renterShare}%` : "—"],
+                  ["Median Income", demo.medianIncome != null ? `$${demo.medianIncome.toLocaleString()}` : "—"],
+                  ["Rent Burden", demo.rentBurden != null ? `${demo.rentBurden}%` : "—"],
+                  ["MF Stock (5+ units)", demo.mfStockShare != null ? `${demo.mfStockShare}%` : "—"],
+                  ["Median Home Value", demo.medianHomeValue != null ? `$${demo.medianHomeValue.toLocaleString()}` : "—"],
+                ].map(([k, v]) => (
+                  <div key={k} className="rounded-lg border border-[var(--line)] bg-bg2/40 p-3">
+                    <p className="mono text-[9px] tracking-[0.08em] text-muted">{k.toUpperCase()}</p>
+                    <p className="mt-1 text-lg font-semibold text-ink">{v}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="mono mt-3 text-[10px] tracking-[0.08em] text-muted">Census ACS 5-Year · vintage {String(demo.asOf).slice(0, 4)} · rent burden = median gross rent ÷ income</p>
+            </div>
+          ) : (
+            <div className="mt-4 border-t border-[var(--line)] pt-3">
+              <p className="mono text-[10px] tracking-[0.1em] text-muted">COMING NEXT FOR THIS AREA</p>
+              <p className="mt-1 text-[12px] leading-relaxed text-muted">Local job growth, building permits &amp; news at the county/metro level.</p>
+            </div>
+          )}
         </div>
       )}
     </section>
