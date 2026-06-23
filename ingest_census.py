@@ -30,9 +30,15 @@ MF_PARTS = ["B25024_007E", "B25024_008E", "B25024_009E", "B25024_010E"]  # -> ac
 ALL_VARS = list(ACS_VAR_SLUG) + MF_PARTS
 START_YEAR = 2010
 
-# Geography levels to ingest. Each: (region_type, census `for` clause, region matcher).
-# National is wired now; add states/metros/zctas here as those region rows land.
-GEO_LEVELS = [("national", {"for": "us:1"}, ("national", "US"))]
+# Geography levels to ingest.
+#   single -> one fixed region (national).
+#   multi  -> many regions resolved by code (metros via CBSA; ZCTAs later via ZIP).
+GEO_LEVELS = [
+    {"kind": "single", "clause": {"for": "us:1"}, "region": ("national", "US")},
+    {"kind": "multi", "clause": {"for": "metropolitan statistical area/micropolitan statistical area:*"},
+     "geo_col": "metropolitan statistical area/micropolitan statistical area",
+     "region_type": "metro", "name_filter": "Metro Area"},
+]
 
 
 def fetch(year, key, geo_clause):
@@ -66,40 +72,59 @@ def main():
             cur.execute("SELECT slug, id FROM indicators WHERE source='Census ACS'")
             slug_id = {s: i for s, i in cur.fetchall()}
             ins = skip = 0
-            for region_type, geo_clause, (rt, code) in GEO_LEVELS:
-                cur.execute("SELECT id FROM regions WHERE region_type=%s AND code=%s", (rt, code))
-                row = cur.fetchone()
-                if not row:
-                    print(f"  region {rt}/{code} not found — skipping"); continue
-                region_id = row[0]
+            for level in GEO_LEVELS:
+                # Resolve region(s) for this level.
+                if level["kind"] == "single":
+                    rt, code = level["region"]
+                    cur.execute("SELECT id FROM regions WHERE region_type=%s AND code=%s", (rt, code))
+                    row = cur.fetchone()
+                    if not row:
+                        print(f"  region {rt}/{code} not found — skipping"); continue
+                    region_lookup = {None: row[0]}      # single bucket
+                else:
+                    cur.execute("SELECT code, id FROM regions WHERE region_type=%s AND code ~ '^[0-9]+$'",
+                                (level["region_type"],))
+                    region_lookup = {c: i for c, i in cur.fetchall()}
+
                 for year in range(START_YEAR, end_year + 1):
-                    data = fetch(year, key, geo_clause)
+                    data = fetch(year, key, level["clause"])
                     if not data or len(data) < 2:
                         continue
-                    rec = dict(zip(data[0], data[1]))
+                    hdr = data[0]
+                    gi = hdr.index(level["geo_col"]) if level["kind"] == "multi" else None
                     obs_date = f"{year}-12-31"
-                    points = {slug: num(rec.get(var)) for var, slug in ACS_VAR_SLUG.items()}
-                    mf = sum(filter(None, [num(rec.get(c)) for c in MF_PARTS]))
-                    points["acs_mf_units_5plus"] = mf or None
-                    for slug, val in points.items():
-                        if val is None or slug not in slug_id:
-                            continue
-                        iid = slug_id[slug]
-                        cur.execute(
-                            "SELECT value, revision FROM observations WHERE indicator_id=%s "
-                            "AND region_id=%s AND obs_date=%s ORDER BY revision DESC LIMIT 1",
-                            (iid, region_id, obs_date))
-                        prev = cur.fetchone()
-                        if prev is None:
-                            cur.execute(
-                                "INSERT INTO observations(indicator_id,region_id,obs_date,value,revision,release_date)"
-                                " VALUES(%s,%s,%s,%s,0,%s)", (iid, region_id, obs_date, val, release)); ins += 1
-                        elif float(prev[0]) != float(val):
-                            cur.execute(
-                                "INSERT INTO observations(indicator_id,region_id,obs_date,value,revision,release_date)"
-                                " VALUES(%s,%s,%s,%s,%s,%s)", (iid, region_id, obs_date, val, prev[1] + 1, release)); ins += 1
+                    for rec in data[1:]:
+                        d = dict(zip(hdr, rec))
+                        if level["kind"] == "multi":
+                            if level.get("name_filter") and level["name_filter"] not in d.get("NAME", ""):
+                                continue
+                            region_id = region_lookup.get(rec[gi])
                         else:
-                            skip += 1
+                            region_id = region_lookup[None]
+                        if not region_id:
+                            continue
+                        points = {slug: num(d.get(var)) for var, slug in ACS_VAR_SLUG.items()}
+                        mf = sum(filter(None, [num(d.get(c)) for c in MF_PARTS]))
+                        points["acs_mf_units_5plus"] = mf or None
+                        for slug, val in points.items():
+                            if val is None or slug not in slug_id:
+                                continue
+                            iid = slug_id[slug]
+                            cur.execute(
+                                "SELECT value, revision FROM observations WHERE indicator_id=%s "
+                                "AND region_id=%s AND obs_date=%s ORDER BY revision DESC LIMIT 1",
+                                (iid, region_id, obs_date))
+                            prev = cur.fetchone()
+                            if prev is None:
+                                cur.execute(
+                                    "INSERT INTO observations(indicator_id,region_id,obs_date,value,revision,release_date)"
+                                    " VALUES(%s,%s,%s,%s,0,%s)", (iid, region_id, obs_date, val, release)); ins += 1
+                            elif float(prev[0]) != float(val):
+                                cur.execute(
+                                    "INSERT INTO observations(indicator_id,region_id,obs_date,value,revision,release_date)"
+                                    " VALUES(%s,%s,%s,%s,%s,%s)", (iid, region_id, obs_date, val, prev[1] + 1, release)); ins += 1
+                            else:
+                                skip += 1
             print(f"Census ACS — inserted {ins}, unchanged {skip}")
             cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_indicator_analytics;")
         conn.commit()
