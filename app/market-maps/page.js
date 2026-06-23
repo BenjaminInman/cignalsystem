@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { MapPin, Building2, ChevronDown, Truck, Package, Search } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
+import { MapPin, Building2, ChevronDown, Truck, Package, Search, Bookmark, Check, Loader2 } from "lucide-react";
 import { toneColor, Sparkline } from "@/components/ui";
+import { createClient } from "@/lib/supabase/client";
 import { useContent, useVertical } from "@/components/VerticalProvider";
 import { isPageReady } from "@/lib/verticals";
 import ComingSoonInline from "@/components/ComingSoonInline";
@@ -318,12 +320,41 @@ function Metric({ label, value, tone }) {
 }
 
 function ZipLookup() {
+  const supabase = useMemo(() => createClient(), []);
   const [q, setQ] = useState("");
   const [data, setData] = useState(null);
   const [demo, setDemo] = useState(null); // ZIP-level Census demographics
   const [signals, setSignals] = useState(null); // metro-level signals (jobs, RPP, rent CPI…)
   const [status, setStatus] = useState("idle"); // idle | loading | error
   const [msg, setMsg] = useState("");
+  const [userId, setUserId] = useState(undefined); // undefined = loading; null = signed out
+  const [savedZips, setSavedZips] = useState(() => new Set());
+  const [saving, setSaving] = useState(false);
+
+  // Who's signed in, and which ZIPs are already on their list?
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!active) return;
+      if (!user) { setUserId(null); return; }
+      setUserId(user.id);
+      const { data: rows } = await supabase.from("user_zip_codes").select("zip").eq("user_id", user.id);
+      if (!active) return;
+      setSavedZips(new Set((rows || []).map((r) => r.zip)));
+    })();
+    return () => { active = false; };
+  }, [supabase]);
+
+  const saveZip = async (zip) => {
+    if (!userId || savedZips.has(zip)) return;
+    setSaving(true);
+    // Append to the end of the user's list.
+    const { count } = await supabase.from("user_zip_codes").select("zip", { count: "exact", head: true }).eq("user_id", userId);
+    await supabase.from("user_zip_codes").upsert({ user_id: userId, zip, position: count || 0 });
+    setSavedZips((prev) => new Set(prev).add(zip));
+    setSaving(false);
+  };
 
   const search = async () => {
     const v = q.trim();
@@ -396,9 +427,26 @@ function ZipLookup() {
                 )}
               </p>
             </div>
-            {data.trend?.length > 1 && (
-              <Sparkline series={data.trend} color={up ? "#5FB97C" : "#E5634D"} w={170} h={46} />
-            )}
+            <div className="flex flex-col items-end gap-3">
+              {data.trend?.length > 1 && (
+                <Sparkline series={data.trend} color={up ? "#5FB97C" : "#E5634D"} w={170} h={46} />
+              )}
+              {/^\d{5}$/.test(String(data.query || "")) && (
+                userId === null ? (
+                  <Link href="/login" className="mono flex items-center gap-2 rounded-md border border-[var(--line-strong)] px-3 py-2 text-[11px] tracking-[0.04em] text-muted hover:text-ink">
+                    <Bookmark size={13} /> Sign in to save
+                  </Link>
+                ) : savedZips.has(data.query) ? (
+                  <span className="mono flex items-center gap-2 rounded-md border border-up/40 bg-up/10 px-3 py-2 text-[11px] tracking-[0.04em] text-up">
+                    <Check size={13} /> Saved to My Zip Codes
+                  </span>
+                ) : (
+                  <button onClick={() => saveZip(data.query)} disabled={saving || userId === undefined} className="mono flex items-center gap-2 rounded-md border border-signal/40 bg-signal/10 px-3 py-2 text-[11px] tracking-[0.04em] text-signal hover:bg-signal/20 disabled:opacity-50">
+                    {saving ? <Loader2 size={13} className="animate-spin" /> : <Bookmark size={13} />} Save to My Zip Codes
+                  </button>
+                )
+              )}
+            </div>
           </div>
 
           {data.rolledUp && (
