@@ -35,12 +35,13 @@ const monthLabel = (ym) =>
 function derive(s) {
   const tri = num(s.total_rental_income);
   const ltl = num(s.loss_to_lease);
+  const vac = num(s.vacancy_loss);
   const bd = num(s.bad_debt);
   const conc = num(s.concessions);
   const oi = num(s.other_income);
   const exp = num(s.total_expenses);
   const nri =
-    tri === null ? null : tri + (ltl || 0) - (bd || 0) - (conc || 0);
+    tri === null ? null : tri + (ltl || 0) - (vac || 0) - (bd || 0) - (conc || 0);
   const ti = nri === null && oi === null ? null : (nri || 0) + (oi || 0);
   const noi = ti === null ? null : ti - (exp || 0);
   return { net_rental_income: nri, total_income: ti, noi };
@@ -49,7 +50,7 @@ function derive(s) {
 const EMPTY_SNAP = {
   avg_rent_1bed: "", avg_rent_2bed: "", avg_rent_3bed: "", avg_rent_4bed: "",
   physical_occupancy: "",
-  total_rental_income: "", loss_to_lease: "", bad_debt: "", concessions: "",
+  total_rental_income: "", loss_to_lease: "", vacancy_loss: "", bad_debt: "", concessions: "",
   net_rental_income: "", other_income: "", total_income: "", total_expenses: "", noi: "",
 };
 const EMPTY_PROP = { name: "", city: "", state: "", unit_count: "", class: "" };
@@ -216,6 +217,7 @@ function PortfolioInner() {
         physical_occupancy: num(snap.physical_occupancy),
         total_rental_income: num(snap.total_rental_income),
         loss_to_lease: num(snap.loss_to_lease),
+        vacancy_loss: num(snap.vacancy_loss),
         bad_debt: num(snap.bad_debt),
         concessions: num(snap.concessions),
         other_income: num(snap.other_income),
@@ -444,6 +446,7 @@ function Editor({ prop, setProp, snap, setSnap, month, loadMonth, snaps, overrid
       >
         <Field label="Total Rental Income"><input type="number" value={snap.total_rental_income} onChange={ss("total_rental_income")} className="input" /></Field>
         <Field label="Loss / Gain to Lease" hint="negative = loss"><input type="number" value={snap.loss_to_lease} onChange={ss("loss_to_lease")} className="input" /></Field>
+        <Field label="Vacancy Loss"><input type="number" value={snap.vacancy_loss} onChange={ss("vacancy_loss")} className="input" /></Field>
         <Field label="Bad Debt"><input type="number" value={snap.bad_debt} onChange={ss("bad_debt")} className="input" /></Field>
         <Field label="Concessions"><input type="number" value={snap.concessions} onChange={ss("concessions")} className="input" /></Field>
         <Calc label="Net Rental Income" override={override} value={snap.net_rental_income} computed={deriveLive.net_rental_income} onChange={ss("net_rental_income")} />
