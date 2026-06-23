@@ -24,6 +24,9 @@ const ICONS = {
   truck: Truck,
   package: Package,
   user: UserCog,
+  building: Building2,
+  map: MapPin,
+  database: Database,
 };
 
 // Cadence badge styling, keyed by tone.

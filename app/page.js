@@ -11,7 +11,8 @@ import { fetchTeaserSignals } from "@/lib/signals";
 
 const AUD_ICONS = { Building2, SlidersHorizontal, TrendingUp, Users };
 
-const fmtK = (n) => (n >= 1000 ? `${Math.round(n / 1000)}K` : `${n}`);
+const fmtK = (n) =>
+  n >= 1e6 ? `${(n / 1e6).toFixed(2)}MM` : n >= 1000 ? `${Math.round(n / 1000)}K` : `${n}`;
 
 // Map a teaser card to its live indicator (by the name getLiveIndicators uses).
 function mergeLiveCard(card, live) {

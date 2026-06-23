@@ -10,9 +10,7 @@ export const dynamic = "force-dynamic";
 // so adding/removing a FRED series or migration report updates these numbers
 // automatically — no edit needed here.
 function buildSources({ bySource, migrationBySource }) {
-  const fred = bySource["FRED"] || 0;
-  const zillow = bySource["Zillow Research"] || 0;
-  const manual = bySource["manual"] || 0;
+  const n = (k) => bySource[k] || 0;
   const uhaul = migrationBySource["uhaul"] || 0;
   const pods = migrationBySource["pods"] || 0;
 
@@ -20,8 +18,8 @@ function buildSources({ bySource, migrationBySource }) {
     {
       name: "FRED",
       icon: "landmark",
-      desc: "Federal Reserve Economic Data",
-      volume: `${fred} indicators`,
+      desc: "Federal Reserve Economic Data — rates & macro",
+      volume: `${n("FRED")} indicators`,
       cadence: "Daily",
       tone: "live",
     },
@@ -29,9 +27,57 @@ function buildSources({ bySource, migrationBySource }) {
       name: "Zillow Research (ZORI)",
       icon: "home",
       desc: "Rent index — ZIP, metro & national",
-      volume: `${zillow} series`,
+      volume: `${n("Zillow Research")} series`,
       cadence: "Monthly",
       tone: "monthly",
+    },
+    {
+      name: "Census ACS",
+      icon: "map",
+      desc: "Demographics — rent, income, tenure (ZIP & metro)",
+      volume: `${n("Census ACS")} indicators`,
+      cadence: "Annual",
+      tone: "annual",
+    },
+    {
+      name: "HUD",
+      icon: "building",
+      desc: "Fair Market Rents + ZIP↔CBSA crosswalk",
+      volume: `${n("HUD FMR")} indicators`,
+      cadence: "Monthly",
+      tone: "monthly",
+    },
+    {
+      name: "BEA",
+      icon: "landmark",
+      desc: "Regional price parities — rents & all-items by metro",
+      volume: `${n("BEA")} indicators`,
+      cadence: "Annual",
+      tone: "annual",
+    },
+    {
+      name: "BLS",
+      icon: "database",
+      desc: "Metro employment, unemployment & rent CPI",
+      volume: `${n("BLS")} indicators`,
+      cadence: "Monthly",
+      tone: "monthly",
+    },
+    {
+      name: "Freddie Mac AIMI",
+      icon: "line",
+      desc: "Apartment Investment Market Index — national & metro",
+      volume: `${n("Freddie Mac AIMI")} indicators`,
+      cadence: "Quarterly",
+      tone: "manual",
+    },
+    {
+      name: "Apartment List",
+      icon: "home",
+      desc: "Rent, vacancy & time-on-market by metro",
+      volume: `${n("Apartment List")} indicators`,
+      cadence: "Monthly",
+      tone: "manual",
     },
     {
       name: "U.S. Treasury",
@@ -61,7 +107,7 @@ function buildSources({ bySource, migrationBySource }) {
       name: "Analyst-maintained",
       icon: "user",
       desc: "Cap rate, absorption, DSCR, foreclosure +2",
-      volume: `${manual} indicators`,
+      volume: `${n("manual")} indicators`,
       cadence: "Manual",
       tone: "manual",
     },
