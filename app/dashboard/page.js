@@ -6,6 +6,7 @@ import { Activity, BarChart3, LineChart, Radio, BookOpen, Briefcase, ArrowUpRigh
 import { useVertical, useContent } from "@/components/VerticalProvider";
 import { isPageReady } from "@/lib/verticals";
 import ComingSoonInline from "@/components/ComingSoonInline";
+import MyZipCodes from "@/components/MyZipCodes";
 import { createClient } from "@/lib/supabase/client";
 import { toneColor } from "@/components/ui";
 
@@ -49,6 +50,8 @@ function DashboardInner() {
       </p>
 
       <Watchlist />
+
+      <MyZipCodes />
 
       <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,360px)_1fr]">
         {/* LEFT: placeholder panel — swap for featured content (cycle phase, portfolio snapshot, etc.) */}
