@@ -9,6 +9,9 @@ const SOURCES = {
   yardi: { label: "Yardi / MHN", title: "Top Emerging Markets · 2026", url: "https://www.multihousingnews.com/top-emerging-multifamily-markets/" },
 };
 
+// Stable rank->CBSA for the 2026 Yardi list (fallback if the API hasn't surfaced the column yet).
+const YARDI_CBSA = { 1: "26620", 2: "45220", 3: "12260", 4: "46140", 5: "33660", 6: "10900", 7: "48620", 8: "14260", 9: "42340", 10: "44060" };
+
 export default function ExpertPicks({ noradaMarkets = [] }) {
   const [src, setSrc] = useState("norada");
   const [yardi, setYardi] = useState([]);
@@ -26,7 +29,7 @@ export default function ExpertPicks({ noradaMarkets = [] }) {
         setYardi(ym);
         const union = [
           ...noradaMarkets.map((m) => ({ cbsa: m.cbsa, name: m.city })),
-          ...ym.map((m) => ({ cbsa: m.cbsa, name: `${m.city}, ${m.state}` })),
+          ...ym.map((m) => ({ cbsa: m.cbsa || YARDI_CBSA[m.rank], name: `${m.city}, ${m.state}` })),
         ].filter((x) => x.cbsa);
         const seen = {}, cbsas = [], names = [];
         for (const x of union) { if (seen[x.cbsa]) continue; seen[x.cbsa] = 1; cbsas.push(x.cbsa); names.push(x.name); }
@@ -40,7 +43,7 @@ export default function ExpertPicks({ noradaMarkets = [] }) {
 
   const rows = useMemo(() => {
     if (src === "yardi") {
-      return yardi.map((m) => ({ key: m.cbsa || `${m.city}${m.rank}`, rank: m.rank, name: `${m.city}, ${m.state}`, tag: m.metro_name, cbsa: m.cbsa }));
+      return yardi.map((m) => ({ key: m.cbsa || `${m.city}${m.rank}`, rank: m.rank, name: `${m.city}, ${m.state}`, tag: m.metro_name, cbsa: m.cbsa || YARDI_CBSA[m.rank] }));
     }
     return noradaMarkets.map((m, i) => ({ key: m.cbsa || m.city, rank: i + 1, name: m.city, tag: m.tier, cbsa: m.cbsa }));
   }, [src, yardi, noradaMarkets]);
