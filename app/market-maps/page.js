@@ -114,7 +114,7 @@ function MarketMapsInner() {
   const cmap = card?.markets || {};
   const withLive = (m) => {
     const sc = cmap[m.cbsa] || null;
-    const g = gmap[m.city]; // metro-growth (zori_metro) is keyed by "City, ST" name
+    const g = gmap[m.zori || m.city]; // metro-growth (zori_metro) is keyed by "City, ST" name
     const base = { ...m, sc, rentVal: parseFloat(m.rent), rentTone: m.tone, live: false };
     if (g == null) return base;
     const rentTone = g > 0.15 ? "bull" : g < -0.15 ? "bear" : "neutral";
@@ -124,8 +124,8 @@ function MarketMapsInner() {
   const filters = ["All", ...MARKET_GROUPS.map((g) => g.region)];
   const groups = groupsAll.filter((g) => f === "All" || g.region === f);
   const flat = groupsAll.flatMap((g) => g.markets);
-  // Rent Growth Comparison chart shows positive-growth markets only (prefers live ZORI data).
-  const all = flat.filter((m) => (loaded ? m.live : true) && m.rentVal > 0).sort((a, b) => b.rentVal - a.rentVal);
+  // Show every tracked market with live ZORI — growth AND decline (sorted high to low).
+  const all = flat.filter((m) => (loaded ? m.live : true)).sort((a, b) => b.rentVal - a.rentVal);
 
   return (
     <div className="pt-12 pb-10">
@@ -138,13 +138,13 @@ function MarketMapsInner() {
 
       <div className="card mt-8 p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-semibold text-ink">{labels[0]} Comparison — Top Markets</h2>
+          <h2 className="font-semibold text-ink">{labels[0]} — Tracked Markets</h2>
           <span className="mono text-[10px] tracking-[0.08em] text-muted">
             {growth?.asOf ? <><span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-up align-middle" />LIVE · ZORI YoY · as of {fmtMonth(growth.asOf)}</> : "Loading live data…"}
           </span>
         </div>
         <BarChart all={all} />
-        <p className="mono mt-2 text-[10px] tracking-[0.06em] text-muted">Hover a bar for the metro and its year-over-year rent growth · sorted high to low.</p>
+        <p className="mono mt-2 text-[10px] tracking-[0.06em] text-muted">Live ZORI year-over-year for every tracked metro · sorted high to low · bars below the line are markets where rents are falling.</p>
       </div>
 
       <div className="mt-8 flex flex-wrap gap-2">
