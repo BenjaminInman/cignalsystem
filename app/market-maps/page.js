@@ -11,75 +11,12 @@ import ComingSoonInline from "@/components/ComingSoonInline";
 import EmergingMarkets from "@/components/EmergingMarkets";
 import MarketRanker from "@/components/MarketRanker";
 import ExpertPicks from "@/components/ExpertPicks";
+import RentRadial from "@/components/RentRadial";
 
 function fmtMonth(d) {
   if (!d) return "";
   const x = new Date(d + "T00:00:00Z");
   return x.toLocaleString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
-}
-
-function BarChart({ all }) {
-  const [hi, setHi] = useState(null);
-  const w = 1100, h = 230, pad = 30;
-  const vals = all.map((m) => m.rentVal);
-  const max = Math.max(...vals, 6), min = Math.min(...vals, -2);
-  const span = max - min || 1;
-  const bw = (w - pad * 2) / Math.max(all.length, 1);
-  const yOf = (v) => pad + ((max - v) / span) * (h - pad * 2);
-  const zeroY = yOf(0);
-  const showLabels = all.length <= 12;
-
-  return (
-    <svg viewBox={`0 0 ${w} ${h + 30}`} className="w-full" onMouseLeave={() => setHi(null)}>
-      <line x1={pad} y1={zeroY} x2={w - pad} y2={zeroY} stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
-      {all.map((m, i) => {
-        const v = m.rentVal;
-        const x = pad + i * bw + bw * 0.18;
-        const bwInner = bw * 0.64;
-        const y = v >= 0 ? yOf(v) : zeroY;
-        const hgt = Math.max(Math.abs(yOf(v) - zeroY), 1);
-        const isHi = hi === i;
-        const showLabel = (showLabels || i % 2 === 0) && !isHi;
-        return (
-          <g key={m.city} onMouseEnter={() => setHi(i)} style={{ cursor: "pointer" }}>
-            <rect x={pad + i * bw} y={pad} width={bw} height={h - pad} fill="transparent" />
-            <rect
-              x={x} y={y} width={bwInner} height={hgt} rx="3"
-              fill={toneColor(m.rentTone || m.tone)} opacity={isHi ? 1 : 0.85}
-              style={{
-                transition: "transform .18s ease, opacity .18s ease",
-                transformBox: "fill-box",
-                transformOrigin: v >= 0 ? "center bottom" : "center top",
-                transform: isHi ? "scaleY(1.09)" : "none",
-              }}
-            />
-            {showLabel && (
-              <text x={x + bwInner / 2} y={h + 14} textAnchor="middle" fontSize="11" fill="#797e85" fontFamily="IBM Plex Mono">{m.city.split(",")[0]}</text>
-            )}
-          </g>
-        );
-      })}
-      {hi != null && all[hi] && (() => {
-        const m = all[hi];
-        const v = m.rentVal;
-        const cx = pad + hi * bw + bw * 0.5;
-        const pctTxt = `${v >= 0 ? "+" : ""}${v}%`;
-        const label = `${m.city}   ${pctTxt}`;
-        const tw = label.length * 6.6 + 22;
-        const tx = Math.max(pad, Math.min(cx - tw / 2, w - pad - tw));
-        const ty = Math.max(yOf(Math.max(v, 0)) - 40, 2);
-        return (
-          <g pointerEvents="none">
-            <rect x={tx} y={ty} width={tw} height={28} rx="6" fill="#0E0F11" stroke="rgba(245,181,68,0.55)" strokeWidth="1" />
-            <text x={tx + tw / 2} y={ty + 18} textAnchor="middle" fontSize="12.5" fontFamily="IBM Plex Mono">
-              <tspan fill="#ECEDEF">{m.city}</tspan>
-              <tspan fill={toneColor(m.rentTone || m.tone)}>{"   " + pctTxt}</tspan>
-            </text>
-          </g>
-        );
-      })()}
-    </svg>
-  );
 }
 
 export default function MarketMapsPage() {
@@ -151,8 +88,8 @@ function MarketMapsInner() {
             {growth?.asOf ? <><span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-up align-middle" />LIVE · ZORI YoY · as of {fmtMonth(growth.asOf)}</> : "Loading live data…"}
           </span>
         </div>
-        <BarChart all={all} />
-        <p className="mono mt-2 text-[10px] tracking-[0.06em] text-muted">Live ZORI year-over-year for every tracked metro · sorted high to low · bars below the line are markets where rents are falling.</p>
+        <RentRadial markets={all} />
+        <p className="mono mt-3 text-[10px] tracking-[0.06em] text-muted">Live ZORI year-over-year · ring grouped by U.S. region, wedge sized by the size of the move · hover any market for the exact figure.</p>
       </div>
 
       <div className="mt-8 flex flex-wrap gap-2">
