@@ -193,6 +193,9 @@ function MarketRow({ m, i, labels, loaded }) {
               {sc.box?.aimi && (
                 <SignalLine label="Apartment Investment Market Index" value={sc.box.aimi.yoyPct != null ? fmtPct(sc.box.aimi.yoyPct) : fmtNum(sc.box.aimi.v)} src="Freddie Mac AIMI" lead note="Composite of rents, property values and mortgage rates; higher = relatively more attractive entry point." />
               )}
+              {sc.box?.permits && (
+                <SignalLine label="MF Permits 5+ (annual)" value={`${sc.box.permits.v.toLocaleString()}${sc.box.permits.deltaPct != null ? ` · ${sc.box.permits.deltaPct >= 0 ? "+" : ""}${sc.box.permits.deltaPct}% YoY` : ""}`} src={`Census BPS · ${sc.box.permits.year}`} lead note="New multifamily units authorized — the future supply pipeline. Rising = more deliveries (and rent pressure) ahead." />
+              )}
 
               <p className="kicker mb-1 mt-4">Supporting fundamentals</p>
               <SignalLine label="Market Rent (ZORI, YoY)" value={m.live ? m.rent : null} pct={cols.rent?.pct} src="Zillow ZORI" note="Observed asking-rent momentum across all rental types." />
@@ -201,9 +204,12 @@ function MarketRow({ m, i, labels, loaded }) {
               {sc.box?.rppRents && (
                 <SignalLine label="Rent Price Parity" value={fmtNum(sc.box.rppRents.v)} src="BEA RPP" note="Local rent cost vs national = 100 — an affordability read." />
               )}
+              {sc.box?.homeValue && (
+                <SignalLine label="Home Value (ZHVI)" value={`$${Math.round(sc.box.homeValue.v / 1000)}k${sc.box.homeValue.yoyPct != null ? ` · ${sc.box.homeValue.yoyPct >= 0 ? "+" : ""}${sc.box.homeValue.yoyPct}% YoY` : ""}`} src="Zillow ZHVI" note="Median home value and appreciation — affordability and owner-equity read." />
+              )}
 
               <p className="mt-4 text-[11px] leading-relaxed text-muted">
-                Sources: U.S. Bureau of Labor Statistics (employment, unemployment), Zillow Research (ZORI), Apartment List (vacancy), Bureau of Economic Analysis (Regional Price Parity){sc.box?.aimi ? ", Freddie Mac (AIMI)" : ""}. Percentiles rank this metro against every U.S. metro reporting each series. The score weights employment — the only leading signal carried at metro level — most heavily; trailing series confirm rather than trigger.
+                Sources: U.S. Bureau of Labor Statistics (employment, unemployment), Zillow Research (ZORI rent, ZHVI home value), Apartment List (vacancy), Bureau of Economic Analysis (Regional Price Parity), Census BPS (multifamily permits){sc.box?.aimi ? ", Freddie Mac (AIMI)" : ""}. Percentiles rank this metro against every U.S. metro reporting each series. The score weights employment — the only leading signal carried at metro level — most heavily; trailing series confirm rather than trigger.
               </p>
             </>
           )}

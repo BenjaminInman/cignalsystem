@@ -81,18 +81,60 @@ function compositeScore(parts) {
   return den ? Math.round(num / den) : null;
 }
 
+// Level + YoY per metro (latest), keyed by region_code. For ZHVI (name-keyed).
+async function crossSectionFull(slug) {
+  const rows = await sb(
+    `v_indicator_analytics?slug=eq.${slug}&region_type=eq.metro` +
+      `&select=region_code,obs_date,value,yoy_change&order=obs_date.desc&limit=1000`
+  );
+  const map = {};
+  for (const r of rows || []) {
+    const k = r.region_code;
+    if (k == null || map[k] !== undefined) continue;
+    const v = Number(r.value);
+    let yoyPct = null;
+    if (r.yoy_change != null) {
+      const prior = v - Number(r.yoy_change);
+      yoyPct = prior ? Math.round((Number(r.yoy_change) / prior) * 1000) / 10 : null;
+    }
+    map[k] = { value: Math.round(v), yoyPct };
+  }
+  return map;
+}
+
+// Last two annual permit prints per CBSA -> latest + YoY delta (supply trend).
+async function permitsTrend(cbsas) {
+  if (!cbsas.length) return {};
+  const rows = await sb(
+    `v_indicator_analytics?slug=eq.permits_5plus_metro&region_code=in.(${cbsas.join(",")})` +
+      `&select=region_code,obs_date,value&order=obs_date.desc&limit=600`
+  );
+  const byC = {};
+  for (const r of rows || []) (byC[r.region_code] ||= []).push(r);
+  const out = {};
+  for (const c of Object.keys(byC)) {
+    const arr = byC[c];
+    const lv = Number(arr[0].value);
+    const pv = arr[1] ? Number(arr[1].value) : null;
+    out[c] = { v: lv, year: String(arr[0].obs_date).slice(0, 4), deltaPct: pv ? Math.round(((lv - pv) / pv) * 1000) / 10 : null };
+  }
+  return out;
+}
+
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const cbsas = (searchParams.get("cbsas") || "").split(",").map((s) => s.trim()).filter(Boolean);
   const names = (searchParams.get("names") || "").split("|").map((s) => s.trim());
   try {
-    const [emp, rent, vac, unemp, rpp, aimi] = await Promise.all([
+    const [emp, rent, vac, unemp, rpp, aimi, zhvi, permits] = await Promise.all([
       crossSection("bls_metro_employment", { yoy: true }), // leading, by CBSA
       crossSection("zori_metro", { yoy: true }),            // Zillow rent, by NAME
       crossSection("apt_vacancy"),                          // Apartment List, by CBSA
       crossSection("bls_metro_unemployment"),               // BLS LAUS, by CBSA
       extras("bea_rpp_rents", cbsas),                       // affordability (box)
       extras("aimi", cbsas, { yoy: true }),                 // Freddie Mac (box, ~24 metros)
+      crossSectionFull("zhvi_metro"),                       // home values, by NAME (box)
+      permitsTrend(cbsas),                                  // MF supply pipeline, by CBSA (box)
     ]);
 
     const empPop = Object.values(emp.map);
@@ -122,6 +164,8 @@ export async function GET(req) {
         box: {
           rppRents: rpp[c] ? { v: rpp[c].value, src: "BEA RPP", asOf: rpp[c].asOf } : null,
           aimi: aimi[c] ? { v: aimi[c].value, yoyPct: aimi[c].yoyPct, src: "Freddie Mac AIMI", lead: true, asOf: aimi[c].asOf } : null,
+          homeValue: zhvi[nm] ? { v: zhvi[nm].value, yoyPct: zhvi[nm].yoyPct, src: "Zillow ZHVI" } : null,
+          permits: permits[c] ? { v: permits[c].v, year: permits[c].year, deltaPct: permits[c].deltaPct, src: "Census BPS", lead: true } : null,
         },
       };
     });
