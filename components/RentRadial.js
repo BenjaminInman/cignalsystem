@@ -62,62 +62,67 @@ function Donut({ items, color, label }) {
     );
   }
   const { wedges, regionArcs, maxW } = layout(items);
-  const C = 200, rHub = 66, rI1 = 70, rI2 = 104, rO1 = 108, rO2 = 162;
+  const CX = 290, CY = 200, rHub = 78, rI1 = 82, rI2 = 122, rO1 = 126, rO2 = 182, POP = 11;
   const avg = items.reduce((s, m) => s + m.rentVal, 0) / items.length;
   const fmt = (v) => `${v >= 0 ? "+" : ""}${Math.round(v * 10) / 10}%`;
 
   return (
     <div className="flex flex-col items-center">
-      <svg viewBox="0 0 400 400" className="w-full max-w-[340px]" onMouseLeave={() => setHover(null)}>
+      <svg viewBox="0 0 580 410" className="w-full max-w-[540px]" onMouseLeave={() => setHover(null)}>
         {/* inner ring: regions */}
         {regionArcs.map((r) => (
-          <path key={`r-${r.region}`} d={arcPath(C, C, rI1, rI2, r.a0, r.a1)} fill={color} fillOpacity={0.14} stroke="#08090A" strokeWidth="1" />
+          <path key={`r-${r.region}`} d={arcPath(CX, CY, rI1, rI2, r.a0, r.a1)} fill={color} fillOpacity={0.14} stroke="#08090A" strokeWidth="1" />
         ))}
         {regionArcs.filter((r) => r.a1 - r.a0 > 26).map((r) => {
-          const [tx, ty] = polar(C, C, (rI1 + rI2) / 2, (r.a0 + r.a1) / 2);
-          return <text key={`rl-${r.region}`} x={tx} y={ty} textAnchor="middle" dominantBaseline="middle" fontSize="8" fontFamily="IBM Plex Mono" fill={MUTED} style={{ textTransform: "uppercase", letterSpacing: "0.08em" }}>{r.region}</text>;
+          const [tx, ty] = polar(CX, CY, (rI1 + rI2) / 2, (r.a0 + r.a1) / 2);
+          return <text key={`rl-${r.region}`} x={tx} y={ty} textAnchor="middle" dominantBaseline="middle" fontSize="8.5" fontFamily="IBM Plex Mono" fill={MUTED} style={{ textTransform: "uppercase", letterSpacing: "0.08em" }}>{r.region}</text>;
         })}
         {/* outer ring: cities */}
         {wedges.map((w) => {
           const t = w.w / maxW;
           const on = hover?.city === w.city;
+          const mid = (w.a0 + w.a1) / 2;
+          const ux = Math.cos(((mid - 90) * Math.PI) / 180), uy = Math.sin(((mid - 90) * Math.PI) / 180);
           return (
             <path
               key={w.city}
-              d={arcPath(C, C, rO1, rO2, w.a0, w.a1)}
+              d={arcPath(CX, CY, rO1, rO2, w.a0, w.a1)}
               fill={color}
               fillOpacity={on ? 1 : 0.38 + 0.55 * t}
               stroke={on ? GOLD : "#08090A"}
               strokeWidth={on ? 1.5 : 1}
-              style={{ cursor: "pointer", transition: "fill-opacity .15s" }}
+              style={{ cursor: "pointer", transition: "transform .16s ease, fill-opacity .15s", transform: on ? `translate(${POP * ux}px, ${POP * uy}px)` : undefined }}
               onMouseEnter={() => setHover(w)}
             />
           );
         })}
-        {/* city labels for wider wedges */}
-        {wedges.filter((w) => w.a1 - w.a0 >= 13).map((w) => {
+        {/* city labels (two-line) for wider wedges */}
+        {wedges.filter((w) => w.a1 - w.a0 >= 12).map((w) => {
           const mid = (w.a0 + w.a1) / 2;
-          const [lx, ly] = polar(C, C, rO2 + 9, mid);
-          const anchor = Math.sin(((mid - 90) * Math.PI) / 180) > 0.08 ? "start" : Math.sin(((mid - 90) * Math.PI) / 180) < -0.08 ? "end" : "middle";
+          const on = hover?.city === w.city;
+          const [lx, ly] = polar(CX, CY, rO2 + (on ? POP + 12 : 12), mid);
+          const sn = Math.sin(((mid - 90) * Math.PI) / 180);
+          const anchor = sn > 0.08 ? "start" : sn < -0.08 ? "end" : "middle";
           return (
-            <text key={`l-${w.city}`} x={lx} y={ly} textAnchor={anchor} dominantBaseline="middle" fontSize="9" fontFamily="IBM Plex Mono" fill={hover?.city === w.city ? INK : MUTED}>
-              {shortCity(w.city)} {fmt(w.rentVal)}
+            <text key={`l-${w.city}`} x={lx} y={ly} textAnchor={anchor} fontFamily="IBM Plex Mono" fill={on ? INK : MUTED}>
+              <tspan x={lx} dy="-1" fontSize="9.5">{shortCity(w.city)}</tspan>
+              <tspan x={lx} dy="11" fontSize="9" fill={color}>{fmt(w.rentVal)}</tspan>
             </text>
           );
         })}
         {/* center hub */}
-        <circle cx={C} cy={C} r={rHub} fill="#0B0C0E" stroke="var(--line)" />
+        <circle cx={CX} cy={CY} r={rHub} fill="#0B0C0E" stroke="var(--line)" />
         {hover ? (
           <>
-            <text x={C} y={C - 12} textAnchor="middle" fontSize="11" fontFamily="IBM Plex Mono" fill={INK}>{shortCity(hover.city)}</text>
-            <text x={C} y={C + 6} textAnchor="middle" fontSize="9" fontFamily="IBM Plex Mono" fill={MUTED} style={{ letterSpacing: "0.06em" }}>{regionOf(hover.city).toUpperCase()}</text>
-            <text x={C} y={C + 24} textAnchor="middle" fontSize="15" fontWeight="600" fontFamily="IBM Plex Mono" fill={color}>{fmt(hover.rentVal)}</text>
+            <text x={CX} y={CY - 14} textAnchor="middle" fontSize="12" fontFamily="IBM Plex Mono" fill={INK}>{shortCity(hover.city)}</text>
+            <text x={CX} y={CY + 5} textAnchor="middle" fontSize="9" fontFamily="IBM Plex Mono" fill={MUTED} style={{ letterSpacing: "0.06em" }}>{regionOf(hover.city).toUpperCase()}</text>
+            <text x={CX} y={CY + 26} textAnchor="middle" fontSize="17" fontWeight="600" fontFamily="IBM Plex Mono" fill={color}>{fmt(hover.rentVal)}</text>
           </>
         ) : (
           <>
-            <text x={C} y={C - 10} textAnchor="middle" fontSize="10" fontFamily="IBM Plex Mono" fill={color} style={{ letterSpacing: "0.14em" }}>{label}</text>
-            <text x={C} y={C + 10} textAnchor="middle" fontSize="18" fontWeight="600" fontFamily="IBM Plex Mono" fill={INK}>{items.length}</text>
-            <text x={C} y={C + 26} textAnchor="middle" fontSize="8.5" fontFamily="IBM Plex Mono" fill={MUTED}>avg {fmt(avg)}</text>
+            <text x={CX} y={CY - 12} textAnchor="middle" fontSize="10.5" fontFamily="IBM Plex Mono" fill={color} style={{ letterSpacing: "0.14em" }}>{label}</text>
+            <text x={CX} y={CY + 12} textAnchor="middle" fontSize="20" fontWeight="600" fontFamily="IBM Plex Mono" fill={INK}>{items.length}</text>
+            <text x={CX} y={CY + 29} textAnchor="middle" fontSize="9" fontFamily="IBM Plex Mono" fill={MUTED}>avg {fmt(avg)}</text>
           </>
         )}
       </svg>
