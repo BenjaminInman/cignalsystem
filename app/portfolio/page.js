@@ -16,7 +16,7 @@ const ICONS = {
   "PROPERTIES": Building2,
   "TOTAL UNITS": Building2,
   "AVG OCCUPANCY": Activity,
-  "ANNUAL NOI (RUN-RATE)": TrendingUp,
+  "ANNUAL NOI": TrendingUp,
 };
 
 // ---------- helpers ----------
@@ -126,13 +126,13 @@ function PortfolioInner() {
         occW += Number(s.physical_occupancy) * p.unit_count;
         occU += p.unit_count;
       }
-      if (s.noi != null) annualNoi += Number(s.noi) * 12;
+      if (s.noi != null) annualNoi += Number(s.noi);
     }
     return [
       { label: "PROPERTIES", value: String(list.length), color: "#ECEDEF" },
       { label: "TOTAL UNITS", value: units.toLocaleString(), color: "#ECEDEF" },
       { label: "AVG OCCUPANCY", value: occU ? `${(occW / occU).toFixed(1)}%` : "—", color: "#5FB97C" },
-      { label: "ANNUAL NOI (RUN-RATE)", value: annualNoi ? fmtMoney(annualNoi) : "—", color: "#F5B544" },
+      { label: "ANNUAL NOI", value: annualNoi ? fmtMoney(annualNoi) : "—", color: "#F5B544" },
     ];
   }, [properties, latest]);
 
