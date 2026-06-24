@@ -91,18 +91,33 @@ function MarketMapsInner() {
   const [f, setF] = useState("All");
   const [mig, setMig] = useState(null);
   const [growth, setGrowth] = useState(null);
+  const [card, setCard] = useState(null);
+  const tracked = useMemo(
+    () => MARKET_GROUPS.flatMap((g) => g.markets).filter((m) => m.cbsa).map((m) => ({ cbsa: m.cbsa, name: m.city })),
+    [MARKET_GROUPS]
+  );
   useEffect(() => {
     fetch("/api/migration").then((r) => r.json()).then(setMig).catch(() => setMig({}));
     fetch("/api/metro-growth").then((r) => r.json()).then(setGrowth).catch(() => setGrowth({ growth: {} }));
   }, []);
-  const labels = COPY.mmMetrics || ["Rent Growth", "Vacancy", "Cap Rate", "NOI Growth"];
+  useEffect(() => {
+    if (!tracked.length) return;
+    const cbsas = encodeURIComponent(tracked.map((t) => t.cbsa).join(","));
+    const names = encodeURIComponent(tracked.map((t) => t.name).join("|"));
+    fetch(`/api/market-scorecard?cbsas=${cbsas}&names=${names}`)
+      .then((r) => r.json()).then(setCard).catch(() => setCard({ markets: {} }));
+  }, [tracked]);
+  const labels = COPY.mmMetrics || ["Rent Growth", "Employment", "Vacancy", "Unemployment"];
   const gmap = growth?.growth || {};
   const loaded = growth != null;
+  const cmap = card?.markets || {};
   const withLive = (m) => {
-    const g = gmap[m.city];
-    if (g == null) return { ...m, rentVal: parseFloat(m.rent), rentTone: m.tone, live: false };
+    const sc = cmap[m.cbsa] || null;
+    const g = gmap[m.city]; // metro-growth (zori_metro) is keyed by "City, ST" name
+    const base = { ...m, sc, rentVal: parseFloat(m.rent), rentTone: m.tone, live: false };
+    if (g == null) return base;
     const rentTone = g > 0.15 ? "bull" : g < -0.15 ? "bear" : "neutral";
-    return { ...m, rent: `${g >= 0 ? "+" : ""}${g}%`, rentVal: g, rentTone, live: true };
+    return { ...base, rent: `${g >= 0 ? "+" : ""}${g}%`, rentVal: g, rentTone, live: true };
   };
   const groupsAll = MARKET_GROUPS.map((g) => ({ ...g, markets: g.markets.map(withLive) }));
   const filters = ["All", ...MARKET_GROUPS.map((g) => g.region)];
@@ -140,17 +155,7 @@ function MarketMapsInner() {
           <p className="kicker mb-4 flex items-center gap-2"><Building2 size={13} className="text-signal" /> {g.region}</p>
           <div className="overflow-hidden rounded-lg border border-[var(--line)]">
             {g.markets.map((m, i) => (
-              <div key={m.city} className={`grid grid-cols-2 items-center gap-4 px-6 py-5 md:grid-cols-[1.4fr_repeat(4,1fr)_auto] bg-bg2 ${i ? "border-t border-[var(--line)]" : ""}`}>
-                <p className="flex items-center gap-2 font-semibold text-ink"><MapPin size={14} className="text-muted" /> {m.city}</p>
-                <Metric label={labels[0]} value={m.rent} tone={m.rentTone} />
-                <Metric label={labels[1]} value={m.vac} />
-                <Metric label={labels[2]} value={m.cap} />
-                <Metric label={labels[3]} value={m.noi} tone={m.tone} />
-                <div className="flex items-center justify-end gap-3">
-                  <span className="mono rounded px-2.5 py-1 text-[12px]" style={{ color: toneColor(m.tone), backgroundColor: `${toneColor(m.tone)}1a` }}>{m.score}</span>
-                  <ChevronDown size={16} className="hidden text-muted md:block" />
-                </div>
-              </div>
+              <MarketRow key={m.city} m={m} i={i} labels={labels} loaded={card != null} />
             ))}
           </div>
         </div>
@@ -159,6 +164,103 @@ function MarketMapsInner() {
       <MigrationTrends data={mig?.uhaul} />
       <PodsTrends data={mig?.pods} />
       <EmergingMarkets />
+    </div>
+  );
+}
+
+function pctLabel(p) {
+  if (p == null) return null;
+  const t = p % 100, u = p % 10;
+  const s = u === 1 && t !== 11 ? "st" : u === 2 && t !== 12 ? "nd" : u === 3 && t !== 13 ? "rd" : "th";
+  return `${p}${s} pct`;
+}
+
+function SignalLine({ label, value, pct, src, lead, note }) {
+  return (
+    <div className="flex items-start justify-between gap-4 border-t border-[var(--line)] py-2.5 first:border-t-0">
+      <div className="min-w-0">
+        <p className="flex items-center gap-2 text-sm text-ink">
+          {label}
+          {lead && <span className="mono rounded bg-signal/10 px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-signal">LEADING</span>}
+        </p>
+        {note && <p className="mt-0.5 text-[11px] leading-snug text-muted">{note}</p>}
+      </div>
+      <div className="shrink-0 text-right">
+        <p className="mono text-sm text-ink">{value ?? "—"}</p>
+        <p className="mono mt-0.5 text-[10px] tracking-[0.06em] text-muted">{[pctLabel(pct), src].filter(Boolean).join(" · ")}</p>
+      </div>
+    </div>
+  );
+}
+
+function MarketRow({ m, i, labels, loaded }) {
+  const [open, setOpen] = useState(false);
+  const sc = m.sc;
+  const score = sc?.score ?? null;
+  const scoreTone = sc?.scoreTone || m.tone;
+  const cols = sc?.cols || {};
+  const fmtPct = (v) => (v == null ? "—" : `${v >= 0 ? "+" : ""}${v}%`);
+  const fmtNum = (v) => (v == null ? "—" : `${v}`);
+  const empV = cols.employment ? fmtPct(cols.employment.v) : "—";
+  const vacV = cols.vacancy ? `${cols.vacancy.v}%` : "—";
+  const unempV = cols.unemployment ? `${cols.unemployment.v}%` : "—";
+  const empTone = cols.employment ? (cols.employment.v > 0.3 ? "bull" : cols.employment.v < -0.3 ? "bear" : "neutral") : undefined;
+
+  return (
+    <div className={i ? "border-t border-[var(--line)]" : ""}>
+      <div
+        role="button" tabIndex={0} aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen((v) => !v); } }}
+        className="grid cursor-pointer grid-cols-2 items-center gap-4 bg-bg2 px-6 py-5 transition hover:bg-bg2/60 md:grid-cols-[1.4fr_repeat(4,1fr)_auto]"
+      >
+        <p className="flex items-center gap-2 font-semibold text-ink"><MapPin size={14} className="text-muted" /> {m.city}</p>
+        <Metric label={labels[0]} value={m.rent} tone={m.rentTone} />
+        <Metric label={labels[1]} value={empV} tone={empTone} />
+        <Metric label={labels[2]} value={vacV} />
+        <Metric label={labels[3]} value={unempV} />
+        <div className="flex items-center justify-end gap-3">
+          <span className="mono rounded px-2.5 py-1 text-[12px]" style={{ color: toneColor(scoreTone), backgroundColor: `${toneColor(scoreTone)}1a` }}>
+            {score ?? (loaded ? "—" : "··")}
+          </span>
+          <ChevronDown size={16} className={`shrink-0 text-muted transition-transform ${open ? "rotate-180" : ""}`} />
+        </div>
+      </div>
+
+      {open && (
+        <div className="border-t border-[var(--line)] bg-bg px-6 py-5">
+          {!sc ? (
+            <p className="mono text-[11px] text-muted">Loading metro signals…</p>
+          ) : (
+            <>
+              <p className="mb-3 text-[12px] leading-relaxed text-muted">
+                <span className="text-ink">Why it scores {score ?? "—"}: </span>
+                {cols.employment
+                  ? `payroll employment ${fmtPct(cols.employment.v)} YoY (${pctLabel(cols.employment.pct)} of U.S. metros) — the leading demand signal — corroborated by the trailing fundamentals below. Score is a national percentile rank, weighted toward employment.`
+                  : "metro employment isn't reported for this market, so the score reflects the available trailing fundamentals only."}
+              </p>
+
+              <p className="kicker mb-1">Leading</p>
+              <SignalLine label="Payroll Employment (YoY)" value={cols.employment ? fmtPct(cols.employment.v) : null} pct={cols.employment?.pct} src="BLS" lead note="Total nonfarm jobs — the upstream driver of household formation and rental demand." />
+              {sc.box?.aimi && (
+                <SignalLine label="Apartment Investment Market Index" value={sc.box.aimi.yoyPct != null ? fmtPct(sc.box.aimi.yoyPct) : fmtNum(sc.box.aimi.v)} src="Freddie Mac AIMI" lead note="Composite of rents, property values and mortgage rates; higher = relatively more attractive entry point." />
+              )}
+
+              <p className="kicker mb-1 mt-4">Supporting fundamentals</p>
+              <SignalLine label="Market Rent (ZORI, YoY)" value={m.live ? m.rent : null} pct={cols.rent?.pct} src="Zillow ZORI" note="Observed asking-rent momentum across all rental types." />
+              <SignalLine label="Vacancy Index" value={cols.vacancy ? `${cols.vacancy.v}%` : null} pct={cols.vacancy?.pct} src="Apartment List" note="Share of units sitting empty; lower ranks higher." />
+              <SignalLine label="Unemployment Rate" value={cols.unemployment ? `${cols.unemployment.v}%` : null} pct={cols.unemployment?.pct} src="BLS LAUS" note="Labor-market slack; lower ranks higher." />
+              {sc.box?.rppRents && (
+                <SignalLine label="Rent Price Parity" value={fmtNum(sc.box.rppRents.v)} src="BEA RPP" note="Local rent cost vs national = 100 — an affordability read." />
+              )}
+
+              <p className="mt-4 text-[11px] leading-relaxed text-muted">
+                Sources: U.S. Bureau of Labor Statistics (employment, unemployment), Zillow Research (ZORI), Apartment List (vacancy), Bureau of Economic Analysis (Regional Price Parity){sc.box?.aimi ? ", Freddie Mac (AIMI)" : ""}. Percentiles rank this metro against every U.S. metro reporting each series. The score weights employment — the only leading signal carried at metro level — most heavily; trailing series confirm rather than trigger.
+              </p>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -310,7 +310,7 @@ export default function Home() {
                 <div key={m.city} className={`flex items-center justify-between py-3.5 ${i ? "border-t border-[var(--line)]" : ""}`}>
                   <div>
                     <p className="font-semibold text-ink">{m.city}</p>
-                    <p className="mono mt-0.5 text-[11px] text-muted">{COPY.marketMetricA}: {m.rent} &nbsp; {COPY.marketMetricB}: {m.vac}</p>
+                    <p className="mono mt-0.5 text-[11px] text-muted">{COPY.marketMetricA}: {m.rent} &nbsp; Score: {m.score}</p>
                   </div>
                   <div className="flex items-center gap-5">
                     <span className="headline text-2xl" style={{ color: toneColor(m.tone) }}>{m.score}</span>
