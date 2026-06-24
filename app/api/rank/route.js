@@ -22,6 +22,7 @@ const FACTORS = {
   affordability:  { slug: "bea_rpp_rents",          yoy: false, higher: false, label: "Affordability",          source: "BEA RPP" },
   aimi:           { slug: "aimi",                   yoy: false, higher: true,  label: "Investment Index (AIMI)", source: "Freddie Mac",   lead: true },
   time_on_market: { slug: "apt_time_on_market",     yoy: false, higher: false, label: "Time on Market",         source: "Apartment List" },
+  supply_pressure:{ slug: "permits_5plus_metro",    yoy: false, higher: false, label: "Supply Pressure",        source: "Census BPS / ACS", lead: true, normalizeBy: "acs_mf_units_5plus" },
 };
 
 // Latest reading per metro for one factor -> { asOf, map{cbsa: value} }.
@@ -55,6 +56,22 @@ function pct(val, pop, higher) {
   return Math.round((below / pop.length) * 100);
 }
 
+// One factor's metro map. For factors with `normalizeBy`, divide the base
+// series by a denominator series (e.g. new permits per 1,000 existing 5+ units)
+// so the value is comparable across metros of any size.
+async function factorSection(k) {
+  const f = FACTORS[k];
+  const base = await crossSection(f.slug, { yoy: f.yoy });
+  if (!f.normalizeBy) return base;
+  const denom = await crossSection(f.normalizeBy);
+  const map = {};
+  for (const c of Object.keys(base.map)) {
+    const d = denom.map[c];
+    if (d && d > 0) map[c] = Math.round((base.map[c] / d) * 1000 * 10) / 10; // per 1,000 units
+  }
+  return { asOf: base.asOf, map };
+}
+
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
   let keys = (searchParams.get("factors") || "").split(",").map((s) => s.trim()).filter((k) => FACTORS[k]);
@@ -69,7 +86,7 @@ export async function GET(req) {
   const wlCbsas = (searchParams.get("cbsas") || "").split(",").map((s) => s.trim()).filter(Boolean);
 
   try {
-    const sections = await Promise.all(keys.map((k) => crossSection(FACTORS[k].slug, { yoy: FACTORS[k].yoy })));
+    const sections = await Promise.all(keys.map((k) => factorSection(k)));
     const pops = sections.map((s) => Object.values(s.map));
 
     let candidates;

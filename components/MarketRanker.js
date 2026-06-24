@@ -12,6 +12,7 @@ const FACTOR_MENU = [
   { key: "affordability", label: "Affordability", source: "BEA RPP", hint: "Cheaper rent vs U.S. ranks higher" },
   { key: "aimi", label: "Investment Index", source: "Freddie Mac AIMI", lead: true, hint: "Higher = better entry (24 metros)" },
   { key: "time_on_market", label: "Time on Market", source: "Apartment List", hint: "Faster leasing ranks higher" },
+  { key: "supply_pressure", label: "Supply Pressure", source: "Census BPS / ACS", lead: true, hint: "New MF permits per 1,000 existing units — less ranks higher" },
 ];
 const LABELS = Object.fromEntries(FACTOR_MENU.map((f) => [f.key, f.label]));
 
