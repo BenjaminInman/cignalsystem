@@ -9,6 +9,7 @@ import { useContent, useVertical } from "@/components/VerticalProvider";
 import { isPageReady } from "@/lib/verticals";
 import ComingSoonInline from "@/components/ComingSoonInline";
 import EmergingMarkets from "@/components/EmergingMarkets";
+import MarketRanker from "@/components/MarketRanker";
 
 function fmtMonth(d) {
   if (!d) return "";
@@ -132,6 +133,8 @@ function MarketMapsInner() {
       <p className="mt-3 max-w-2xl text-muted">{COPY.mmSubtitle || "Fundamentals scored and ranked across top U.S. metros."}</p>
 
       <ZipLookup />
+
+      <MarketRanker watchlistCbsas={tracked.map((t) => t.cbsa)} />
 
       <div className="card mt-8 p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
