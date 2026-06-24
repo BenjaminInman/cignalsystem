@@ -27,6 +27,13 @@ const fmtMoney = (n) =>
     : `$${Math.round(Number(n)).toLocaleString()}`;
 const fmtPct = (n) =>
   n === null || n === undefined || Number.isNaN(Number(n)) ? "—" : `${Number(n)}%`;
+// Expense ratio = total expenses / total income, as a percent.
+const expRatio = (income, expenses) => {
+  const i = num(income), e = num(expenses);
+  return i && i !== 0 && e !== null && e !== undefined ? (e / i) * 100 : null;
+};
+const fmtRatio = (n) =>
+  n === null || n === undefined || Number.isNaN(Number(n)) ? "—" : `${Number(n).toFixed(1)}%`;
 const thisMonth = () => new Date().toISOString().slice(0, 7); // YYYY-MM
 const monthLabel = (ym) =>
   new Date(`${ym}-01T00:00:00`).toLocaleDateString("en-US", { month: "short", year: "numeric" });
@@ -355,9 +362,10 @@ function PortfolioInner() {
                   </p>
                 </div>
                 <div className="flex items-center gap-8">
-                  <div className="grid grid-cols-3 gap-x-8 gap-y-2">
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-2 sm:grid-cols-4">
                     <Col label="Occupancy" value={fmtPct(s.physical_occupancy)} color={s.physical_occupancy != null ? "#5FB97C" : undefined} />
                     <Col label="Total Income" value={fmtMoney(s.total_income)} />
+                    <Col label="Expense Ratio" value={fmtRatio(expRatio(s.total_income, s.total_expenses))} />
                     <Col label="NOI" value={fmtMoney(s.noi)} color={s.noi != null ? "#F5B544" : undefined} />
                   </div>
                   <ChevronDown size={18} className={`shrink-0 text-muted transition-transform ${isOpen ? "rotate-180" : ""}`} />
@@ -394,6 +402,8 @@ function Editor({ prop, setProp, snap, setSnap, month, loadMonth, snaps, overrid
   const sp = (k) => (e) => setProp({ ...prop, [k]: e.target.value });
   const ss = (k) => (e) => setSnap({ ...snap, [k]: e.target.value });
   const recorded = new Set((snaps || []).map((r) => r.snapshot_month?.slice(0, 7)));
+  // Effective income honors a manual Total Income override; expenses is always the raw input.
+  const ratioLive = expRatio(override ? snap.total_income : deriveLive.total_income, snap.total_expenses);
 
   return (
     <div className="space-y-7">
@@ -454,6 +464,15 @@ function Editor({ prop, setProp, snap, setSnap, month, loadMonth, snaps, overrid
         <Calc label="Total Income" override={override} value={snap.total_income} computed={deriveLive.total_income} onChange={ss("total_income")} />
         <Field label="Total Expenses"><input type="number" value={snap.total_expenses} onChange={ss("total_expenses")} className="input" /></Field>
         <Calc label="NOI" override={override} value={snap.noi} computed={deriveLive.noi} onChange={ss("noi")} accent />
+        <div>
+          <label className="mono mb-1.5 block text-[10px] tracking-[0.08em] text-muted">Expense Ratio <span className="text-[9px] opacity-70">(auto)</span></label>
+          <div
+            className="mono rounded px-2.5 py-2.5 text-[13px]"
+            style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed var(--line-strong,#2a2d31)", color: "#eceeef" }}
+          >
+            {fmtRatio(ratioLive)}
+          </div>
+        </div>
       </Section>
 
       {err && <p className="mono text-[12px] text-down">{err}</p>}
