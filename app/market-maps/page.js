@@ -10,6 +10,7 @@ import { isPageReady } from "@/lib/verticals";
 import ComingSoonInline from "@/components/ComingSoonInline";
 import EmergingMarkets from "@/components/EmergingMarkets";
 import MarketRanker from "@/components/MarketRanker";
+import ExpertPicks from "@/components/ExpertPicks";
 
 function fmtMonth(d) {
   if (!d) return "";
@@ -97,6 +98,10 @@ function MarketMapsInner() {
     () => MARKET_GROUPS.flatMap((g) => g.markets).filter((m) => m.cbsa).map((m) => ({ cbsa: m.cbsa, name: m.city })),
     [MARKET_GROUPS]
   );
+  const noradaMarkets = useMemo(
+    () => MARKET_GROUPS.flatMap((g) => g.markets.map((m) => ({ city: m.city, cbsa: m.cbsa, tier: g.region }))),
+    [MARKET_GROUPS]
+  );
   useEffect(() => {
     fetch("/api/migration").then((r) => r.json()).then(setMig).catch(() => setMig({}));
     fetch("/api/metro-growth").then((r) => r.json()).then(setGrowth).catch(() => setGrowth({ growth: {} }));
@@ -134,7 +139,10 @@ function MarketMapsInner() {
 
       <ZipLookup />
 
-      <MarketRanker watchlistCbsas={tracked.map((t) => t.cbsa)} />
+      <div className="mt-8 grid gap-6 lg:grid-cols-2 lg:items-start">
+        <ExpertPicks noradaMarkets={noradaMarkets} />
+        <MarketRanker watchlistCbsas={tracked.map((t) => t.cbsa)} />
+      </div>
 
       <div className="card mt-8 p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">

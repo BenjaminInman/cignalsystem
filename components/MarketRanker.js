@@ -78,7 +78,7 @@ export default function MarketRanker({ watchlistCbsas = [] }) {
   const results = data?.results || [];
 
   return (
-    <div className="card mt-8 p-6">
+    <div className="card p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="kicker mb-1 flex items-center gap-2"><SlidersHorizontal size={13} className="text-signal" /> Build Your Own Ranking</p>
