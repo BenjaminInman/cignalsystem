@@ -49,9 +49,10 @@ export async function GET(req) {
     // ZIP path
     if (/^\d{5}$/.test(q)) {
       const zip = q;
-      const z = await fetchSeries("zori_zip", zip);
-      if (z) return Response.json({ found: true, grain: "zip", label: `ZIP ${zip}`, query: zip, ...z });
       const xw = (await sb(`zip_crosswalk?zip=eq.${zip}&select=*`))?.[0];
+      const place = xw?.city_label || null; // exact "City, ST" for this ZIP
+      const z = await fetchSeries("zori_zip", zip);
+      if (z) return Response.json({ found: true, grain: "zip", label: `ZIP ${zip}`, place, query: zip, ...z });
       if (xw) {
         const ladder = [
           ["city", "zori_city", xw.city_label],
@@ -61,10 +62,10 @@ export async function GET(req) {
         for (const [grain, slug, code] of ladder) {
           if (!code) continue;
           const res = await fetchSeries(slug, code);
-          if (res) return Response.json({ found: true, grain, label: grain === "metro" ? `${code} metro` : code, query: zip, rolledUp: true, rolledFrom: `ZIP ${zip}`, ...res });
+          if (res) return Response.json({ found: true, grain, label: grain === "metro" ? `${code} metro` : code, place, query: zip, rolledUp: true, rolledFrom: `ZIP ${zip}`, ...res });
         }
       }
-      return Response.json({ found: false, query: zip, kind: "zip" });
+      return Response.json({ found: false, query: zip, kind: "zip", place });
     }
 
     // City, State path
@@ -74,7 +75,7 @@ export async function GET(req) {
       const res = await fetchSeries(slug, parsed.code, true);
       if (res) {
         const name = res.code || parsed.code;
-        return Response.json({ found: true, grain, label: grain === "metro" ? `${name} metro` : name, query: q, ...res });
+        return Response.json({ found: true, grain, label: grain === "metro" ? `${name} metro` : name, place: name, query: q, ...res });
       }
     }
     return Response.json({ found: false, query: q, kind: "city" });

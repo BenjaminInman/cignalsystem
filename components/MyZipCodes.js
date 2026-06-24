@@ -18,6 +18,7 @@ export default function MyZipCodes() {
   const supabase = useMemo(() => createClient(), []);
   const [userId, setUserId] = useState(null);
   const [zips, setZips] = useState(null); // null = loading; else [{ zip, position }]
+  const [places, setPlaces] = useState({}); // zip -> "City, ST"
   const [open, setOpen] = useState(() => new Set()); // expanded zips
   const [details, setDetails] = useState({}); // zip -> { loading, rent, demo, error }
   const [input, setInput] = useState("");
@@ -39,6 +40,11 @@ export default function MyZipCodes() {
         .order("position", { ascending: true });
       if (!active) return;
       setZips(data || []);
+      const list = (data || []).map((r) => r.zip);
+      if (list.length) {
+        const { data: xw } = await supabase.from("zip_crosswalk").select("zip, city_label").in("zip", list);
+        if (active && xw) setPlaces(Object.fromEntries(xw.map((r) => [r.zip, r.city_label])));
+      }
     })();
     return () => { active = false; };
   }, [supabase]);
@@ -81,10 +87,11 @@ export default function MyZipCodes() {
     if (zips?.some((z) => z.zip === zip)) { setAddError(`${zip} is already on your list.`); return; }
     setBusy(true);
     // Confirm the ZIP resolves to a tracked market before saving.
-    let ok = false;
+    let ok = false, place = null;
     try {
       const probe = await fetch(`/api/zip?zip=${zip}`).then((r) => r.json());
       ok = !!(probe && probe.found);
+      place = probe?.place || null;
     } catch { ok = false; }
     if (!ok) {
       setBusy(false);
@@ -94,6 +101,7 @@ export default function MyZipCodes() {
     const position = zips?.length || 0;
     const next = [...(zips || []), { zip, position }];
     setZips(next);
+    if (place) setPlaces((p) => ({ ...p, [zip]: place }));
     setInput("");
     setBusy(false);
     if (userId) await supabase.from("user_zip_codes").upsert({ user_id: userId, zip, position });
@@ -159,6 +167,7 @@ export default function MyZipCodes() {
                     <button onClick={() => toggle(zip)} className="flex flex-1 items-center gap-3 text-left">
                       <ChevronDown size={16} className={`shrink-0 text-muted transition-transform ${isOpen ? "rotate-180" : ""}`} />
                       <span className="mono text-[15px] tracking-[0.06em] text-ink">{zip}</span>
+                      {places[zip] && <span className="text-[13px] text-muted">{places[zip]}</span>}
                       {d?.rent?.grain && (
                         <span className="mono rounded-sm border border-signal/30 bg-signal/10 px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-signal">
                           {GRAIN_LABEL[d.rent.grain] || d.rent.grain.toUpperCase()}
@@ -222,8 +231,8 @@ function ZipDetail({ zip, rent, demo }) {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="mono text-[9px] tracking-[0.12em] text-muted">
-              ZILLOW OBSERVED RENT · {rent.label}
-              {rent.rolledUp ? ` · rolled up from ${rent.rolledFrom}` : ""}
+              ZILLOW OBSERVED RENT · {rent.place || rent.label}
+              {rent.rolledUp ? ` · via ${rent.label}` : ""}
             </p>
             <div className="mt-1 flex items-baseline gap-3">
               <span className="mono text-3xl text-ink">{usd(rent.rent)}</span>

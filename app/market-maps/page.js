@@ -416,7 +416,9 @@ function ZipLookup() {
             <div>
               <p className="mono flex flex-wrap items-center gap-2 text-[11px] tracking-[0.12em] text-muted">
                 <span className="rounded bg-signal/15 px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-signal">{GRAIN[data.grain]}</span>
-                {data.label} · OBSERVED RENT
+                {data.place && /^\d{5}$/.test(String(data.query || ""))
+                  ? `${data.place} · ZIP ${data.query}`
+                  : data.label} · OBSERVED RENT
               </p>
               <p className="mt-1.5 text-3xl font-semibold text-ink">${data.rent.toLocaleString()}<span className="ml-1 text-sm text-muted">/mo</span></p>
               <p className="mt-1 text-sm">
