@@ -44,7 +44,7 @@ async function fileToContent(file, label) {
   }
   if (type === "text/csv" || type === "text/plain" || name.endsWith(".csv") || name.endsWith(".txt"))
     return { text: buf.toString("utf-8").slice(0, 60000) };
-  if (/\.(xlsx|xls|xlsm)$/.test(name) || type.includes("spreadsheet") || type.includes("excel")) {
+  if (/\.(xlsx|xls|xlsm|xlsb)$/.test(name) || type.includes("spreadsheet") || type.includes("ms-excel") || type.includes("excel")) {
     try {
       const wb = XLSX.read(buf, { type: "buffer" });
       const out = wb.SheetNames.map((s) => `# Sheet: ${s}\n${XLSX.utils.sheet_to_csv(wb.Sheets[s])}`).join("\n\n");
@@ -93,7 +93,7 @@ Output ONLY a JSON object — no prose, no markdown, no code fences. Capture EVE
     "avg_rent_2bed": number|null,
     "avg_rent_3bed": number|null,
     "avg_rent_4bed": number|null,
-    "unit_mix": [ { "bedrooms": number, "baths": number|null, "units": number, "occupied": number|null, "avg_rent": number|null } ]
+    "unit_mix": [ { "plan": string|null, "bedrooms": number, "baths": number|null, "units": number, "occupied": number|null, "avg_rent": number|null } ]
   },
   "property_meta": { "name": string|null, "city": string|null, "state": string|null },
   "notes": string
@@ -104,7 +104,7 @@ Rules:
 - The user gives a TARGET MONTH. If the statement covers multiple periods (a T-12 with monthly columns), extract that month's column and say so in period_detected; if single-period, use it and say so.
 - Numbers must be plain (no $, commas, parentheses). Convert accounting parentheses to negative EXCEPT vacancy_loss/bad_debt/concessions, returned as positive magnitudes.
 - expenses.line_items must list EVERY operating-expense line you can read, with its original label and amount — do not drop any. Also map them into the named categories where they fit.
-- rent_roll: group units by bedroom count, average the in-place rent; if only market rent is available, use it and note that. Occupancy = occupied units / total units.
+- rent_roll: For each avg_rent_Nbed, average the in-place rent across ALL units of that bedroom count, spanning every floor plan / unit type that shares that bedroom count. If a bedroom type has multiple floor plans (e.g. a 2-bedroom with plans B1, B2, B3), combine them into a single 2-bed average — use a UNIT-WEIGHTED mean (sum of all 2-bed unit rents ÷ total 2-bed units), not a simple average of plan averages, so larger floor plans count proportionally. Preserve each distinct floor plan separately in unit_mix (its plan label, bedrooms, unit count, occupied count, and its own avg rent) so the detail survives. If only market rent is available, use it and note that. Occupancy = occupied units / total units.
 - property_meta: read the property name and location from the documents if present.
 - If a document is unrelated/unreadable, set its fields to null and explain in notes.`;
 

@@ -673,7 +673,7 @@ function FileInput({ label, file, onPick }) {
       </div>
       <input
         type="file" className="hidden"
-        accept=".pdf,.csv,.txt,.xlsx,.xls,.xlsm,.png,.jpg,.jpeg,.webp"
+        accept=".pdf,.csv,.txt,.xlsx,.xls,.xlsm,.xlsb,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.png,.jpg,.jpeg,.webp"
         onChange={(e) => onPick(e.target.files?.[0] || null)}
       />
     </label>
