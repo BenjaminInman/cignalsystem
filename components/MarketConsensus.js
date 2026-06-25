@@ -61,10 +61,10 @@ export default function MarketConsensus() {
           <p className="kicker mb-1 flex items-center gap-2">
             <Layers size={13} className="text-signal" /> Market Consensus
           </p>
-          <h2 className="headline text-2xl text-ink md:text-3xl">Weighted Market Consensus &middot; 2026</h2>
+          <h2 className="headline text-2xl text-ink md:text-3xl">Top Market Consensus &middot; 2026</h2>
           <p className="mt-2 max-w-xl text-sm text-muted">
-            Twelve published &ldquo;top markets&rdquo; lists, combined into one ranking and weighted by source
-            rigor &mdash; institutional research counts more than an SEO blog. Each market carries its live
+            Twelve published &ldquo;top markets&rdquo; lists, combined into one ranking that leans on
+            institutional research over SEO blogs. Each market carries its live
             Cignal score, so where the crowd and the fundamentals disagree, you see it.
           </p>
         </div>
@@ -139,9 +139,9 @@ export default function MarketConsensus() {
       </div>
 
       <p className="mono mt-3 text-[10px] leading-relaxed tracking-[0.04em] text-muted">
-        Consensus strength weights each source by tier (institutional research &gt; marketplace &gt; editorial) and
-        by where the market lands on its list. Score = national-percentile blend of live fundamentals
-        (employment-weighted). A market high on the crowd&rsquo;s list but low on score is the gap most lists never show.
+        Consensus strength reflects each source&rsquo;s tier (institutional research &gt; marketplace &gt; editorial) and
+        where the market lands on its list. Score = national-percentile blend of live fundamentals
+        (employment-led). A market high on the crowd&rsquo;s list but low on score is the gap most lists never show.
       </p>
     </div>
   );
