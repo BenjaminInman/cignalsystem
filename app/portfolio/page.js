@@ -446,6 +446,9 @@ function Editor({ prop, setProp, snap, setSnap, month, loadMonth, snaps, overrid
       fd.append("income", incomeFile);
       if (rentRollFile) fd.append("rentRoll", rentRollFile);
       fd.append("month", month);
+      fd.append("propertyName", prop.name || "");
+      fd.append("city", prop.city || "");
+      fd.append("state", prop.state || "");
       const pid = snaps?.[0]?.property_id;
       if (pid) fd.append("propertyId", pid);
       const res = await fetch("/api/portfolio/extract", { method: "POST", body: fd });
