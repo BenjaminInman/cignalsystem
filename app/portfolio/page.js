@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Plus, DollarSign, TrendingUp, Building2, Activity,
-  ChevronDown, Trash2, Save, X, Loader2,
+  ChevronDown, Trash2, Save, X, Loader2, Sparkles, Upload,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useContent, useVertical } from "@/components/VerticalProvider";
@@ -405,8 +405,98 @@ function Editor({ prop, setProp, snap, setSnap, month, loadMonth, snaps, overrid
   // Effective income honors a manual Total Income override; expenses is always the raw input.
   const ratioLive = expRatio(override ? snap.total_income : deriveLive.total_income, snap.total_expenses);
 
+  // ----- document auto-fill -----
+  const [incomeFile, setIncomeFile] = useState(null);
+  const [rentRollFile, setRentRollFile] = useState(null);
+  const [extracting, setExtracting] = useState(false);
+  const [exErr, setExErr] = useState("");
+  const [exNote, setExNote] = useState("");
+
+  function applyExtract(data) {
+    const inc = data.income_statement || {};
+    const rr = data.rent_roll || {};
+    const map = {
+      total_rental_income: inc.total_rental_income,
+      loss_to_lease: inc.loss_to_lease,
+      vacancy_loss: inc.vacancy_loss,
+      bad_debt: inc.bad_debt,
+      concessions: inc.concessions,
+      other_income: inc.other_income,
+      total_expenses: inc.total_expenses,
+      avg_rent_1bed: rr.avg_rent_1bed,
+      avg_rent_2bed: rr.avg_rent_2bed,
+      avg_rent_3bed: rr.avg_rent_3bed,
+      avg_rent_4bed: rr.avg_rent_4bed,
+      physical_occupancy: rr.physical_occupancy,
+    };
+    setSnap((cur) => {
+      const next = { ...cur };
+      for (const [k, v] of Object.entries(map)) if (v !== null && v !== undefined) next[k] = v;
+      return next;
+    });
+    if (rr.unit_count !== null && rr.unit_count !== undefined)
+      setProp((cur) => ({ ...cur, unit_count: rr.unit_count }));
+  }
+
+  async function runExtract() {
+    if (!incomeFile) { setExErr("Attach an income statement first."); return; }
+    setExErr(""); setExNote(""); setExtracting(true);
+    try {
+      const fd = new FormData();
+      fd.append("income", incomeFile);
+      if (rentRollFile) fd.append("rentRoll", rentRollFile);
+      fd.append("month", month);
+      const pid = snaps?.[0]?.property_id;
+      if (pid) fd.append("propertyId", pid);
+      const res = await fetch("/api/portfolio/extract", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) { setExErr(data.error || "Extraction failed."); return; }
+      applyExtract(data);
+      const bits = [];
+      if (data.income_statement?.period_detected) bits.push(`Period read: ${data.income_statement.period_detected}.`);
+      if (data.income_statement?.reported_noi != null)
+        bits.push(`Statement NOI ${fmtMoney(data.income_statement.reported_noi)} — yours auto-calculates from the inputs, so reconcile if they differ.`);
+      if (data.notes) bits.push(data.notes);
+      setExNote(bits.join(" ") || "Fields filled. Review before saving.");
+    } catch {
+      setExErr("Something went wrong reaching the extractor.");
+    } finally {
+      setExtracting(false);
+    }
+  }
+
   return (
     <div className="space-y-7">
+      {/* auto-fill from documents */}
+      <div className="rounded-lg border border-dashed border-[var(--line-strong,#2a2d31)] bg-white/[0.02] p-4">
+        <div className="mb-1 flex items-center gap-2">
+          <Sparkles size={14} className="text-signal" />
+          <p className="kicker">Auto-fill from documents</p>
+        </div>
+        <p className="mono mb-3 text-[11px] leading-relaxed text-muted">
+          Upload this month&apos;s operating statement (and optionally a rent roll). Cignal reads the figures and fills the fields below — always review before saving. PDF, image, CSV, or Excel.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <FileInput label="Income statement" file={incomeFile} onPick={setIncomeFile} />
+          <FileInput label="Rent roll (optional)" file={rentRollFile} onPick={setRentRollFile} />
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <button
+            onClick={runExtract} disabled={extracting || !incomeFile}
+            className="mono flex items-center gap-2 rounded-sm border border-signal/50 px-4 py-2 text-[12px] tracking-[0.06em] text-signal hover:bg-signal/10 disabled:opacity-40"
+          >
+            {extracting ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+            {extracting ? "Reading documents…" : "Extract & fill"}
+          </button>
+          {exErr && <span className="mono text-[11px] text-down">{exErr}</span>}
+        </div>
+        {exNote && (
+          <p className="mono mt-3 text-[11px] leading-relaxed text-muted">
+            <span className="text-up">● Filled.</span> {exNote}
+          </p>
+        )}
+      </div>
+
       {/* month selector */}
       <div className="flex flex-wrap items-end gap-4">
         <Field label="Reporting Month" wide>
@@ -564,6 +654,26 @@ function Col({ label, value, color }) {
       <p className="mono text-[10px] tracking-[0.1em] text-muted">{label}</p>
       <p className="mono mt-1 text-sm" style={{ color: color || "#eceeef" }}>{value}</p>
     </div>
+  );
+}
+
+function FileInput({ label, file, onPick }) {
+  return (
+    <label className="block cursor-pointer">
+      <span className="mono mb-1.5 block text-[10px] tracking-[0.08em] text-muted">{label}</span>
+      <div className="flex items-center gap-2 rounded border border-[var(--line-strong,#2a2d31)] bg-bg px-3 py-2 hover:border-signal/40">
+        <Upload size={13} className="shrink-0 text-muted" />
+        <span className="mono truncate text-[12px]" style={{ color: file ? "#eceeef" : "#797e85" }}>
+          {file ? file.name : "Choose file…"}
+        </span>
+        {file && <X size={13} className="ml-auto shrink-0 text-muted hover:text-down" onClick={(e) => { e.preventDefault(); onPick(null); }} />}
+      </div>
+      <input
+        type="file" className="hidden"
+        accept=".pdf,.csv,.txt,.xlsx,.xls,.xlsm,.png,.jpg,.jpeg,.webp"
+        onChange={(e) => onPick(e.target.files?.[0] || null)}
+      />
+    </label>
   );
 }
 
