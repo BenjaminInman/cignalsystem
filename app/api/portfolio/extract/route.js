@@ -186,23 +186,49 @@ export async function POST(req) {
   });
 
   let parsed, usage = {};
+  let d;
   try {
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": AKEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: MODEL, max_tokens: 3000, system: SYSTEM, messages: [{ role: "user", content }] }),
+      body: JSON.stringify({ model: MODEL, max_tokens: 8000, system: SYSTEM, messages: [{ role: "user", content }] }),
     });
-    const d = await r.json();
-    if (!r.ok || !Array.isArray(d.content))
-      return Response.json({ error: "The extractor hit an error. Please try again." }, { status: 502 });
-    usage = d.usage || {};
-    const raw = d.content.filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
-    const clean = raw.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
+    d = await r.json();
+    if (!r.ok) {
+      console.error("[extract] anthropic non-200", r.status, JSON.stringify(d).slice(0, 600));
+      return Response.json({ error: "The extraction model returned an error. Please try again in a moment." }, { status: 502 });
+    }
+  } catch (e) {
+    console.error("[extract] fetch threw:", e?.message);
+    return Response.json({ error: "Couldn't reach the extraction model. Please try again." }, { status: 502 });
+  }
+
+  if (!Array.isArray(d?.content)) {
+    console.error("[extract] unexpected response shape:", JSON.stringify(d).slice(0, 600));
+    return Response.json({ error: "The extractor returned an unexpected response. Please try again." }, { status: 502 });
+  }
+  usage = d.usage || {};
+  const stop = d.stop_reason;
+  const raw = d.content.filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
+  console.log(
+    `[extract] stop_reason=${stop} text_len=${raw.length} blocks=${d.content.map((b) => b.type).join(",")} in=${usage.input_tokens} out=${usage.output_tokens}`
+  );
+
+  try {
+    let clean = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
     const start = clean.indexOf("{");
     const end = clean.lastIndexOf("}");
-    parsed = JSON.parse(start >= 0 ? clean.slice(start, end + 1) : clean);
-  } catch {
-    return Response.json({ error: "Couldn't parse the documents into fields. Try a clearer PDF or CSV export." }, { status: 502 });
+    if (start >= 0 && end > start) clean = clean.slice(start, end + 1);
+    parsed = JSON.parse(clean);
+  } catch (e) {
+    console.error(
+      `[extract] JSON parse failed: ${e?.message} | stop=${stop} | len=${raw.length} | head=${raw.slice(0, 200)} | tail=${raw.slice(-200)}`
+    );
+    const hint =
+      stop === "max_tokens"
+        ? "The documents were large enough to truncate the response — try uploading the income statement and rent roll one at a time."
+        : "Try a clearer PDF, image, or CSV export.";
+    return Response.json({ error: `Couldn't read the documents into fields. ${hint}` }, { status: 502 });
   }
 
   const meta = parsed.property_meta || {};
