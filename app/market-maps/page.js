@@ -10,7 +10,7 @@ import { isPageReady } from "@/lib/verticals";
 import ComingSoonInline from "@/components/ComingSoonInline";
 import EmergingMarkets from "@/components/EmergingMarkets";
 import MarketRanker from "@/components/MarketRanker";
-import ExpertPicks from "@/components/ExpertPicks";
+import MarketConsensus from "@/components/MarketConsensus";
 import RentRadial from "@/components/RentRadial";
 
 function fmtMonth(d) {
@@ -33,10 +33,6 @@ function MarketMapsInner() {
   const [card, setCard] = useState(null);
   const tracked = useMemo(
     () => MARKET_GROUPS.flatMap((g) => g.markets).filter((m) => m.cbsa).map((m) => ({ cbsa: m.cbsa, name: m.city })),
-    [MARKET_GROUPS]
-  );
-  const noradaMarkets = useMemo(
-    () => MARKET_GROUPS.flatMap((g) => g.markets.map((m) => ({ city: m.city, cbsa: m.cbsa, tier: g.region }))),
     [MARKET_GROUPS]
   );
   useEffect(() => {
@@ -77,7 +73,7 @@ function MarketMapsInner() {
       <ZipLookup />
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2 lg:items-start">
-        <ExpertPicks noradaMarkets={noradaMarkets} />
+        <MarketConsensus />
         <MarketRanker watchlistCbsas={tracked.map((t) => t.cbsa)} />
       </div>
 
