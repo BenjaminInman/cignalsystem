@@ -59,7 +59,7 @@ export default function IndexDonut({ members = [] }) {
   const fmt = (v) => `${v >= 0 ? "+" : ""}${Math.round(v * 100) / 100}%`;
 
   return (
-    <svg viewBox="0 0 360 336" className="w-full max-w-[320px]" onMouseLeave={() => setHover(null)}>
+    <svg viewBox="0 0 360 336" className="w-full max-w-[460px]" onMouseLeave={() => setHover(null)}>
       {/* inner ring: advancing / declining split */}
       {Object.entries(groups).filter(([, g]) => g.n > 0 && g.a1 - g.a0 > 0.5).map(([name, g]) => (
         <path key={`g-${name}`} d={arcPath(CX, CY, rI1, rI2, g.a0, g.a1)} fill={g.color} fillOpacity={0.16} stroke="#08090A" strokeWidth="1" />
