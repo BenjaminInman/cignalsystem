@@ -1,6 +1,6 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 import { createClient } from "@/lib/supabase/server";
 import * as XLSX from "xlsx";
@@ -10,8 +10,8 @@ const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const AKEY = process.env.ANTHROPIC_API_KEY;
 const MODEL = "claude-sonnet-4-6";
 
-const FREE_TRIAL = 3;     // lifetime extractions for a free account (conversion teaser)
-const PRO_DAILY_CAP = 40; // per-day ceiling for Pro (abuse / runaway guard)
+const FREE_TRIAL = 3;
+const PRO_DAILY_CAP = 40;
 const MAX_BYTES = 15 * 1024 * 1024;
 
 const IMG = { "image/png": 1, "image/jpeg": 1, "image/jpg": 1, "image/webp": 1, "image/gif": 1 };
@@ -56,7 +56,7 @@ async function fileToContent(file, label) {
   throw new Error(`Unsupported ${label} format. Upload a PDF, image, CSV, or Excel file.`);
 }
 
-const SYSTEM = `You are a multifamily real-estate financial-data extractor for the Cignal System portfolio tracker. You read an operator's monthly operating statement (income statement / T-12) and optionally a rent roll for ONE property, and return the data as strict JSON.
+const SYSTEM = `You are a multifamily real-estate financial-data extractor for the Cignal System portfolio tracker. You are given ONE document for one property — either an operating statement (income statement / T-12) or a rent roll — and return the data as strict JSON. Fill the sections the document supports; use null for everything it does not contain.
 
 Output ONLY a JSON object — no prose, no markdown, no code fences. Capture EVERYTHING you can identify; this feeds both the operator's dashboard and an anonymized nationwide research corpus, so detailed expense line items matter. Schema:
 {
@@ -67,32 +67,23 @@ Output ONLY a JSON object — no prose, no markdown, no code fences. Capture EVE
     "bad_debt": number|null,               // POSITIVE magnitude
     "concessions": number|null,            // POSITIVE magnitude
     "other_income": number|null,
-    "total_income": number|null,           // effective gross income, if stated
+    "total_income": number|null,
     "total_expenses": number|null,         // total operating expenses (exclude debt service / capex if separable)
     "reported_noi": number|null,
     "period_detected": string
   },
-  "expenses": {                            // operating-expense detail; null where not present
-    "payroll": number|null,
-    "marketing": number|null,
-    "administrative": number|null,
-    "utilities": number|null,
-    "repairs_maintenance": number|null,
-    "contract_services": number|null,
-    "turnover": number|null,
-    "management_fee": number|null,
-    "insurance": number|null,
-    "property_taxes": number|null,
-    "other_expenses": number|null,         // sum anything not fitting a category above
-    "line_items": [ { "label": string, "amount": number } ]  // every expense line verbatim as labeled
+  "expenses": {
+    "payroll": number|null, "marketing": number|null, "administrative": number|null,
+    "utilities": number|null, "repairs_maintenance": number|null, "contract_services": number|null,
+    "turnover": number|null, "management_fee": number|null, "insurance": number|null,
+    "property_taxes": number|null, "other_expenses": number|null,
+    "line_items": [ { "label": string, "amount": number } ]
   },
   "rent_roll": {
     "unit_count": number|null,
-    "physical_occupancy": number|null,     // percent, e.g. 94.5
-    "avg_rent_1bed": number|null,          // average IN-PLACE (actual) rent
-    "avg_rent_2bed": number|null,
-    "avg_rent_3bed": number|null,
-    "avg_rent_4bed": number|null,
+    "physical_occupancy": number|null,
+    "avg_rent_1bed": number|null, "avg_rent_2bed": number|null,
+    "avg_rent_3bed": number|null, "avg_rent_4bed": number|null,
     "unit_mix": [ { "plan": string|null, "bedrooms": number, "baths": number|null, "units": number, "occupied": number|null, "avg_rent": number|null } ]
   },
   "property_meta": { "name": string|null, "city": string|null, "state": string|null },
@@ -100,13 +91,57 @@ Output ONLY a JSON object — no prose, no markdown, no code fences. Capture EVE
 }
 
 Rules:
-- Extract ONLY what is present. Use null for anything missing. NEVER fabricate or estimate a number not supported by the documents.
-- The user gives a TARGET MONTH. If the statement covers multiple periods (a T-12 with monthly columns), extract that month's column and say so in period_detected; if single-period, use it and say so.
+- Extract ONLY what is present. Use null for anything missing. NEVER fabricate or estimate a number not supported by the document.
+- The user gives a TARGET MONTH. If the document covers multiple periods (a T-12 with monthly columns), extract that month's column and say so in period_detected; if single-period, use it and say so.
 - Numbers must be plain (no $, commas, parentheses). Convert accounting parentheses to negative EXCEPT vacancy_loss/bad_debt/concessions, returned as positive magnitudes.
-- expenses.line_items must list EVERY operating-expense line you can read, with its original label and amount — do not drop any. Also map them into the named categories where they fit.
-- rent_roll: For each avg_rent_Nbed, average the in-place rent across ALL units of that bedroom count, spanning every floor plan / unit type that shares that bedroom count. If a bedroom type has multiple floor plans (e.g. a 2-bedroom with plans B1, B2, B3), combine them into a single 2-bed average — use a UNIT-WEIGHTED mean (sum of all 2-bed unit rents ÷ total 2-bed units), not a simple average of plan averages, so larger floor plans count proportionally. Preserve each distinct floor plan separately in unit_mix (its plan label, bedrooms, unit count, occupied count, and its own avg rent) so the detail survives. If only market rent is available, use it and note that. Occupancy = occupied units / total units.
-- property_meta: read the property name and location from the documents if present.
-- If a document is unrelated/unreadable, set its fields to null and explain in notes.`;
+- expenses.line_items must list EVERY operating-expense line you can read, with its original label and amount. Also map them into the named categories where they fit.
+- rent_roll: For each avg_rent_Nbed, average the in-place rent across ALL units of that bedroom count, spanning every floor plan that shares that bedroom count (combine multiple plans into one average) using a UNIT-WEIGHTED mean (sum of unit rents / total units), not a simple average of plan averages. Preserve each distinct floor plan separately in unit_mix. If only market rent is available, use it and note that. Occupancy = occupied units / total units.
+- property_meta: read the property name and location from the document if present.
+- If the document is unrelated/unreadable, set fields to null and explain in notes.`;
+
+// One model call for ONE document. Returns { parsed, usage } or { error, status }.
+async function callModel(content, tag) {
+  let d;
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": AKEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({ model: MODEL, max_tokens: 8000, system: SYSTEM, messages: [{ role: "user", content }] }),
+    });
+    d = await r.json();
+    if (!r.ok) {
+      console.error(`[extract:${tag}] anthropic non-200`, r.status, JSON.stringify(d).slice(0, 600));
+      return { error: "The extraction model returned an error. Please try again in a moment.", status: 502 };
+    }
+  } catch (e) {
+    console.error(`[extract:${tag}] fetch threw:`, e?.message);
+    return { error: "Couldn't reach the extraction model. Please try again.", status: 502 };
+  }
+  if (!Array.isArray(d?.content)) {
+    console.error(`[extract:${tag}] unexpected shape:`, JSON.stringify(d).slice(0, 600));
+    return { error: "The extractor returned an unexpected response. Please try again.", status: 502 };
+  }
+  const usage = d.usage || {};
+  const stop = d.stop_reason;
+  const raw = d.content.filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
+  console.log(`[extract:${tag}] stop=${stop} len=${raw.length} in=${usage.input_tokens} out=${usage.output_tokens}`);
+  try {
+    let clean = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
+    const start = clean.indexOf("{");
+    const end = clean.lastIndexOf("}");
+    if (start >= 0 && end > start) clean = clean.slice(start, end + 1);
+    return { parsed: JSON.parse(clean), usage };
+  } catch (e) {
+    console.error(`[extract:${tag}] parse failed: ${e?.message} | stop=${stop} | head=${raw.slice(0, 160)} | tail=${raw.slice(-160)}`);
+    const hint = stop === "max_tokens" ? "the document was very large" : "try a clearer PDF, image, or CSV export";
+    return { error: `Couldn't read the ${tag} into fields — ${hint}.`, status: 502 };
+  }
+}
+
+const pick = (...vals) => {
+  for (const v of vals) if (v !== null && v !== undefined && v !== "") return v;
+  return null;
+};
 
 export async function POST(req) {
   if (!AKEY)
@@ -120,24 +155,17 @@ export async function POST(req) {
   const isAdmin = !!prof?.is_admin;
   const isPro = prof?.tier === "pro";
 
-  // --- Tier-aware cap ---
   if (!isAdmin) {
     if (isPro) {
       const since = new Date();
       since.setUTCHours(0, 0, 0, 0);
-      const used = await sbGet(
-        `portfolio_extractions?user_id=eq.${user.id}&created_at=gte.${since.toISOString()}&select=id`,
-        SERVICE
-      );
+      const used = await sbGet(`portfolio_extractions?user_id=eq.${user.id}&created_at=gte.${since.toISOString()}&select=id`, SERVICE);
       if (Array.isArray(used) && used.length >= PRO_DAILY_CAP)
         return Response.json({ error: `You've reached today's auto-fill limit (${PRO_DAILY_CAP}). It resets at midnight UTC.` }, { status: 429 });
     } else {
       const used = await sbGet(`portfolio_extractions?user_id=eq.${user.id}&select=id`, SERVICE);
       if (Array.isArray(used) && used.length >= FREE_TRIAL)
-        return Response.json(
-          { error: `You've used your ${FREE_TRIAL} free document auto-fills. Upgrade to Cignal Pro for the full workflow.`, upgrade: true },
-          { status: 403 }
-        );
+        return Response.json({ error: `You've used your ${FREE_TRIAL} free document auto-fills. Upgrade to Cignal Pro for the full workflow.`, upgrade: true }, { status: 403 });
     }
   }
 
@@ -156,87 +184,63 @@ export async function POST(req) {
   const formState = (form.get("state") || "").toString().slice(0, 60) || null;
   if (!income) return Response.json({ error: "Attach at least an income statement." }, { status: 400 });
 
-  const content = [];
-  const textParts = [];
+  const monthLabel = month
+    ? new Date(`${month}-01T00:00:00`).toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    : "the most recent period available";
+  const instr = `TARGET MONTH: ${monthLabel}. Extract the figures for that period and return the JSON object per the schema.`;
+
   const names = [];
+  const calls = [];
   try {
     const inc = await fileToContent(income, "income statement");
     names.push(income.name || "income");
-    if (inc.blocks) content.push({ type: "text", text: "INCOME STATEMENT (document below):" }, ...inc.blocks);
-    else textParts.push(`INCOME STATEMENT (text):\n${inc.text}`);
+    const incContent = inc.blocks
+      ? [{ type: "text", text: "This is the INCOME STATEMENT for one property." }, ...inc.blocks, { type: "text", text: instr }]
+      : [{ type: "text", text: `This is the INCOME STATEMENT for one property.\n\n${inc.text}\n\n${instr}` }];
+    calls.push(callModel(incContent, "income"));
 
     if (rentRoll && typeof rentRoll.arrayBuffer === "function") {
       const rr = await fileToContent(rentRoll, "rent roll");
       names.push(rentRoll.name || "rentroll");
-      if (rr.blocks) content.push({ type: "text", text: "RENT ROLL (document below):" }, ...rr.blocks);
-      else textParts.push(`RENT ROLL (text):\n${rr.text}`);
+      const rrContent = rr.blocks
+        ? [{ type: "text", text: "This is the RENT ROLL for one property." }, ...rr.blocks, { type: "text", text: instr }]
+        : [{ type: "text", text: `This is the RENT ROLL for one property.\n\n${rr.text}\n\n${instr}` }];
+      calls.push(callModel(rrContent, "rentroll"));
     }
   } catch (e) {
     return Response.json({ error: e.message || "Could not read the files." }, { status: 400 });
   }
 
-  const monthLabel = month
-    ? new Date(`${month}-01T00:00:00`).toLocaleDateString("en-US", { month: "long", year: "numeric" })
-    : "the most recent period available";
-  content.push({
-    type: "text",
-    text: `TARGET MONTH: ${monthLabel}.\nExtract the figures for that period and return the JSON object per the schema.${
-      textParts.length ? "\n\n" + textParts.join("\n\n") : ""
-    }`,
-  });
+  // Process documents in parallel — keeps wall-clock well under the function limit.
+  const results = await Promise.all(calls);
+  const incomeRes = results[0];
+  const rrRes = results[1]; // may be undefined
 
-  let parsed, usage = {};
-  let d;
-  try {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": AKEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: MODEL, max_tokens: 8000, system: SYSTEM, messages: [{ role: "user", content }] }),
-    });
-    d = await r.json();
-    if (!r.ok) {
-      console.error("[extract] anthropic non-200", r.status, JSON.stringify(d).slice(0, 600));
-      return Response.json({ error: "The extraction model returned an error. Please try again in a moment." }, { status: 502 });
-    }
-  } catch (e) {
-    console.error("[extract] fetch threw:", e?.message);
-    return Response.json({ error: "Couldn't reach the extraction model. Please try again." }, { status: 502 });
-  }
+  // The income statement is required; if it failed outright, surface the reason.
+  if (!incomeRes?.parsed)
+    return Response.json({ error: incomeRes?.error || "Couldn't read the income statement." }, { status: incomeRes?.status || 502 });
 
-  if (!Array.isArray(d?.content)) {
-    console.error("[extract] unexpected response shape:", JSON.stringify(d).slice(0, 600));
-    return Response.json({ error: "The extractor returned an unexpected response. Please try again." }, { status: 502 });
-  }
-  usage = d.usage || {};
-  const stop = d.stop_reason;
-  const raw = d.content.filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
-  console.log(
-    `[extract] stop_reason=${stop} text_len=${raw.length} blocks=${d.content.map((b) => b.type).join(",")} in=${usage.input_tokens} out=${usage.output_tokens}`
-  );
-
-  try {
-    let clean = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
-    const start = clean.indexOf("{");
-    const end = clean.lastIndexOf("}");
-    if (start >= 0 && end > start) clean = clean.slice(start, end + 1);
-    parsed = JSON.parse(clean);
-  } catch (e) {
-    console.error(
-      `[extract] JSON parse failed: ${e?.message} | stop=${stop} | len=${raw.length} | head=${raw.slice(0, 200)} | tail=${raw.slice(-200)}`
-    );
-    const hint =
-      stop === "max_tokens"
-        ? "The documents were large enough to truncate the response — try uploading the income statement and rent roll one at a time."
-        : "Try a clearer PDF, image, or CSV export.";
-    return Response.json({ error: `Couldn't read the documents into fields. ${hint}` }, { status: 502 });
-  }
+  const ip = incomeRes.parsed || {};
+  const rp = rrRes?.parsed || {};
+  const usage = {
+    input_tokens: (incomeRes?.usage?.input_tokens || 0) + (rrRes?.usage?.input_tokens || 0),
+    output_tokens: (incomeRes?.usage?.output_tokens || 0) + (rrRes?.usage?.output_tokens || 0),
+  };
+  const im = ip.property_meta || {};
+  const rm = rp.property_meta || {};
+  const parsed = {
+    income_statement: ip.income_statement || null,
+    expenses: ip.expenses || null,
+    rent_roll: pick(rp.rent_roll, ip.rent_roll),
+    property_meta: { name: pick(im.name, rm.name), city: pick(im.city, rm.city), state: pick(im.state, rm.state) },
+    notes: [ip.notes, rp.notes, rrRes?.error].filter(Boolean).join(" "),
+  };
 
   const meta = parsed.property_meta || {};
   const city = formCity || meta.city || null;
   const state = formState || meta.state || null;
 
-  // Store the COMPLETE extraction for research (service role; survives even if the
-  // operator edits values or never saves the snapshot).
+  // Store the COMPLETE extraction for research (service role; survives edits / no-save).
   try {
     await fetch(`${SUPA}/rest/v1/portfolio_extractions`, {
       method: "POST",
@@ -254,9 +258,8 @@ export async function POST(req) {
         tokens_out: usage.output_tokens ?? null,
       }),
     });
-  } catch { /* research logging is non-critical to the user flow */ }
+  } catch { /* research logging is non-critical */ }
 
-  // Return only the dashboard-mapping fields (the rest is captured server-side).
   const inc = parsed.income_statement || {};
   const rr = parsed.rent_roll || {};
   return Response.json({
