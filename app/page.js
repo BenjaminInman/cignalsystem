@@ -302,26 +302,23 @@ export default function Home() {
               <TrendingUp size={13} className="text-signal" /> Market Intelligence
             </p>
 
-            <div className="space-y-6">
+            <div className="space-y-7">
               <div>
-                <p className="headline text-5xl leading-none text-ink md:text-6xl">Monitor.</p>
-                <p className="mt-2 text-[13.5px] leading-relaxed text-muted">
-                  Every indicator that drives the multifamily cycle &mdash; leading to lagging,
-                  national to metro &mdash; updated the moment each new print lands.
+                <p className="headline text-6xl leading-none text-ink md:text-7xl">Monitor.</p>
+                <p className="mt-2.5 text-[13.5px] leading-snug text-muted">
+                  Every indicator, leading to lagging, as each one releases.
                 </p>
               </div>
               <div>
-                <p className="headline text-5xl leading-none text-ink md:text-6xl">Compare.</p>
-                <p className="mt-2 text-[13.5px] leading-relaxed text-muted">
-                  Watch the leading signals pull ahead of the lagging ones, and measure the
-                  hard data against what the consensus is calling.
+                <p className="headline text-6xl leading-none text-ink md:text-7xl">Compare.</p>
+                <p className="mt-2.5 text-[13.5px] leading-snug text-muted">
+                  Leading against lagging &mdash; and data against the consensus.
                 </p>
               </div>
               <div>
-                <p className="headline text-5xl leading-none text-signal md:text-6xl">Confirm.</p>
-                <p className="mt-2 text-[13.5px] leading-relaxed text-muted">
-                  Pin down where the market truly sits in the cycle, so you can time capital
-                  and adjust strategy with conviction &mdash; not guesswork.
+                <p className="headline text-6xl leading-none text-signal md:text-7xl">Confirm.</p>
+                <p className="mt-2.5 text-[13.5px] leading-snug text-muted">
+                  Where the market&rsquo;s headed, so you can adjust strategy.
                 </p>
               </div>
             </div>
