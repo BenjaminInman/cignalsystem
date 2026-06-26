@@ -5,7 +5,6 @@ import Link from "next/link";
 import { ArrowRight, Lock, Newspaper, ArrowUpRight, Building2, SlidersHorizontal, TrendingUp, Users } from "lucide-react";
 import { toneColor, Sparkline, StatusPill } from "@/components/ui";
 import SignalCard from "@/components/SignalCard";
-import PerformanceTrends from "@/components/PerformanceTrends";
 import CycleWheel from "@/components/CycleWheel";
 import { useContent } from "@/components/VerticalProvider";
 import { fetchTeaserSignals } from "@/lib/signals";
@@ -295,9 +294,25 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 12-MONTH PERFORMANCE TRENDS + MARKET CYCLE */}
-      <div className="mt-14 grid gap-6 lg:grid-cols-[1.5fr_1fr] lg:items-stretch">
-        <PerformanceTrends />
+      {/* VALUE PROP + MARKET CYCLE */}
+      <div className="mt-14 grid gap-6 lg:grid-cols-[1fr_1.5fr] lg:items-stretch">
+        <section>
+          <div className="card flex h-full flex-col justify-center p-8 md:p-10">
+            <p className="kicker mb-5 flex items-center gap-2">
+              <TrendingUp size={13} className="text-signal" /> Market Intelligence
+            </p>
+            <h2 className="headline text-5xl leading-[1.04] text-ink md:text-6xl">
+              <span className="block">Monitor.</span>
+              <span className="block">Compare.</span>
+              <span className="block text-signal">Confirm.</span>
+            </h2>
+            <p className="mt-6 max-w-sm text-[15px] leading-relaxed text-muted">
+              Leading indicators turn first. We track them across every market, weigh the
+              data against the consensus, and confirm where the cycle is really headed
+              &mdash; before the rest of the market catches on.
+            </p>
+          </div>
+        </section>
         <CycleWheel />
       </div>
 
