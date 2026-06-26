@@ -18,13 +18,15 @@ export async function GET() {
     const uhaul = uh.filter((x) => x.report_year === maxYear);
     const n = uhaul.length || 1;
 
-    const irs = (await sb(`v_indicator_analytics?slug=in.(irs_net_migration,irs_inflow_agi,irs_agi_differential)&select=slug,region_code,value`)) || [];
     const irsMap = {};
-    for (const row of irs) {
-      const m = (irsMap[row.region_code] ||= {});
-      if (row.slug === "irs_net_migration") m.net = Math.round(row.value);
-      if (row.slug === "irs_inflow_agi") m.inAgi = Math.round(row.value);
-      if (row.slug === "irs_agi_differential") m.diff = Math.round(row.value);
+    for (const slug of ["irs_net_migration", "irs_inflow_agi", "irs_agi_differential"]) {
+      const rows = (await sb(`v_indicator_analytics?slug=eq.${slug}&select=region_code,value&limit=1000`)) || [];
+      for (const row of rows) {
+        const m = (irsMap[row.region_code] ||= {});
+        if (slug === "irs_net_migration") m.net = Math.round(row.value);
+        if (slug === "irs_inflow_agi") m.inAgi = Math.round(row.value);
+        if (slug === "irs_agi_differential") m.diff = Math.round(row.value);
+      }
     }
 
     const ALIAS = { "Boise, ID": "Boise City, ID" };
