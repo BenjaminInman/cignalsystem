@@ -45,7 +45,7 @@ export default function MigrationDivergence() {
       <p className="kicker mb-2 flex items-center gap-2"><Compass size={13} className="text-signal" /> Migration Divergence · Money-Flow Momentum</p>
       <h2 className="headline text-2xl text-ink md:text-3xl">Renters are moving in — is the money flow strengthening or fading?</h2>
       <p className="mt-2 max-w-2xl text-sm text-muted">
-        Every dot is a U-Haul Top-25 growth metro. Vertical position is the <span className="text-ink">level</span> — above the line the metro is gaining higher-income households (per IRS tax-return migration), below it the wealthier are leaving. The tail and color show the <span className="text-ink">year-over-year move</span>: an affluence advantage that&apos;s widening (accelerating) or narrowing (fading) — a metro can sit high yet be fading fast.
+        Every dot is a U-Haul Top-25 growth metro. Vertical position is the <span className="text-ink">level</span> — above the line the metro is gaining higher-income households (per IRS tax-return migration), below it the wealthier are leaving. The tail and color show the <span className="text-ink">year-over-year move</span> — whether that income gap is shifting in the metro&apos;s favor (strengthening) or against it (fading), independent of where it currently sits. A metro can be high yet fading, or still negative yet strengthening.
       </p>
 
       <div className="mt-5 overflow-x-auto">
@@ -89,7 +89,7 @@ export default function MigrationDivergence() {
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[11px]">
-        <span className="mono flex items-center gap-1.5 text-muted"><span className="inline-block h-2 w-2 rounded-full" style={{ background: ACCEL }} /> Accelerating {counts.accelerating ? `(${counts.accelerating})` : ""}</span>
+        <span className="mono flex items-center gap-1.5 text-muted"><span className="inline-block h-2 w-2 rounded-full" style={{ background: ACCEL }} /> Strengthening {counts.accelerating ? `(${counts.accelerating})` : ""}</span>
         <span className="mono flex items-center gap-1.5 text-muted"><span className="inline-block h-2 w-2 rounded-full" style={{ background: FADE }} /> Fading {counts.fading ? `(${counts.fading})` : ""}</span>
         <span className="mono flex items-center gap-1.5 text-muted"><span className="inline-block h-2 w-2 rounded-full" style={{ background: STEADY }} /> Steady {counts.steady ? `(${counts.steady})` : ""}</span>
         <span className="mono text-muted">· tail = where it sat a year earlier · dot size = net households</span>
@@ -97,10 +97,10 @@ export default function MigrationDivergence() {
 
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         <p className="mono rounded-md border border-up/20 bg-up/[0.06] px-3 py-2 text-[11px] leading-relaxed text-muted">
-          <span className="text-up">ACCELERATING</span> · the income gap between arrivers and leavers is widening year-over-year — higher-income inflow is strengthening.
+          <span className="text-up">STRENGTHENING</span> · the income gap is moving in the metro&apos;s favor year-over-year — arrivers gaining ground on the people leaving (even a still-negative metro can be turning).
         </p>
         <p className="mono rounded-md border border-down/20 bg-down/[0.06] px-3 py-2 text-[11px] leading-relaxed text-muted">
-          <span className="text-down">FADING</span> · the gap is narrowing — the wealth-migration tailwind is weakening, even in metros still sitting above the line.
+          <span className="text-down">FADING</span> · the gap is moving against the metro — the wealth-migration tailwind is weakening, even where it still sits above the line.
         </p>
       </div>
 
