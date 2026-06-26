@@ -295,13 +295,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 12-MONTH PERFORMANCE TRENDS */}
-      <div className="mt-14">
+      {/* 12-MONTH PERFORMANCE TRENDS + MARKET CYCLE */}
+      <div className="mt-14 grid gap-6 lg:grid-cols-[1.5fr_1fr] lg:items-stretch">
         <PerformanceTrends />
-      </div>
-
-      {/* WHERE ARE WE IN THE CYCLE */}
-      <div className="mt-6">
         <CycleWheel />
       </div>
 
