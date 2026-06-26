@@ -297,20 +297,44 @@ export default function Home() {
       {/* VALUE PROP + MARKET CYCLE */}
       <div className="mt-14 grid gap-6 lg:grid-cols-[1fr_1.5fr] lg:items-stretch">
         <section>
-          <div className="card flex h-full flex-col justify-center p-8 md:p-10">
-            <p className="kicker mb-5 flex items-center gap-2">
+          <div className="card flex h-full flex-col p-8 md:p-10">
+            <p className="kicker mb-7 flex items-center gap-2">
               <TrendingUp size={13} className="text-signal" /> Market Intelligence
             </p>
-            <h2 className="headline text-5xl leading-[1.04] text-ink md:text-6xl">
-              <span className="block">Monitor.</span>
-              <span className="block">Compare.</span>
-              <span className="block text-signal">Confirm.</span>
-            </h2>
-            <p className="mt-6 max-w-sm text-[15px] leading-relaxed text-muted">
-              Leading indicators turn first. We track them across every market, weigh the
-              data against the consensus, and confirm where the cycle is really headed
-              &mdash; before the rest of the market catches on.
-            </p>
+
+            <div className="space-y-5">
+              <div>
+                <p className="headline text-5xl leading-none text-ink md:text-6xl">Monitor.</p>
+                <p className="mt-1.5 text-[13.5px] leading-snug text-muted">
+                  Every indicator, leading to lagging &mdash; tracked as each one releases.
+                </p>
+              </div>
+              <div>
+                <p className="headline text-5xl leading-none text-ink md:text-6xl">Compare.</p>
+                <p className="mt-1.5 text-[13.5px] leading-snug text-muted">
+                  Leading signals against lagging, and the data against the consensus.
+                </p>
+              </div>
+              <div>
+                <p className="headline text-5xl leading-none text-signal md:text-6xl">Confirm.</p>
+                <p className="mt-1.5 text-[13.5px] leading-snug text-muted">
+                  Where the market&rsquo;s headed &mdash; so you can adjust strategy with conviction.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-auto border-t border-[var(--line)] pt-6">
+              <p className="mono text-[10.5px] tracking-[0.08em] text-muted">
+                70 INDICATORS &middot; LEADING TO LAGGING &middot; UPDATED ON RELEASE
+              </p>
+              <Link
+                href="/indicators"
+                className="group mt-4 inline-flex items-center gap-1.5 text-[13px] font-medium tracking-[0.01em] text-signal transition-colors hover:text-ink"
+              >
+                See the live signals
+                <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            </div>
           </div>
         </section>
         <CycleWheel />
