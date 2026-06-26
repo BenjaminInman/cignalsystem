@@ -498,6 +498,9 @@ function Editor({ prop, setProp, snap, setSnap, month, loadMonth, snaps, overrid
             <span className="text-up">● Filled.</span> {exNote}
           </p>
         )}
+        <p className="mono mt-3 border-t border-[var(--line)] pt-3 text-[10px] leading-relaxed text-muted">
+          Your documents and figures stay private. Cignal does not sell or share your information with anyone — it is used only for internal analytics and your own portfolio.
+        </p>
       </div>
 
       {/* month selector */}

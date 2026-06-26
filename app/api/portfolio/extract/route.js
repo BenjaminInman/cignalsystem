@@ -58,7 +58,7 @@ async function fileToContent(file, label) {
 
 const SYSTEM = `You are a multifamily real-estate financial-data extractor for the Cignal System portfolio tracker. You are given ONE document for one property — either an operating statement (income statement / T-12) or a rent roll — and return the data as strict JSON. Fill the sections the document supports; use null for everything it does not contain.
 
-Output ONLY the JSON object — begin with { and end with }. Do NOT write any reasoning, explanation, preamble, or commentary. Never use '...', ellipses, or placeholder values; emit complete values only. Keep "notes" to one short sentence. Schema:
+Record your answer by calling the record_extraction tool. Use null for anything the document does not contain; never invent values. Fill the sections the document supports. Field semantics:
 {
   "income_statement": {
     "total_rental_income": number|null,
@@ -100,7 +100,46 @@ Rules:
 - property_meta: read the property name and location from the document if present.
 - If the document is unrelated/unreadable, set fields to null and explain in notes.`;
 
-// One model call for ONE document. Returns { parsed, usage } or { error, status }.
+const NUM = { type: ["number", "null"] };
+const STR = { type: ["string", "null"] };
+const TOOL_SCHEMA = {
+  type: "object",
+  properties: {
+    income_statement: {
+      type: "object",
+      properties: {
+        total_rental_income: NUM, loss_to_lease: NUM, vacancy_loss: NUM, bad_debt: NUM,
+        concessions: NUM, other_income: NUM, total_income: NUM, total_expenses: NUM,
+        reported_noi: NUM, period_detected: STR,
+      },
+    },
+    expenses: {
+      type: "object",
+      properties: {
+        payroll: NUM, marketing: NUM, administrative: NUM, utilities: NUM,
+        repairs_maintenance: NUM, contract_services: NUM, turnover: NUM, management_fee: NUM,
+        insurance: NUM, property_taxes: NUM, other_expenses: NUM,
+        line_items: { type: "array", items: { type: "object", properties: { label: { type: "string" }, amount: { type: "number" } } } },
+      },
+    },
+    rent_roll: {
+      type: "object",
+      properties: {
+        unit_count: NUM, physical_occupancy: NUM,
+        avg_rent_1bed: NUM, avg_rent_2bed: NUM, avg_rent_3bed: NUM, avg_rent_4bed: NUM,
+        unit_mix: {
+          type: "array",
+          items: { type: "object", properties: { plan: STR, bedrooms: NUM, baths: NUM, units: NUM, occupied: NUM, avg_rent: NUM } },
+        },
+      },
+    },
+    property_meta: { type: "object", properties: { name: STR, city: STR, state: STR } },
+    notes: STR,
+  },
+  required: ["income_statement", "rent_roll", "property_meta"],
+};
+
+// One model call for ONE document, via forced tool use. Returns { parsed, usage } or { error, status }.
 async function callModel(content, tag) {
   let d;
   try {
@@ -111,7 +150,9 @@ async function callModel(content, tag) {
         model: MODEL,
         max_tokens: 16000,
         system: SYSTEM,
-        messages: [{ role: "user", content }, { role: "assistant", content: "{" }],
+        tools: [{ name: "record_extraction", description: "Record the extracted property financials and rent-roll data.", input_schema: TOOL_SCHEMA }],
+        tool_choice: { type: "tool", name: "record_extraction" },
+        messages: [{ role: "user", content }],
       }),
     });
     d = await r.json();
@@ -129,19 +170,14 @@ async function callModel(content, tag) {
   }
   const usage = d.usage || {};
   const stop = d.stop_reason;
-  const raw = ("{" + d.content.filter((b) => b.type === "text").map((b) => b.text).join("\n")).trim();
-  console.log(`[extract:${tag}] stop=${stop} len=${raw.length} in=${usage.input_tokens} out=${usage.output_tokens}`);
-  try {
-    let clean = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
-    const start = clean.indexOf("{");
-    const end = clean.lastIndexOf("}");
-    if (start >= 0 && end > start) clean = clean.slice(start, end + 1);
-    return { parsed: JSON.parse(clean), usage };
-  } catch (e) {
-    console.error(`[extract:${tag}] parse failed: ${e?.message} | stop=${stop} | head=${raw.slice(0, 160)} | tail=${raw.slice(-160)}`);
-    const hint = stop === "max_tokens" ? "the document was very large" : "try a clearer PDF, image, or CSV export";
+  const tool = d.content.find((b) => b.type === "tool_use");
+  console.log(`[extract:${tag}] stop=${stop} tool=${!!tool} in=${usage.input_tokens} out=${usage.output_tokens}`);
+  if (!tool || typeof tool.input !== "object") {
+    console.error(`[extract:${tag}] no tool_use block; stop=${stop} blocks=${d.content.map((b) => b.type).join(",")}`);
+    const hint = stop === "max_tokens" ? "the document was very large — try uploading it on its own" : "try a clearer PDF, image, or CSV export";
     return { error: `Couldn't read the ${tag} into fields — ${hint}.`, status: 502 };
   }
+  return { parsed: tool.input, usage };
 }
 
 const pick = (...vals) => {
