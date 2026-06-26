@@ -53,8 +53,21 @@ async function irsMigration(code) {
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const zip = (searchParams.get("zip") || "").trim();
+  const metro = (searchParams.get("metro") || "").trim(); // Zillow "City, ST" (or sub-metro city/county)
   let cbsa = (searchParams.get("cbsa") || "").trim();
   try {
+    // resolve a metro handle (from a City/Metro/County lookup) to a CBSA
+    if (!cbsa && metro) {
+      const enc = encodeURIComponent(metro);
+      let xr = await sb(`cbsa_zillow_xwalk?zillow_code=eq.${enc}&select=cbsa&limit=1`);
+      if (!xr?.length) {
+        // sub-metro city/county -> find its parent metro, then bridge
+        let ml = (await sb(`zip_crosswalk?city_label=eq.${enc}&select=metro_label&limit=1`))?.[0]?.metro_label;
+        if (!ml) ml = (await sb(`zip_crosswalk?county_label=eq.${enc}&select=metro_label&limit=1`))?.[0]?.metro_label;
+        if (ml) xr = await sb(`cbsa_zillow_xwalk?zillow_code=eq.${encodeURIComponent(ml)}&select=cbsa&limit=1`);
+      }
+      cbsa = xr?.[0]?.cbsa || "";
+    }
     if (!cbsa) {
       if (!/^\d{5}$/.test(zip)) return Response.json({ found: false });
       const xw = await sb(

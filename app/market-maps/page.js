@@ -422,7 +422,12 @@ function ZipLookup() {
       if (!zr.ok) { setStatus("error"); setMsg(zr.d.error || "Lookup failed. Please try again."); return; }
       setData(zr.d);
       if (dr?.found) setDemo(dr);
-      if (sr?.found) setSignals(sr);
+      let signalRes = sr;
+      // City / Metro / County lookups: resolve to the parent metro's signals
+      if (!isZip && zr.d?.found && zr.d.code) {
+        signalRes = await fetch(`/api/metro-signals?metro=${encodeURIComponent(zr.d.code)}`).then((r) => r.json()).catch(() => null);
+      }
+      if (signalRes?.found) setSignals(signalRes);
       setStatus("idle");
     } catch {
       setStatus("error"); setMsg("Lookup failed. Please try again.");
