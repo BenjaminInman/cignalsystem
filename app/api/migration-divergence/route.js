@@ -11,7 +11,18 @@ async function sb(path) {
   return r.ok ? r.json() : null;
 }
 
-const DEADBAND = 2500; // $/yr change below which momentum is "steady"
+const DEADBAND = 2000; // $/yr slope below which momentum is "steady"
+const WINDOW = 4; // years in the smoothing window
+
+function ols(pairs) {
+  const n = pairs.length;
+  if (n < 3) return null;
+  const mx = pairs.reduce((s, [x]) => s + x, 0) / n;
+  const my = pairs.reduce((s, [, y]) => s + y, 0) / n;
+  let num = 0, den = 0;
+  for (const [x, y] of pairs) { num += (x - mx) * (y - my); den += (x - mx) ** 2; }
+  return den ? num / den : null;
+}
 
 export async function GET() {
   try {
@@ -21,7 +32,6 @@ export async function GET() {
     const n = uhaul.length || 1;
 
     const irsMap = {};
-    // net migration + in-migrant AGI: latest per metro (newest-first, keep first seen)
     for (const slug of ["irs_net_migration", "irs_inflow_agi"]) {
       const rows = (await sb(`v_indicator_analytics?slug=eq.${slug}&select=region_code,value,obs_date&order=obs_date.desc&limit=1000`)) || [];
       for (const row of rows) {
@@ -31,28 +41,36 @@ export async function GET() {
       }
     }
 
-    // AGI differential: latest + prior year, so we can measure YoY momentum
+    // AGI differential: pull the last WINDOW annual prints so momentum is a smoothed
+    // multi-year slope rather than a single (noisy) year-over-year step.
     const latestRow = await sb(`v_indicator_analytics?slug=eq.irs_agi_differential&select=obs_date&order=obs_date.desc&limit=1`);
     const latestDate = latestRow?.[0]?.obs_date || null;
-    const prevDate = latestDate ? `${Number(latestDate.slice(0, 4)) - 1}${latestDate.slice(4)}` : null;
     const latestYear = latestDate ? Number(latestDate.slice(0, 4)) : null;
+    const diffSeries = {}; // region_code -> { year: value }
     if (latestDate) {
-      const diffRows = (await sb(`v_indicator_analytics?slug=eq.irs_agi_differential&obs_date=in.(${latestDate},${prevDate})&select=region_code,obs_date,value&limit=1000`)) || [];
-      for (const r of diffRows) {
-        const m = (irsMap[r.region_code] ||= {});
-        if (r.obs_date === latestDate) m.diff = Math.round(r.value);
-        else if (r.obs_date === prevDate) m.diffPrev = Math.round(r.value);
-      }
+      const suffix = latestDate.slice(4); // "-12-31"
+      const dates = Array.from({ length: WINDOW }, (_, i) => `${latestYear - i}${suffix}`);
+      const results = await Promise.all(
+        dates.map((d) => sb(`v_indicator_analytics?slug=eq.irs_agi_differential&obs_date=eq.${d}&select=region_code,value&limit=1000`))
+      );
+      results.forEach((rows, i) => {
+        const yr = latestYear - i;
+        for (const r of rows || []) (diffSeries[r.region_code] ||= {})[yr] = Math.round(r.value);
+      });
     }
 
     const ALIAS = { "Boise, ID": "Boise City, ID" };
     const items = uhaul.map((u) => {
-      const m = irsMap[ALIAS[u.market] || u.market] || {};
+      const code = ALIAS[u.market] || u.market;
+      const m = irsMap[code] || {};
       const renter = Math.round(((n + 1 - u.rank) / n) * 100);
-      const diff = m.diff ?? null;
-      const diffPrev = m.diffPrev ?? null;
-      const delta = diff != null && diffPrev != null ? diff - diffPrev : null;
-      const momentum = delta == null ? null : delta >= DEADBAND ? "accelerating" : delta <= -DEADBAND ? "fading" : "steady";
+      const ser = diffSeries[code] || {};
+      const years = Object.keys(ser).map(Number).sort((a, b) => a - b);
+      const diff = years.length ? ser[years[years.length - 1]] : null;
+      const pairs = years.map((yr, i) => [i, ser[yr]]);
+      const slope = ols(pairs); // $/yr, smoothed
+      const span = pairs.length ? pairs.length - 1 : 0;
+      const momentum = slope == null ? null : slope >= DEADBAND ? "accelerating" : slope <= -DEADBAND ? "fading" : "steady";
       let quadrant = null;
       if (diff != null) {
         const renterStrong = u.rank <= Math.ceil(n / 2);
@@ -61,11 +79,12 @@ export async function GET() {
       return {
         market: u.market, uhaulRank: u.rank, renter,
         net: m.net ?? null, inAgi: m.inAgi ?? null,
-        diff, diffPrev, delta, momentum, quadrant, matched: diff != null,
+        diff, slope: slope != null ? Math.round(slope) : null, span,
+        momentum, quadrant, matched: diff != null,
       };
     });
 
-    return Response.json({ year: maxYear ? String(maxYear) : null, irsPeriod: "2022\u20132023", latestYear, items });
+    return Response.json({ year: maxYear ? String(maxYear) : null, latestYear, window: WINDOW, items });
   } catch {
     return Response.json({ items: [] });
   }

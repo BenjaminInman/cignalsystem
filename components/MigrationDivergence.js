@@ -24,7 +24,7 @@ export default function MigrationDivergence() {
   const pts = (data.items || []).filter((d) => d.matched && d.diff != null);
 
   const W = 720, H = 440, padL = 58, padR = 138, padT = 26, padB = 48;
-  const ys = pts.flatMap((p) => [p.diff, p.diffPrev]).filter((v) => v != null);
+  const ys = pts.flatMap((p) => [p.diff, p.slope != null ? p.diff - p.slope * p.span : null]).filter((v) => v != null);
   const yMin = Math.min(0, ...ys) - 6000;
   const yMax = Math.max(0, ...ys) + 8000;
   const x = (renter) => padL + (renter / 100) * (W - padL - padR);
@@ -34,7 +34,7 @@ export default function MigrationDivergence() {
   const fmtK = (v) => (v >= 0 ? "+" : "\u2212") + "$" + Math.abs(Math.round(v / 100) / 10) + "k";
   const name = (p) => p.market.replace(/, [A-Z]{2}$/, "");
 
-  const movers = [...pts].filter((p) => p.delta != null).sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+  const movers = [...pts].filter((p) => p.slope != null).sort((a, b) => Math.abs(b.slope) - Math.abs(a.slope));
   const labelSet = new Set(movers.slice(0, 9).map((p) => p.market));
   ["Miami, FL", "Austin, TX", "Houston, TX", "Phoenix, AZ"].forEach((m) => labelSet.add(m));
 
@@ -45,7 +45,7 @@ export default function MigrationDivergence() {
       <p className="kicker mb-2 flex items-center gap-2"><Compass size={13} className="text-signal" /> Migration Divergence · Money-Flow Momentum</p>
       <h2 className="headline text-2xl text-ink md:text-3xl">Renters are moving in — is the money flow strengthening or fading?</h2>
       <p className="mt-2 max-w-2xl text-sm text-muted">
-        Every dot is a U-Haul Top-25 growth metro. Vertical position is the <span className="text-ink">level</span> — above the line the metro is gaining higher-income households (per IRS tax-return migration), below it the wealthier are leaving. The tail and color show the <span className="text-ink">year-over-year move</span> — whether that income gap is shifting in the metro&apos;s favor (strengthening) or against it (fading), independent of where it currently sits. A metro can be high yet fading, or still negative yet strengthening.
+        Every dot is a U-Haul Top-25 growth metro. Vertical position is the <span className="text-ink">level</span> — above the line the metro is gaining higher-income households (per IRS tax-return migration), below it the wealthier are leaving. The tail and color show the <span className="text-ink">multi-year trend</span> — whether that income gap is shifting in the metro&apos;s favor (strengthening) or against it (fading), independent of where it currently sits. A metro can be high yet fading, or still negative yet strengthening.
       </p>
 
       <div className="mt-5 overflow-x-auto">
@@ -70,16 +70,19 @@ export default function MigrationDivergence() {
             const leftSide = cx > W - padR - 64;
             return (
               <g key={p.market} onMouseEnter={() => setHi(p.market)} onMouseLeave={() => setHi(null)} style={{ cursor: "default" }}>
-                {p.diffPrev != null && (
-                  <>
-                    <line x1={cx} y1={y(p.diffPrev)} x2={cx} y2={cyNow} stroke={col} strokeWidth={active ? 2 : 1.4} opacity={active ? 0.8 : 0.5} />
-                    <circle cx={cx} cy={y(p.diffPrev)} r="2" fill="none" stroke={col} strokeWidth="1" opacity="0.45" />
-                  </>
-                )}
+                {p.slope != null && p.span > 0 && (() => {
+                  const y1 = y(p.diff - p.slope * p.span);
+                  return (
+                    <>
+                      <line x1={cx} y1={y1} x2={cx} y2={cyNow} stroke={col} strokeWidth={active ? 2 : 1.4} opacity={active ? 0.8 : 0.5} />
+                      <circle cx={cx} cy={y1} r="2" fill="none" stroke={col} strokeWidth="1" opacity="0.45" />
+                    </>
+                  );
+                })()}
                 <circle cx={cx} cy={cyNow} r={active ? r + 2 : r} fill={col} fillOpacity={active ? 0.98 : 0.82} stroke={col} strokeWidth="1" />
                 {show && (
                   <text x={leftSide ? cx - r - 5 : cx + r + 5} y={cyNow + 3} textAnchor={leftSide ? "end" : "start"} fontSize="9.5" fill={active ? "var(--ink)" : "var(--muted)"} className="mono">
-                    {name(p)}{p.delta != null ? <tspan fill={col}> {fmtK(p.delta)}/yr</tspan> : null}
+                    {name(p)}{p.slope != null ? <tspan fill={col}> {fmtK(p.slope)}/yr</tspan> : null}
                   </text>
                 )}
               </g>
@@ -92,7 +95,7 @@ export default function MigrationDivergence() {
         <span className="mono flex items-center gap-1.5 text-muted"><span className="inline-block h-2 w-2 rounded-full" style={{ background: ACCEL }} /> Strengthening {counts.accelerating ? `(${counts.accelerating})` : ""}</span>
         <span className="mono flex items-center gap-1.5 text-muted"><span className="inline-block h-2 w-2 rounded-full" style={{ background: FADE }} /> Fading {counts.fading ? `(${counts.fading})` : ""}</span>
         <span className="mono flex items-center gap-1.5 text-muted"><span className="inline-block h-2 w-2 rounded-full" style={{ background: STEADY }} /> Steady {counts.steady ? `(${counts.steady})` : ""}</span>
-        <span className="mono text-muted">· tail = where it sat a year earlier · dot size = net households</span>
+        <span className="mono text-muted">· tail traces the smoothed {data.window || 4}-yr trend · dot size = net households</span>
       </div>
 
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -105,7 +108,7 @@ export default function MigrationDivergence() {
       </div>
 
       <p className="mono mt-3 text-[10px] tracking-[0.06em] text-muted">
-        U-Haul Growth Index {data.year} · momentum = IRS AGI differential {data.latestYear ? `${data.latestYear - 1}\u2192${data.latestYear}` : ""} (domestic, ~2-yr lag) · {pts.length} metros matched
+        U-Haul Growth Index {data.year} · momentum = smoothed {data.window || 4}-yr slope of the IRS AGI differential{data.latestYear ? ` (${data.latestYear - (data.window || 4) + 1}\u2013${data.latestYear})` : ""} · domestic, ~2-yr lag · {pts.length} metros matched
       </p>
     </section>
   );
