@@ -10,6 +10,7 @@ import { isPageReady } from "@/lib/verticals";
 import ComingSoonInline from "@/components/ComingSoonInline";
 import EmergingMarkets from "@/components/EmergingMarkets";
 import MarketRanker from "@/components/MarketRanker";
+import MigrationDivergence from "@/components/MigrationDivergence";
 import MarketConsensus from "@/components/MarketConsensus";
 import RentRadial from "@/components/RentRadial";
 
@@ -105,6 +106,7 @@ function MarketMapsInner() {
         </div>
       ))}
 
+      <MigrationDivergence />
       <MigrationTrends data={mig?.uhaul} />
       <PodsTrends data={mig?.pods} />
       <EmergingMarkets />
