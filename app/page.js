@@ -6,6 +6,7 @@ import { ArrowRight, Lock, Newspaper, ArrowUpRight, Building2, SlidersHorizontal
 import { toneColor, Sparkline, StatusPill } from "@/components/ui";
 import SignalCard from "@/components/SignalCard";
 import PerformanceTrends from "@/components/PerformanceTrends";
+import CycleWheel from "@/components/CycleWheel";
 import { useContent } from "@/components/VerticalProvider";
 import { fetchTeaserSignals } from "@/lib/signals";
 
@@ -294,33 +295,14 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 12-MONTH PERFORMANCE TRENDS + TOP MARKETS */}
-      <div className="mt-14 grid gap-6 lg:grid-cols-[1.5fr_1fr] lg:items-stretch">
+      {/* 12-MONTH PERFORMANCE TRENDS */}
+      <div className="mt-14">
         <PerformanceTrends />
+      </div>
 
-        {/* TOP MARKETS */}
-        <section>
-          <div className="card h-full p-6 md:p-8">
-            <div className="mb-5 flex items-center justify-between">
-              <h2 className="headline text-2xl text-ink md:text-3xl">Top Markets</h2>
-              <Link href="/market-maps" className="hover-line mono text-[12px] tracking-[0.08em] text-muted hover:text-ink">VIEW ALL →</Link>
-            </div>
-            <div>
-              {TOP_MARKETS.map((m, i) => (
-                <div key={m.city} className={`flex items-center justify-between py-3.5 ${i ? "border-t border-[var(--line)]" : ""}`}>
-                  <div>
-                    <p className="font-semibold text-ink">{m.city}</p>
-                    <p className="mono mt-0.5 text-[11px] text-muted">{COPY.marketMetricA}: {m.rent} &nbsp; Score: {m.score}</p>
-                  </div>
-                  <div className="flex items-center gap-5">
-                    <span className="headline text-2xl" style={{ color: toneColor(m.tone) }}>{m.score}</span>
-                    <StatusPill tone={m.tone} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+      {/* WHERE ARE WE IN THE CYCLE */}
+      <div className="mt-6">
+        <CycleWheel />
       </div>
 
       {/* PRO CTA */}
