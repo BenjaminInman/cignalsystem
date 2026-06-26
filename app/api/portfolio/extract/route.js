@@ -93,7 +93,7 @@ Record your answer by calling the record_extraction tool. Use null for anything 
 
 Rules:
 - Extract ONLY what is present. Use null for anything missing. NEVER fabricate or estimate a number not supported by the document.
-- The user gives a TARGET MONTH. If the document covers multiple periods (a T-12 with monthly columns), extract that month's column and say so in period_detected; if single-period, use it and say so.
+- Pull ANNUAL totals. If the income statement is a T-12 or multi-period statement with an annual / trailing-12 / "Total" column, extract THAT annual column for every income and expense figure — never a single month. If it is a single-period (one-month) statement with no annual column, use the figures present and note in period_detected that they are single-period, not annualized. Always state in period_detected which column you used.
 - Transcribe every figure EXACTLY as printed, including cents; never round, recompute totals, or estimate — use the document's own stated totals and subtotals verbatim.
 - Numbers must be plain (no $, commas, parentheses). Convert accounting parentheses to negative EXCEPT vacancy_loss/bad_debt/concessions, returned as positive magnitudes.
 - expenses.line_items must list EVERY operating-expense line you can read, with its original label and amount. Also map them into the named categories where they fit.
@@ -233,7 +233,8 @@ export async function POST(req) {
   const monthLabel = month
     ? new Date(`${month}-01T00:00:00`).toLocaleDateString("en-US", { month: "long", year: "numeric" })
     : "the most recent period available";
-  const instr = `TARGET MONTH: ${monthLabel}. Extract the figures for that period and return the JSON object per the schema.`;
+  const incInstr = `This income statement is filed under reporting month ${monthLabel}. Pull the ANNUAL totals: if it has an annual / trailing-12 / "Total" column, extract THAT column for every figure (never a single month). If it is a single-period statement with no annual column, use the figures present and note that in period_detected. Always state which column you used in period_detected.`;
+  const rrInstr = `This rent roll is filed under reporting month ${monthLabel}. Extract the unit mix, per-bedroom average in-place rents, physical occupancy, and total unit count as of the rent-roll date.`;
 
   const names = [];
   const calls = [];
@@ -241,16 +242,16 @@ export async function POST(req) {
     const inc = await fileToContent(income, "income statement");
     names.push(income.name || "income");
     const incContent = inc.blocks
-      ? [{ type: "text", text: "This is the INCOME STATEMENT for one property." }, ...inc.blocks, { type: "text", text: instr }]
-      : [{ type: "text", text: `This is the INCOME STATEMENT for one property.\n\n${inc.text}\n\n${instr}` }];
+      ? [{ type: "text", text: "This is the INCOME STATEMENT for one property." }, ...inc.blocks, { type: "text", text: incInstr }]
+      : [{ type: "text", text: `This is the INCOME STATEMENT for one property.\n\n${inc.text}\n\n${incInstr}` }];
     calls.push(callModel(incContent, "income"));
 
     if (rentRoll && typeof rentRoll.arrayBuffer === "function") {
       const rr = await fileToContent(rentRoll, "rent roll");
       names.push(rentRoll.name || "rentroll");
       const rrContent = rr.blocks
-        ? [{ type: "text", text: "This is the RENT ROLL for one property." }, ...rr.blocks, { type: "text", text: instr }]
-        : [{ type: "text", text: `This is the RENT ROLL for one property.\n\n${rr.text}\n\n${instr}` }];
+        ? [{ type: "text", text: "This is the RENT ROLL for one property." }, ...rr.blocks, { type: "text", text: rrInstr }]
+        : [{ type: "text", text: `This is the RENT ROLL for one property.\n\n${rr.text}\n\n${rrInstr}` }];
       calls.push(callModel(rrContent, "rentroll"));
     }
   } catch (e) {
