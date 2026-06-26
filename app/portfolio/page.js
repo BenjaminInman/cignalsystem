@@ -434,8 +434,16 @@ function Editor({ prop, setProp, snap, setSnap, month, loadMonth, snaps, overrid
       for (const [k, v] of Object.entries(map)) if (v !== null && v !== undefined) next[k] = v;
       return next;
     });
-    if (rr.unit_count !== null && rr.unit_count !== undefined)
-      setProp((cur) => ({ ...cur, unit_count: rr.unit_count }));
+    const meta = data.property_meta || {};
+    setProp((cur) => {
+      const next = { ...cur };
+      if (rr.unit_count !== null && rr.unit_count !== undefined) next.unit_count = rr.unit_count;
+      // Fill identity fields only when the operator hasn't already typed them.
+      if (meta.name && !String(cur.name || "").trim()) next.name = meta.name;
+      if (meta.city && !String(cur.city || "").trim()) next.city = meta.city;
+      if (meta.state && !String(cur.state || "").trim()) next.state = meta.state;
+      return next;
+    });
   }
 
   async function runExtract() {

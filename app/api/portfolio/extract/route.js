@@ -66,11 +66,12 @@ Record your answer by calling the record_extraction tool. Use null for anything 
     "vacancy_loss": number|null,           // POSITIVE magnitude
     "bad_debt": number|null,               // POSITIVE magnitude
     "concessions": number|null,            // POSITIVE magnitude
-    "other_income": number|null,
+    "other_income": number|null,           // SUM of ALL non-rental income (e.g. "Other Income" + "Utility Reimbursement" + fees)
     "total_income": number|null,
     "total_expenses": number|null,         // total operating expenses (exclude debt service / capex if separable)
     "reported_noi": number|null,
-    "period_detected": string
+    "period_detected": string,
+    "income_line_items": [ { "label": string, "amount": number } ]
   },
   "expenses": {
     "payroll": number|null, "marketing": number|null, "administrative": number|null,
@@ -96,8 +97,10 @@ Rules:
 - Transcribe every figure EXACTLY as printed, including cents; never round, recompute totals, or estimate — use the document's own stated totals and subtotals verbatim.
 - Numbers must be plain (no $, commas, parentheses). Convert accounting parentheses to negative EXCEPT vacancy_loss/bad_debt/concessions, returned as positive magnitudes.
 - expenses.line_items must list EVERY operating-expense line you can read, with its original label and amount. Also map them into the named categories where they fit.
+- other_income MUST be the SUM of EVERY non-rental income line: utility reimbursements / RUBS, plus application, pet, late, parking, laundry, storage, and miscellaneous fee income. Many statements separate these (e.g. "Other Income" and "Utility Reimbursement" as distinct lines) — add them ALL together into other_income, and itemize each in income_line_items. Never drop utility reimbursements.
 - rent_roll: ALWAYS populate avg_rent_1bed/2bed/3bed/4bed when the rent roll has units of that bedroom count — this is the most important output. For each avg_rent_Nbed, take the UNIT-WEIGHTED mean of in-place rent across ALL units of that bedroom count, combining every floor plan that shares it (sum of unit rents ÷ total units), not a simple average of plan averages. Produce ONE unit_mix entry per distinct FLOOR PLAN, aggregated across its units — NEVER one row per individual unit; keep unit_mix short even for 100+ unit properties. If only market rent is available, use it and note that. Occupancy = occupied units / total units.
-- property_meta: read the property name and location from the document if present.
+- property_meta.name: the property name is almost always printed at the TOP/header of the income statement and the rent roll — always capture it, along with city/state if shown.
+- unit_count = the total number of physical units on the rent roll, equal to the SUM of units across all unit_mix entries; include occupied, vacant, model, and down units; exclude amenity/non-dwelling rows. Verify unit_count equals the sum of unit_mix units before answering.
 - If the document is unrelated/unreadable, set fields to null and explain in notes.`;
 
 const NUM = { type: ["number", "null"] };
@@ -111,6 +114,7 @@ const TOOL_SCHEMA = {
         total_rental_income: NUM, loss_to_lease: NUM, vacancy_loss: NUM, bad_debt: NUM,
         concessions: NUM, other_income: NUM, total_income: NUM, total_expenses: NUM,
         reported_noi: NUM, period_detected: STR,
+        income_line_items: { type: "array", items: { type: "object", properties: { label: { type: "string" }, amount: { type: "number" } } } },
       },
     },
     expenses: {
@@ -324,6 +328,7 @@ export async function POST(req) {
       avg_rent_3bed: rr.avg_rent_3bed ?? null,
       avg_rent_4bed: rr.avg_rent_4bed ?? null,
     },
+    property_meta: parsed.property_meta || null,
     notes: parsed.notes ?? null,
   });
 }
