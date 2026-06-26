@@ -557,6 +557,47 @@ function ZipLookup() {
                 })()}
               </div>
               <p className="mono mt-3 text-[10px] tracking-[0.08em] text-muted">Metro level (CBSA) · BLS jobs &amp; unemployment, BEA rent price parity, Apartment List vacancy &amp; days-on-market</p>
+
+              {signals.migration && (
+                <div className="mt-4 border-t border-[var(--line)] pt-4">
+                  <p className="mono text-[10px] tracking-[0.1em] text-muted">MIGRATION · WHO&apos;S MOVING IN</p>
+                  <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {signals.migration.inAgi != null && (
+                      <div className="rounded-lg border border-[var(--line)] bg-bg2/40 p-3">
+                        <p className="mono text-[9px] tracking-[0.08em] text-muted">IN-MIGRANT INCOME</p>
+                        <p className="mt-1 text-lg font-semibold text-ink">${signals.migration.inAgi.toLocaleString()}</p>
+                        <p className="mono text-[8px] tracking-[0.08em] text-muted">avg AGI of arriving households</p>
+                      </div>
+                    )}
+                    {signals.migration.net != null && (
+                      <div className="rounded-lg border border-[var(--line)] bg-bg2/40 p-3">
+                        <p className="mono text-[9px] tracking-[0.08em] text-muted">NET MIGRATION</p>
+                        <p className="mt-1 text-lg font-semibold" style={{ color: toneColor(signals.migration.net >= 0 ? "bull" : "bear") }}>
+                          {signals.migration.net >= 0 ? "+" : "\u2212"}{Math.abs(signals.migration.net).toLocaleString()}
+                        </p>
+                        <p className="mono text-[8px] tracking-[0.08em] text-muted">households / yr</p>
+                      </div>
+                    )}
+                    {signals.migration.diff != null && (
+                      <div className="rounded-lg border border-[var(--line)] bg-bg2/40 p-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="mono text-[9px] tracking-[0.08em] text-muted">AFFLUENCE TREND</p>
+                            <p className="mt-1 text-lg font-semibold" style={{ color: toneColor(signals.migration.diff >= 0 ? "bull" : "bear") }}>
+                              {signals.migration.diff >= 0 ? "+" : "\u2212"}${Math.abs(signals.migration.diff).toLocaleString()}
+                            </p>
+                          </div>
+                          {signals.migration.diffTrend?.length > 1 && (
+                            <Sparkline series={signals.migration.diffTrend.map((d) => d.v)} color={signals.migration.diff >= 0 ? "#5FB97C" : "#E5634D"} w={64} h={32} />
+                          )}
+                        </div>
+                        <p className="mono text-[8px] tracking-[0.08em] text-muted">in {"\u2212"} out AGI{signals.migration.diffTrend?.length ? ` · ${signals.migration.diffTrend[0].y}\u2013${signals.migration.inAgiYear}` : ""}</p>
+                      </div>
+                    )}
+                  </div>
+                  <p className="mono mt-3 text-[10px] tracking-[0.08em] text-muted">IRS SOI tax-return migration · in-migrant income = avg AGI of households that moved in · positive affluence trend = arrivals out-earn leavers (~2-yr lag)</p>
+                </div>
+              )}
             </div>
           )}
 

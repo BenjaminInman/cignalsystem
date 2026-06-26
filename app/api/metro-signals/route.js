@@ -29,6 +29,27 @@ async function metroSignal(slug, cbsa) {
   return { value: v, yoyPct, delta, asOf: rows[0].obs_date };
 }
 
+// IRS SOI migration signals for a metro, looked up by Zillow "City, ST" code
+// (bridged from CBSA via cbsa_zillow_xwalk). Returns the in-migrant AGI number,
+// net domestic migration, and the 6-year AGI-differential trend.
+async function irsMigration(code) {
+  const enc = encodeURIComponent(code);
+  const [agiRows, netRows, diffRows] = await Promise.all([
+    sb(`v_indicator_analytics?slug=eq.irs_inflow_agi&region_code=eq.${enc}&select=obs_date,value&order=obs_date.desc&limit=1`),
+    sb(`v_indicator_analytics?slug=eq.irs_net_migration&region_code=eq.${enc}&select=value&order=obs_date.desc&limit=1`),
+    sb(`v_indicator_analytics?slug=eq.irs_agi_differential&region_code=eq.${enc}&select=obs_date,value&order=obs_date.asc`),
+  ]);
+  if (!agiRows?.length && !diffRows?.length) return null;
+  const diffTrend = (diffRows || []).map((r) => ({ y: Number(String(r.obs_date).slice(0, 4)), v: Math.round(Number(r.value)) }));
+  return {
+    inAgi: agiRows?.[0] ? Math.round(Number(agiRows[0].value)) : null,
+    inAgiYear: agiRows?.[0] ? Number(String(agiRows[0].obs_date).slice(0, 4)) : null,
+    net: netRows?.[0] ? Math.round(Number(netRows[0].value)) : null,
+    diff: diffTrend.length ? diffTrend[diffTrend.length - 1].v : null,
+    diffTrend,
+  };
+}
+
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const zip = (searchParams.get("zip") || "").trim();
@@ -46,6 +67,11 @@ export async function GET(req) {
     const reg = await sb(`regions?code=eq.${cbsa}&region_type=eq.metro&select=name&limit=1`);
     const metroName = reg?.[0]?.name || null;
 
+    // bridge CBSA -> Zillow "City, ST" so we can attach IRS migration signals
+    const xw = await sb(`cbsa_zillow_xwalk?cbsa=eq.${cbsa}&select=zillow_code&limit=1`);
+    const zillowCode = xw?.[0]?.zillow_code || null;
+    const migration = zillowCode ? await irsMigration(zillowCode) : null;
+
     const [employment, unemployment, rentsRPP, allRPP, cpiRent, vacancy, daysOnMarket] =
       await Promise.all([
         metroSignal("bls_metro_employment", cbsa),
@@ -59,7 +85,7 @@ export async function GET(req) {
 
     const signals = { employment, unemployment, rentsRPP, allRPP, cpiRent, vacancy, daysOnMarket };
     const any = Object.values(signals).some(Boolean);
-    return Response.json({ found: any, cbsa, metroName, signals });
+    return Response.json({ found: any || !!migration, cbsa, metroName, signals, migration });
   } catch {
     return Response.json({ found: false, zip, error: "Lookup failed." }, { status: 502 });
   }

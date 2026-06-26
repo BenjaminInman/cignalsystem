@@ -74,7 +74,7 @@ def aggregate(path, c2cbsa, subj_is_dest):
     r = requests.get(path, timeout=180); r.raise_for_status()
     for row in csv.DictReader(io.StringIO(r.content.decode("latin-1"))):
         if num(row["y1_statefips"]) > 56 or num(row["y2_statefips"]) > 56: continue
-        of = row["y1_statefips"] + row["y1_countyfips"]; df = row["y2_statefips"] + row["y2_countyfips"]
+        of = row["y1_statefips"].zfill(2) + row["y1_countyfips"].zfill(3); df = row["y2_statefips"].zfill(2) + row["y2_countyfips"].zfill(3)
         if of == df: continue
         o = c2cbsa.get(of); d = c2cbsa.get(df)
         subj, other = (d, o) if subj_is_dest else (o, d)
