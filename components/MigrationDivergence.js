@@ -1,16 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Compass } from "lucide-react";
+import { Compass, TrendingUp, TrendingDown, Minus } from "lucide-react";
 
-const ACCEL = "#5FB97C"; // affluence differential rising YoY
-const FADE = "#E5634D";  // falling YoY
-const STEADY = "#F5B544"; // ~flat
-const MUTED = "#797E85";
+const UP = "#5FB97C";
+const DOWN = "#E5634D";
+const STEADY = "#F5B544";
 
-function momColor(mom) {
-  return mom === "accelerating" ? ACCEL : mom === "fading" ? FADE : mom === "steady" ? STEADY : MUTED;
-}
+const MOM = {
+  accelerating: { c: UP, label: "strengthening", Icon: TrendingUp },
+  fading: { c: DOWN, label: "fading", Icon: TrendingDown },
+  steady: { c: STEADY, label: "steady", Icon: Minus },
+};
+
+const fmtK = (v) => (v >= 0 ? "+" : "\u2212") + "$" + Math.abs(Math.round(v / 100) / 10) + "k";
+const cityName = (m) => m.replace(/, [A-Z]{2}$/, "");
 
 export default function MigrationDivergence() {
   const [data, setData] = useState(null);
@@ -21,94 +25,98 @@ export default function MigrationDivergence() {
   }, []);
 
   if (!data) return null;
-  const pts = (data.items || []).filter((d) => d.matched && d.diff != null);
+  const pts = (data.items || [])
+    .filter((d) => d.matched && d.diff != null)
+    .sort((a, b) => b.diff - a.diff);
+  if (!pts.length) return null;
 
-  const W = 720, H = 440, padL = 58, padR = 138, padT = 26, padB = 48;
-  const ys = pts.flatMap((p) => [p.diff, p.slope != null ? p.diff - p.slope * p.span : null]).filter((v) => v != null);
-  const yMin = Math.min(0, ...ys) - 6000;
-  const yMax = Math.max(0, ...ys) + 8000;
-  const x = (renter) => padL + (renter / 100) * (W - padL - padR);
-  const y = (d) => padT + (1 - (d - yMin) / (yMax - yMin)) * (H - padT - padB);
-  const y0 = y(0);
-
-  const fmtK = (v) => (v >= 0 ? "+" : "\u2212") + "$" + Math.abs(Math.round(v / 100) / 10) + "k";
-  const name = (p) => p.market.replace(/, [A-Z]{2}$/, "");
-
-  const movers = [...pts].filter((p) => p.slope != null).sort((a, b) => Math.abs(b.slope) - Math.abs(a.slope));
-  const labelSet = new Set(movers.slice(0, 9).map((p) => p.market));
-  ["Miami, FL", "Austin, TX", "Houston, TX", "Phoenix, AZ"].forEach((m) => labelSet.add(m));
-
-  const counts = pts.reduce((a, p) => { if (p.momentum) a[p.momentum] = (a[p.momentum] || 0) + 1; return a; }, {});
+  const maxAbs = Math.max(...pts.map((p) => Math.abs(p.diff)), 1);
+  const pct = (v) => Math.max(1.5, (Math.abs(v) / maxAbs) * 50);
 
   return (
     <section className="relative mt-10 overflow-hidden rounded-2xl border border-signal/30 bg-gradient-to-br from-signal/[0.07] via-bg2/40 to-bg/20 p-6 md:p-7">
-      <p className="kicker mb-2 flex items-center gap-2"><Compass size={13} className="text-signal" /> Migration Divergence · Money-Flow Momentum</p>
-      <h2 className="headline text-2xl text-ink md:text-3xl">Renters are moving in — is the money flow strengthening or fading?</h2>
+      <p className="kicker mb-2 flex items-center gap-2"><Compass size={13} className="text-signal" /> Migration Divergence</p>
+      <h2 className="headline text-2xl text-ink md:text-3xl">Renters are moving in — is the money following?</h2>
       <p className="mt-2 max-w-2xl text-sm text-muted">
-        Every dot is a U-Haul Top-25 growth metro. Vertical position is the <span className="text-ink">level</span> — above the line the metro is gaining higher-income households (per IRS tax-return migration), below it the wealthier are leaving. The tail and color show the <span className="text-ink">multi-year trend</span> — whether that income gap is shifting in the metro&apos;s favor (strengthening) or against it (fading), independent of where it currently sits. A metro can be high yet fading, or still negative yet strengthening.
+        Each bar is a U-Haul Top-25 growth metro, so renters and DIY movers are flooding all of them. The bar shows whether <span className="text-ink">higher-income households</span> are net arriving (right) or leaving (left), per IRS tax-return migration. The tag on the right shows whether that gap is <span className="text-ink">strengthening or fading</span> over the last {data.window || 4} years — so a metro can sit positive yet be fading.
       </p>
 
       <div className="mt-5 overflow-x-auto">
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[640px]" style={{ maxWidth: 880 }}>
-          <rect x={padL} y={padT} width={W - padL - padR} height={y0 - padT} fill={ACCEL} opacity="0.04" />
-          <rect x={padL} y={y0} width={W - padL - padR} height={H - padB - y0} fill={FADE} opacity="0.04" />
-          <line x1={padL} y1={padT} x2={padL} y2={H - padB} stroke="var(--line)" strokeWidth="1" />
-          <line x1={padL} y1={y0} x2={W - padR} y2={y0} stroke="var(--line)" strokeWidth="1.4" strokeDasharray="3 3" />
-          <text x={padL - 8} y={y(yMax) + 4} textAnchor="end" fontSize="9" fill="var(--muted)" className="mono">{fmtK(yMax)}</text>
-          <text x={padL - 8} y={y0 + 3} textAnchor="end" fontSize="9" fill="var(--muted)" className="mono">$0</text>
-          <text x={padL - 8} y={y(yMin) + 2} textAnchor="end" fontSize="9" fill="var(--muted)" className="mono">{fmtK(yMin)}</text>
-          <text x={(padL + W - padR) / 2} y={H - 10} textAnchor="middle" fontSize="10" fill="var(--muted)" className="mono">U-HAUL RENTER / DIY INFLOW  {"\u2192"}</text>
-          <text x={14} y={padT + 6} fontSize="9" fill="var(--muted)" className="mono">GAINING AFFLUENT</text>
-          <text x={14} y={H - padB - 2} fontSize="9" fill="var(--muted)" className="mono">LOSING AFFLUENT</text>
+        <div className="min-w-[560px]">
+          {/* header */}
+          <div className="mb-1.5 flex items-center gap-3">
+            <div className="w-[118px] shrink-0" />
+            <div className="mono flex flex-1 justify-between text-[9px] tracking-[0.08em] text-muted">
+              <span>{"\u2190"} LOSING AFFLUENT</span>
+              <span>GAINING AFFLUENT {"\u2192"}</span>
+            </div>
+            <div className="w-[54px] shrink-0" />
+            <div className="w-[112px] shrink-0" />
+          </div>
 
-          {pts.map((p) => {
-            const cx = x(p.renter), cyNow = y(p.diff);
-            const col = momColor(p.momentum);
-            const r = 4 + Math.min(5, Math.abs(p.net || 0) / 9000);
-            const active = hi === p.market;
-            const show = labelSet.has(p.market) || active;
-            const leftSide = cx > W - padR - 64;
-            return (
-              <g key={p.market} onMouseEnter={() => setHi(p.market)} onMouseLeave={() => setHi(null)} style={{ cursor: "default" }}>
-                {p.slope != null && p.span > 0 && (() => {
-                  const y1 = y(p.diff - p.slope * p.span);
-                  return (
-                    <>
-                      <line x1={cx} y1={y1} x2={cx} y2={cyNow} stroke={col} strokeWidth={active ? 2 : 1.4} opacity={active ? 0.8 : 0.5} />
-                      <circle cx={cx} cy={y1} r="2" fill="none" stroke={col} strokeWidth="1" opacity="0.45" />
-                    </>
-                  );
-                })()}
-                <circle cx={cx} cy={cyNow} r={active ? r + 2 : r} fill={col} fillOpacity={active ? 0.98 : 0.82} stroke={col} strokeWidth="1" />
-                {show && (
-                  <text x={leftSide ? cx - r - 5 : cx + r + 5} y={cyNow + 3} textAnchor={leftSide ? "end" : "start"} fontSize="9.5" fill={active ? "var(--ink)" : "var(--muted)"} className="mono">
-                    {name(p)}{p.slope != null ? <tspan fill={col}> {fmtK(p.slope)}/yr</tspan> : null}
-                  </text>
-                )}
-              </g>
-            );
-          })}
-        </svg>
+          <div className="space-y-[3px]">
+            {pts.map((p) => {
+              const m = p.momentum ? MOM[p.momentum] : null;
+              const col = p.diff >= 0 ? UP : DOWN;
+              const active = hi === p.market;
+              return (
+                <div
+                  key={p.market}
+                  onMouseEnter={() => setHi(p.market)}
+                  onMouseLeave={() => setHi(null)}
+                  className={`flex items-center gap-3 rounded-md py-1 transition-colors ${active ? "bg-white/[0.03]" : ""}`}
+                >
+                  {/* label */}
+                  <div className="w-[118px] shrink-0 text-right leading-tight">
+                    <div className="truncate text-[12px] text-ink">{cityName(p.market)}</div>
+                    <div className="mono text-[8.5px] tracking-[0.06em] text-muted">U-HAUL #{p.uhaulRank}</div>
+                  </div>
+
+                  {/* diverging bar */}
+                  <div className="relative h-[16px] flex-1">
+                    <div className="absolute inset-y-0 left-1/2 w-px bg-[var(--line)]" />
+                    <div
+                      className={`absolute inset-y-[2px] ${p.diff >= 0 ? "rounded-r-[3px]" : "rounded-l-[3px]"}`}
+                      style={{
+                        background: col,
+                        opacity: active ? 0.95 : 0.78,
+                        width: pct(p.diff) + "%",
+                        ...(p.diff >= 0 ? { left: "50%" } : { right: "50%" }),
+                      }}
+                    />
+                  </div>
+
+                  {/* value */}
+                  <div className="mono w-[54px] shrink-0 text-right text-[11px]" style={{ color: col }}>
+                    {fmtK(p.diff)}
+                  </div>
+
+                  {/* momentum tag */}
+                  <div className="w-[112px] shrink-0">
+                    {m ? (
+                      <span className="mono inline-flex items-center gap-1 text-[10px]" style={{ color: m.c }}>
+                        <m.Icon size={11} strokeWidth={2} /> {m.label}
+                      </span>
+                    ) : (
+                      <span className="mono text-[10px] text-muted">{"\u2014"}</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[11px]">
-        <span className="mono flex items-center gap-1.5 text-muted"><span className="inline-block h-2 w-2 rounded-full" style={{ background: ACCEL }} /> Strengthening {counts.accelerating ? `(${counts.accelerating})` : ""}</span>
-        <span className="mono flex items-center gap-1.5 text-muted"><span className="inline-block h-2 w-2 rounded-full" style={{ background: FADE }} /> Fading {counts.fading ? `(${counts.fading})` : ""}</span>
-        <span className="mono flex items-center gap-1.5 text-muted"><span className="inline-block h-2 w-2 rounded-full" style={{ background: STEADY }} /> Steady {counts.steady ? `(${counts.steady})` : ""}</span>
-        <span className="mono text-muted">· tail traces the smoothed {data.window || 4}-yr trend · dot size = net households</span>
-      </div>
-
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        <p className="mono rounded-md border border-up/20 bg-up/[0.06] px-3 py-2 text-[11px] leading-relaxed text-muted">
-          <span className="text-up">STRENGTHENING</span> · the income gap is moving in the metro&apos;s favor year-over-year — arrivers gaining ground on the people leaving (even a still-negative metro can be turning).
-        </p>
-        <p className="mono rounded-md border border-down/20 bg-down/[0.06] px-3 py-2 text-[11px] leading-relaxed text-muted">
-          <span className="text-down">FADING</span> · the gap is moving against the metro — the wealth-migration tailwind is weakening, even where it still sits above the line.
-        </p>
+      {/* legend */}
+      <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[11px]">
+        <span className="mono flex items-center gap-1.5 text-muted"><span className="inline-block h-2.5 w-4 rounded-sm" style={{ background: UP }} /> bar right = gaining affluent</span>
+        <span className="mono flex items-center gap-1.5 text-muted"><span className="inline-block h-2.5 w-4 rounded-sm" style={{ background: DOWN }} /> bar left = losing affluent</span>
+        <span className="mono flex items-center gap-1.5 text-muted"><TrendingUp size={12} style={{ color: UP }} />/<TrendingDown size={12} style={{ color: DOWN }} /> tag = {data.window || 4}-yr trend</span>
       </div>
 
       <p className="mono mt-3 text-[10px] tracking-[0.06em] text-muted">
-        U-Haul Growth Index {data.year} · momentum = smoothed {data.window || 4}-yr slope of the IRS AGI differential{data.latestYear ? ` (${data.latestYear - (data.window || 4) + 1}\u2013${data.latestYear})` : ""} · domestic, ~2-yr lag · {pts.length} metros matched
+        U-Haul Growth Index {data.year} · bar = latest IRS in−out AGI differential · tag = smoothed {data.window || 4}-yr slope{data.latestYear ? ` (${data.latestYear - (data.window || 4) + 1}\u2013${data.latestYear})` : ""} · domestic, ~2-yr lag · {pts.length} metros
       </p>
     </section>
   );
