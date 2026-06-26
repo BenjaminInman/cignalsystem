@@ -53,7 +53,7 @@ function MarketRow({ m, b }) {
           <MapPin size={14} className="shrink-0 text-muted" />
           <span className="truncate">{m.city}, {m.state}</span>
         </p>
-        <Stat label="Price / Unit" value={fmtUSD(m.price_per_unit)} sub={`${pct(m.price_growth_yoy)} YoY`} />
+        <Stat label="Sale Price/Unit" value={fmtUSD(m.price_per_unit)} sub={`${pct(m.price_growth_yoy)} YoY`} />
         <Stat label="Occupancy" value={`${Number(m.occupancy).toFixed(1)}%`} tone={toneVs(m.occupancy, b?.occupancy)} sub={bpsTxt(m.occupancy_change_bps)} />
         <Stat label="Emp. Growth" value={pct(m.employment_growth_yoy)} tone={toneVs(m.employment_growth_yoy, b?.employment_growth_yoy)} sub="YoY" />
         <Stat label="Sales Vol." value={fmtM(m.sales_volume_musd)} sub={`${Number(m.deliveries_units).toLocaleString()} delivered`} />
@@ -69,7 +69,7 @@ function MarketRow({ m, b }) {
             sub={`${Number(m.deliveries_units).toLocaleString()} units`}
           />
           <Stat label="Under Construction" value={`${Number(m.under_construction_units).toLocaleString()} units`} />
-          <Stat label="Price Growth YoY" value={pct(m.price_growth_yoy)} tone={toneVs(m.price_growth_yoy, b?.price_growth_yoy)} />
+          <Stat label="Price/Unit Growth" value={pct(m.price_growth_yoy)} tone={toneVs(m.price_growth_yoy, b?.price_growth_yoy)} sub="apt sale price, YoY" />
           <p className="text-[13px] leading-relaxed text-muted sm:col-span-3">{m.primary_drivers}</p>
         </div>
       )}
@@ -121,7 +121,7 @@ export default function EmergingMarkets() {
             <div className="card mb-6 grid grid-cols-2 gap-4 p-5 sm:grid-cols-5">
               <Bench label="Nat'l Occupancy" value={`${b.occupancy}%`} sub={bpsTxt(b.occupancy_change_bps)} />
               <Bench label="Nat'l Emp. Growth" value={pct(b.employment_growth_yoy)} sub="YoY" />
-              <Bench label="Nat'l Price / Unit" value={fmtUSD(b.price_per_unit)} sub={`${pct(b.price_growth_yoy)} YoY`} />
+              <Bench label="Nat'l Sale Price/Unit" value={fmtUSD(b.price_per_unit)} sub={`${pct(b.price_growth_yoy)} YoY`} />
               <Bench label="Nat'l Delivery Rate" value={`${b.delivery_pct_stock}%`} sub="of stock" />
               <Bench label="2026 Forecast Rent" value={pct(b.forecast_rent_growth_yoy)} sub="advertised" />
             </div>

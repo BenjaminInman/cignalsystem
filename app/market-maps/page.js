@@ -553,7 +553,7 @@ function ZipLookup() {
                   if (s.rentsRPP) cards.push(["Rent Price Level", `${Math.round(s.rentsRPP.value)}`, null, "US = 100"]);
                   if (s.cpiRent) cards.push(["Rent CPI (YoY)", s.cpiRent.yoyPct != null ? `${s.cpiRent.yoyPct >= 0 ? "+" : ""}${s.cpiRent.yoyPct}%` : `${Math.round(s.cpiRent.value)}`, s.cpiRent.yoyPct]);
                   if (s.vacancy) cards.push(["Apt Vacancy", `${Number(s.vacancy.value).toFixed(1)}%`, null]);
-                  if (s.daysOnMarket) cards.push(["Days on Market", `${Math.round(s.daysOnMarket.value)} days`, null]);
+                  if (s.daysOnMarket) cards.push(["Rental Days on Market", `${Math.round(s.daysOnMarket.value)} days`, null, "avg. apartment lease-up"]);
                   return cards.map(([k, v, tone, sub]) => (
                     <div key={k} className="rounded-lg border border-[var(--line)] bg-bg2/40 p-3">
                       <p className="mono text-[9px] tracking-[0.08em] text-muted">{k.toUpperCase()}</p>
