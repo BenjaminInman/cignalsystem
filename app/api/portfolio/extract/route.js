@@ -58,7 +58,7 @@ async function fileToContent(file, label) {
 
 const SYSTEM = `You are a multifamily real-estate financial-data extractor for the Cignal System portfolio tracker. You are given ONE document for one property — either an operating statement (income statement / T-12) or a rent roll — and return the data as strict JSON. Fill the sections the document supports; use null for everything it does not contain.
 
-Output ONLY a JSON object — no prose, no markdown, no code fences. Capture EVERYTHING you can identify; this feeds both the operator's dashboard and an anonymized nationwide research corpus, so detailed expense line items matter. Schema:
+Output ONLY the JSON object — begin with { and end with }. Do NOT write any reasoning, explanation, preamble, or commentary. Never use '...', ellipses, or placeholder values; emit complete values only. Keep "notes" to one short sentence. Schema:
 {
   "income_statement": {
     "total_rental_income": number|null,
@@ -93,9 +93,10 @@ Output ONLY a JSON object — no prose, no markdown, no code fences. Capture EVE
 Rules:
 - Extract ONLY what is present. Use null for anything missing. NEVER fabricate or estimate a number not supported by the document.
 - The user gives a TARGET MONTH. If the document covers multiple periods (a T-12 with monthly columns), extract that month's column and say so in period_detected; if single-period, use it and say so.
+- Transcribe every figure EXACTLY as printed, including cents; never round, recompute totals, or estimate — use the document's own stated totals and subtotals verbatim.
 - Numbers must be plain (no $, commas, parentheses). Convert accounting parentheses to negative EXCEPT vacancy_loss/bad_debt/concessions, returned as positive magnitudes.
 - expenses.line_items must list EVERY operating-expense line you can read, with its original label and amount. Also map them into the named categories where they fit.
-- rent_roll: For each avg_rent_Nbed, average the in-place rent across ALL units of that bedroom count, spanning every floor plan that shares that bedroom count (combine multiple plans into one average) using a UNIT-WEIGHTED mean (sum of unit rents / total units), not a simple average of plan averages. Preserve each distinct floor plan separately in unit_mix. If only market rent is available, use it and note that. Occupancy = occupied units / total units.
+- rent_roll: ALWAYS populate avg_rent_1bed/2bed/3bed/4bed when the rent roll has units of that bedroom count — this is the most important output. For each avg_rent_Nbed, take the UNIT-WEIGHTED mean of in-place rent across ALL units of that bedroom count, combining every floor plan that shares it (sum of unit rents ÷ total units), not a simple average of plan averages. Produce ONE unit_mix entry per distinct FLOOR PLAN, aggregated across its units — NEVER one row per individual unit; keep unit_mix short even for 100+ unit properties. If only market rent is available, use it and note that. Occupancy = occupied units / total units.
 - property_meta: read the property name and location from the document if present.
 - If the document is unrelated/unreadable, set fields to null and explain in notes.`;
 
@@ -106,7 +107,12 @@ async function callModel(content, tag) {
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": AKEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: MODEL, max_tokens: 8000, system: SYSTEM, messages: [{ role: "user", content }] }),
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 16000,
+        system: SYSTEM,
+        messages: [{ role: "user", content }, { role: "assistant", content: "{" }],
+      }),
     });
     d = await r.json();
     if (!r.ok) {
@@ -123,7 +129,7 @@ async function callModel(content, tag) {
   }
   const usage = d.usage || {};
   const stop = d.stop_reason;
-  const raw = d.content.filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
+  const raw = ("{" + d.content.filter((b) => b.type === "text").map((b) => b.text).join("\n")).trim();
   console.log(`[extract:${tag}] stop=${stop} len=${raw.length} in=${usage.input_tokens} out=${usage.output_tokens}`);
   try {
     let clean = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
