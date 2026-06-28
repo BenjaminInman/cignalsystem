@@ -151,15 +151,35 @@ export default function CycleWheel() {
 
               {hoverIt ? (
                 <>
-                  <text x={CX} y={CY - 18} textAnchor="middle" fontFamily={MONO} fontSize="9" fill={MUT} letterSpacing="1.5">
+                  <text x={CX} y={CY - 40} textAnchor="middle" fontFamily={MONO} fontSize="9" fill={MUT} letterSpacing="1.5">
                     {hoverIt.role.toUpperCase()}
                   </text>
-                  <text x={CX} y={CY + 6} textAnchor="middle" fontFamily={MONO} fontSize="18" fill={INK}>
+                  <text x={CX} y={CY - 19} textAnchor="middle" fontFamily={MONO} fontSize="16" fill={INK}>
                     {hoverIt.label}
                   </text>
-                  <text x={CX} y={CY + 28} textAnchor="middle" fontFamily={MONO} fontSize="14" fill={C[hoverIt.sentiment]}>
+                  <text x={CX} y={CY - 1} textAnchor="middle" fontFamily={MONO} fontSize="13" fill={C[hoverIt.sentiment]}>
                     {hoverIt.value}
                   </text>
+                  {hoverIt.low != null && (
+                    <>
+                      <line x1={CX - 54} y1={CY + 18} x2={CX + 54} y2={CY + 18} stroke={LINE} strokeWidth="2.5" strokeLinecap="round" />
+                      <line x1={CX - 54} y1={CY + 14} x2={CX - 54} y2={CY + 22} stroke={MUT} strokeWidth="1" />
+                      <line x1={CX + 54} y1={CY + 14} x2={CX + 54} y2={CY + 22} stroke={MUT} strokeWidth="1" />
+                      <circle
+                        cx={CX - 54 + (Math.max(0, Math.min(100, hoverIt.position ?? 50)) / 100) * 108}
+                        cy={CY + 18}
+                        r="4"
+                        fill={C[hoverIt.sentiment]}
+                        stroke={HUB}
+                        strokeWidth="1.5"
+                      />
+                      <text x={CX - 54} y={CY + 33} textAnchor="middle" fontFamily={MONO} fontSize="8" fill={MUT}>{hoverIt.low}</text>
+                      <text x={CX + 54} y={CY + 33} textAnchor="middle" fontFamily={MONO} fontSize="8" fill={MUT}>{hoverIt.high}</text>
+                      <text x={CX} y={CY + 46} textAnchor="middle" fontFamily={MONO} fontSize="7.5" fill={MUT} letterSpacing="0.5">
+                        {hoverIt.span ? `${hoverIt.span}-YR RANGE` : "RANGE"}
+                      </text>
+                    </>
+                  )}
                 </>
               ) : (
                 <>

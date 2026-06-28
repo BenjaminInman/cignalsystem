@@ -5,7 +5,8 @@ const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 // Curated hero set: 12 national indicators across the three timing layers.
-// type drives both the displayed value and the green/amber/red reading:
+// type drives the displayed metric, the green/amber/red reading, AND the
+// "where it sits" range gauge:
 //   growth    -> YoY% of a level; up is good
 //   inflation -> YoY% price change; low/at-target is good, hot is bad
 //   rate      -> a level rate; rising is bad (rates, vacancy, unemployment)
@@ -25,65 +26,84 @@ const CONFIG = [
   { slug: "pce_inflation", label: "Inflation", role: "trailing", type: "inflation" },
 ];
 
-async function latest(slug) {
+const cutoff = (() => {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 7);
+  return d.toISOString().slice(0, 10);
+})();
+
+async function history(slug) {
   const r = await fetch(
     `${SUPA}/rest/v1/v_indicator_analytics?slug=eq.${slug}&region_code=eq.US` +
-      `&select=obs_date,value,yoy_change,zscore_12&order=obs_date.desc&limit=1`,
+      `&obs_date=gte.${cutoff}&select=obs_date,value,yoy_change,zscore_12&order=obs_date.desc&limit=400`,
     { headers: { apikey: KEY, Authorization: `Bearer ${KEY}` }, cache: "no-store" }
   );
-  if (!r.ok) return null;
-  const j = await r.json();
-  return j && j[0] ? j[0] : null;
+  if (!r.ok) return [];
+  return (await r.json()) || [];
 }
 
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 const sgn = (n) => (n >= 0 ? "+" : "");
 
-function compute(cfg, row) {
-  if (!row || row.value == null) return null;
-  const value = Number(row.value);
-  const yoyAbs = row.yoy_change == null ? null : Number(row.yoy_change);
-  const z = row.zscore_12 == null ? null : Number(row.zscore_12);
-  const yoyPct =
-    yoyAbs != null && value - yoyAbs !== 0 ? (yoyAbs / (value - yoyAbs)) * 100 : null;
-
-  let display, sentiment;
-  if (cfg.type === "growth") {
-    const p = yoyPct ?? 0;
-    display = `${sgn(p)}${p.toFixed(1)}%`;
-    sentiment = p > 0.5 ? "g" : p < -0.5 ? "r" : "a";
-  } else if (cfg.type === "inflation") {
-    const p = yoyPct ?? 0;
-    display = `${sgn(p)}${p.toFixed(1)}%`;
-    sentiment = p <= 2.5 ? "g" : p <= 4 ? "a" : "r";
-  } else if (cfg.type === "rate") {
-    display = `${value.toFixed(1)}%`;
-    const d = yoyAbs ?? 0; // lower is better -> rising = deteriorating
-    sentiment = d > 0.15 ? "r" : d < -0.15 ? "g" : "a";
-  } else {
-    // gdp: annualized growth rate read off the level
-    display = `${sgn(value)}${value.toFixed(1)}%`;
-    sentiment = value >= 1.5 ? "g" : value < 0 ? "r" : "a";
+// The metric a given indicator's value/range is measured in.
+function metricOf(cfg, row) {
+  const v = Number(row.value);
+  const ya = row.yoy_change == null ? null : Number(row.yoy_change);
+  if (cfg.type === "growth" || cfg.type === "inflation") {
+    return ya != null && v - ya !== 0 ? (ya / (v - ya)) * 100 : null;
   }
+  return v; // rate, gdp
+}
 
-  // Wedge size = how far the reading sits from its own normal (|z|), floored so
-  // a near-normal indicator still shows a visible slice.
+function compute(cfg, rows) {
+  if (!rows || !rows.length || rows[0].value == null) return null;
+  const cur = metricOf(cfg, rows[0]);
+  if (cur == null || !Number.isFinite(cur)) return null;
+  const yoyAbs = rows[0].yoy_change == null ? null : Number(rows[0].yoy_change);
+  const z = rows[0].zscore_12 == null ? null : Number(rows[0].zscore_12);
+
+  const fmt = (x) =>
+    cfg.type === "rate" ? `${x.toFixed(1)}%` : `${sgn(x)}${x.toFixed(1)}%`;
+
+  let sentiment;
+  if (cfg.type === "growth") sentiment = cur > 0.5 ? "g" : cur < -0.5 ? "r" : "a";
+  else if (cfg.type === "inflation") sentiment = cur <= 2.5 ? "g" : cur <= 4 ? "a" : "r";
+  else if (cfg.type === "rate") {
+    const d = yoyAbs ?? 0;
+    sentiment = d > 0.15 ? "r" : d < -0.15 ? "g" : "a";
+  } else sentiment = cur >= 1.5 ? "g" : cur < 0 ? "r" : "a";
+
+  // where it sits: position of the current reading within its multi-year range
+  const series = rows.map((r) => metricOf(cfg, r)).filter((x) => x != null && Number.isFinite(x));
+  const low = Math.min(...series);
+  const high = Math.max(...series);
+  const position = high > low ? Math.round(clamp(((cur - low) / (high - low)) * 100, 0, 100)) : 50;
+  const oldest = rows[rows.length - 1]?.obs_date;
+  const span =
+    oldest && rows[0]?.obs_date
+      ? Math.max(1, Math.round((new Date(rows[0].obs_date) - new Date(oldest)) / 31557600000))
+      : null;
+
   const weight = z == null ? 0.6 : clamp(Math.abs(z), 0.3, 2);
   return {
     slug: cfg.slug,
     label: cfg.label,
     role: cfg.role,
-    value: display,
+    value: fmt(cur),
     sentiment,
     weight: Math.round(weight * 100) / 100,
-    asOf: row.obs_date,
+    position,
+    low: fmt(low),
+    high: fmt(high),
+    span,
+    asOf: rows[0].obs_date,
   };
 }
 
 export async function GET() {
   try {
-    const rows = await Promise.all(CONFIG.map((c) => latest(c.slug)));
-    const indicators = CONFIG.map((c, i) => compute(c, rows[i])).filter(Boolean);
+    const hist = await Promise.all(CONFIG.map((c) => history(c.slug)));
+    const indicators = CONFIG.map((c, i) => compute(c, hist[i])).filter(Boolean);
     const balance = { up: 0, down: 0, turn: 0, total: indicators.length };
     for (const x of indicators) {
       if (x.sentiment === "g") balance.up++;
