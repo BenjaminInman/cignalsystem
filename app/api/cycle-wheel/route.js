@@ -73,10 +73,16 @@ function compute(cfg, rows) {
     sentiment = d > 0.15 ? "r" : d < -0.15 ? "g" : "a";
   } else sentiment = cur >= 1.5 ? "g" : cur < 0 ? "r" : "a";
 
-  // where it sits: position of the current reading within its multi-year range
-  const series = rows.map((r) => metricOf(cfg, r)).filter((x) => x != null && Number.isFinite(x));
-  const low = Math.min(...series);
-  const high = Math.max(...series);
+  // where it sits: position of the current reading within its typical range.
+  // Use the 5th-95th percentile band so one-off outliers (e.g. 2020) don't
+  // blow out the range and flatten every reading to the middle.
+  const series = rows
+    .map((r) => metricOf(cfg, r))
+    .filter((x) => x != null && Number.isFinite(x))
+    .sort((a, b) => a - b);
+  const q = (p) => series[clamp(Math.round((p / 100) * (series.length - 1)), 0, series.length - 1)];
+  const low = series.length ? q(5) : cur;
+  const high = series.length ? q(95) : cur;
   const position = high > low ? Math.round(clamp(((cur - low) / (high - low)) * 100, 0, 100)) : 50;
   const oldest = rows[rows.length - 1]?.obs_date;
   const span =
