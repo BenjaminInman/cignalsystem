@@ -32,8 +32,6 @@ export default function NewsPage() {
 
       <NewsletterSignup />
 
-      <FieldIntel />
-
       <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_300px]">
         <div>
           {items === null ? (
@@ -56,6 +54,8 @@ export default function NewsPage() {
           </div>
         </aside>
       </div>
+
+      <FieldIntel />
     </div>
   );
 }
