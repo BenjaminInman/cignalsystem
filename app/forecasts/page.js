@@ -259,7 +259,8 @@ function ForecastsInner() {
   useEffect(() => {
     let alive = true;
     fetch("/api/forecast").then((r) => r.json()).then((j) => { if (alive && j?.ok) setFc(j); }).catch(() => {});
-    fetch("/api/brief").then((r) => r.json()).then((j) => { if (alive && j?.ok) setBrief(j); }).catch(() => {});
+    // The Brief held for now — fetch disabled. Re-enable with the render to restore.
+    // fetch("/api/brief").then((r) => r.json()).then((j) => { if (alive && j?.ok) setBrief(j); }).catch(() => {});
     return () => { alive = false; };
   }, []);
 
@@ -376,8 +377,9 @@ function ForecastsInner() {
         </div>
       </div>
 
-      {/* The Brief — expert call vs live signal (live) */}
-      <TheBrief brief={brief} />
+      {/* The Brief — held for now (M&M-only is too thin a comparison). Component, /api/brief route, and
+          expert_sources/expert_picks data are all intact. To restore, uncomment the line below. */}
+      {/* <TheBrief brief={brief} /> */}
 
       <div className="card mt-8 flex items-start gap-3 p-5">
         <Info size={16} className="mt-0.5 shrink-0 text-muted" />
