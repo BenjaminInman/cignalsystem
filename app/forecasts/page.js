@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Info, Building2, Gauge } from "lucide-react";
+import { Info, Building2, Gauge, Newspaper } from "lucide-react";
 import { toneColor } from "@/components/ui";
 import { useContent, useVertical } from "@/components/VerticalProvider";
 import { isPageReady } from "@/lib/verticals";
@@ -161,6 +161,90 @@ export default function ForecastsPage() {
   return <ForecastsInner />;
 }
 
+const REL_META = {
+  diverge: { label: "DIVERGE", color: "#F5B544" },
+  converge: { label: "CONVERGE", color: "#797e85" },
+  partial: { label: "MIXED", color: "#797e85" },
+};
+
+// The Brief — the named forecaster's forward call set against the live rent signal.
+// v1 source: Marcus & Millichap NMI. Expert lean and live momentum are kept separate, never averaged.
+function TheBrief({ brief }) {
+  if (!brief || !brief.source) {
+    return (
+      <div className="card mt-8 p-6">
+        <p className="kicker mb-2 flex items-center gap-2"><Newspaper size={12} className="text-signal" /> The Brief</p>
+        <p className="mono py-6 text-center text-[12px] text-muted">Loading expert vs. live signal…</p>
+      </div>
+    );
+  }
+  const { source, rows = [], counts = {}, signalAsOf } = brief;
+  const first = (source.name || "EXPERT").split(" ")[0];
+
+  return (
+    <div className="card mt-8 p-6 md:p-8">
+      <div className="mb-1 flex items-start justify-between gap-4">
+        <div>
+          <p className="kicker mb-2 flex items-center gap-2"><Newspaper size={12} className="text-signal" /> The Brief · Expert Call vs Live Signal</p>
+          <h2 className="headline text-2xl text-ink md:text-3xl">The Brief</h2>
+        </div>
+        <span className="mono shrink-0 text-[10px] tracking-[0.08em] text-muted">
+          <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-up align-middle" />SIGNAL LIVE{signalAsOf ? ` · ${fmtMonth(signalAsOf)}` : ""}
+        </span>
+      </div>
+
+      <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted">
+        How {source.name} ranks each market in its {source.report}, set against what the live rent signal is doing right now.
+        Where the two <span className="text-signal">diverge</span>, the institutional forecast and the measured momentum disagree — that gap is the tell.
+      </p>
+
+      <div className="mt-4 flex flex-wrap gap-2 mono text-[10px] tracking-[0.06em]">
+        {["diverge", "converge", "partial"].map((k) => counts[k] ? (
+          <span key={k} className="rounded px-2 py-1" style={{ color: REL_META[k].color, backgroundColor: `${REL_META[k].color}1a` }}>
+            {counts[k]} {REL_META[k].label}
+          </span>
+        ) : null)}
+      </div>
+
+      <div className="mt-5 grid grid-cols-[1.5fr_1.1fr_0.9fr_1.1fr] gap-2 pb-2 mono text-[10px] tracking-[0.1em] text-muted">
+        <span>MARKET</span>
+        <span>{first.toUpperCase()} CALL</span>
+        <span className="text-center">READ</span>
+        <span className="text-right">LIVE SIGNAL</span>
+      </div>
+
+      {rows.map((r) => (
+        <div key={r.market} title={`${r.expertSide}; ${r.signalSide}.`} className="grid grid-cols-[1.5fr_1.1fr_0.9fr_1.1fr] items-center gap-2 border-t border-[var(--line)] py-3 text-sm">
+          <div>
+            <p className="text-ink">{r.market}</p>
+            <p className="mono text-[10px] text-muted">NMI #{r.rank}/{r.total}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: toneColor(r.expertLean || "neutral") }} />
+            <span className="mono text-[12px]" style={{ color: toneColor(r.expertLean || "neutral") }}>{(r.expertLean || "—").toUpperCase()}</span>
+          </div>
+          <div className="text-center">
+            <span className="mono rounded px-2 py-1 text-[10px] tracking-[0.06em]" style={{ color: REL_META[r.relation].color, backgroundColor: `${REL_META[r.relation].color}1a` }}>
+              {REL_META[r.relation].label}
+            </span>
+          </div>
+          <div className="text-right">
+            <span className="mono text-[12px]" style={{ color: r.rentYoY == null ? "#797e85" : toneColor(r.signal) }}>
+              {r.rentYoY == null ? "—" : `${r.rentYoY >= 0 ? "+" : ""}${r.rentYoY}%`}
+            </span>
+            <p className="mono text-[10px] text-muted">{r.trend || "—"}</p>
+          </div>
+        </div>
+      ))}
+
+      <p className="mono mt-4 border-t border-[var(--line)] pt-3 text-[10px] leading-relaxed tracking-[0.03em] text-muted">
+        {source.name} · {source.mechanism}. Expert call = the source&apos;s forward ranking tier; live signal = current ZORI rent momentum from the Cignal data layer.
+        The two are kept separate by design — never averaged. {source.caveats}
+      </p>
+    </div>
+  );
+}
+
 function ForecastsInner() {
   const { COPY = {} } = useContent();
   const metrics = COPY.fcMetrics || DEFAULT_METRICS;
@@ -168,12 +252,14 @@ function ForecastsInner() {
   const [sc, setSc] = useState("Base Case");
   const [metric, setMetric] = useState(metrics[0]);
   const [fc, setFc] = useState(null);
+  const [brief, setBrief] = useState(null);
   const conf = sc === "Base Case" ? 78 : sc === "Bull Case" ? 64 : 71;
   const series = seriesFor(metric, sc);
 
   useEffect(() => {
     let alive = true;
     fetch("/api/forecast").then((r) => r.json()).then((j) => { if (alive && j?.ok) setFc(j); }).catch(() => {});
+    fetch("/api/brief").then((r) => r.json()).then((j) => { if (alive && j?.ok) setBrief(j); }).catch(() => {});
     return () => { alive = false; };
   }, []);
 
@@ -289,6 +375,9 @@ function ForecastsInner() {
           {!fc && <p className="mono py-6 text-center text-[12px] text-muted">Loading live drivers…</p>}
         </div>
       </div>
+
+      {/* The Brief — expert call vs live signal (live) */}
+      <TheBrief brief={brief} />
 
       <div className="card mt-8 flex items-start gap-3 p-5">
         <Info size={16} className="mt-0.5 shrink-0 text-muted" />
