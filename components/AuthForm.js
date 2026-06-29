@@ -41,6 +41,12 @@ export default function AuthForm({ mode }) {
         });
         if (error) throw error;
         if (data.session) {
+          // Fire-and-forget: send the one-time welcome, never block the redirect.
+          fetch("/api/email/welcome", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+          }).catch(() => {});
           router.push(next);
           router.refresh();
         } else {
