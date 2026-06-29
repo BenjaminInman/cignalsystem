@@ -1,0 +1,32 @@
+name: ingest-news
+
+# Daily news fact-engine. Cadence is intentionally conservative to start;
+# bump the cron once we've watched a few runs and know the per-run volume.
+on:
+  schedule:
+    - cron: "0 11 * * *"   # 11:00 UTC daily (~6-7am ET, after morning releases post)
+  workflow_dispatch: {}     # manual trigger for testing/backfill
+
+concurrency:
+  group: ingest-news
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: pip install requests feedparser psycopg2-binary
+
+      - name: Run news fact-engine
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python ingest_news.py
