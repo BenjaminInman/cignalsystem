@@ -1,0 +1,22 @@
+name: anthropic-key-check
+on:
+  workflow_dispatch: {}
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Anthropic Messages API
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          code=$(curl -s -o /tmp/r.json -w "%{http_code}" https://api.anthropic.com/v1/messages \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -H "content-type: application/json" \
+            -d '{"model":"claude-sonnet-4-6","max_tokens":8,"messages":[{"role":"user","content":"ping"}]}')
+          echo "HTTP_STATUS=$code"
+          if [ "$code" = "200" ]; then
+            echo "RESULT=ANTHROPIC_KEY_OK"
+          else
+            echo "RESULT=ANTHROPIC_KEY_FAIL"; echo "---body---"; cat /tmp/r.json; exit 1
+          fi
