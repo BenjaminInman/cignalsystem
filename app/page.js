@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowRight, Lock, Newspaper, ArrowUpRight, Building2, SlidersHorizontal, TrendingUp, Users } from "lucide-react";
+import { ArrowRight, Lock, Newspaper, ArrowUpRight, Building2, SlidersHorizontal, TrendingUp, Users, Landmark } from "lucide-react";
 import { toneColor, Sparkline, StatusPill } from "@/components/ui";
 import SignalCard from "@/components/SignalCard";
 import CycleWheel from "@/components/CycleWheel";
 import { useContent } from "@/components/VerticalProvider";
 import { fetchTeaserSignals } from "@/lib/signals";
 
-const AUD_ICONS = { Building2, SlidersHorizontal, TrendingUp, Users };
+const AUD_ICONS = { Building2, SlidersHorizontal, TrendingUp, Users, Landmark };
 
 const fmtK = (n) =>
   n >= 1e6 ? `${(n / 1e6).toFixed(2)}MM` : n >= 1000 ? `${Math.round(n / 1000)}K` : `${n}`;
