@@ -5,6 +5,7 @@ import { Newspaper, ArrowUpRight, Mail, Check } from "lucide-react";
 import { useContent } from "@/components/VerticalProvider";
 import CommunityCTA from "@/components/CommunityCTA";
 import CignalScoreCTA from "@/components/CignalScoreCTA";
+import FieldIntel from "@/components/FieldIntel";
 
 export default function NewsPage() {
   const { NEWS = [] } = useContent();
@@ -30,6 +31,8 @@ export default function NewsPage() {
       </p>
 
       <NewsletterSignup />
+
+      <FieldIntel />
 
       <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_300px]">
         <div>
