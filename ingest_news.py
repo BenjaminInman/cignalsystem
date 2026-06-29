@@ -68,12 +68,38 @@ SIGNAL_ROLE = {
     "pce_inflation": "lagging",
 }
 
-EXTRACTION_SYSTEM = """You are a fact-extraction engine for a multifamily real \
-estate market-intelligence platform. From the supplied headline and summary you \
-extract ONLY verifiable, attributable factual claims relevant to multifamily / \
-commercial real estate, housing, or the macro economy that drives them.
+# Per-vertical relevance focus. The pipeline is shared across verticals; each
+# source carries a vertical, and its focus defines the relevance bar applied at
+# extraction. Only multifamily is authored today; add general-real-estate /
+# small-business entries here as those verticals come online.
+VERTICAL_FOCUS = {
+    "multifamily": (
+        "the U.S. MULTIFAMILY real estate market — apartment investment, "
+        "development, financing, ownership, operations, rents, occupancy, and the "
+        "housing / interest-rate / policy forces that move it. News-worthy here "
+        "means it plausibly affects multifamily investment, development, "
+        "financing, operations, supply, demand, or pricing: e.g. apartment "
+        "acquisitions / dispositions and financings at scale, rent / occupancy / "
+        "absorption trends, multifamily and residential construction and permits, "
+        "cap-rate and lending shifts, distressed multifamily debt or assets, "
+        "migration affecting housing demand, and rate / housing / rental policy. "
+        "DROP as off-focus: single-company executive hires or promotions, "
+        "unrelated industries (healthcare, retail, office-only, hospitality) "
+        "unless they bear on multifamily demand, product launches, marketing "
+        "programs, and generic corporate public relations."
+    ),
+}
+DEFAULT_FOCUS = VERTICAL_FOCUS["multifamily"]
+
+EXTRACTION_SYSTEM = """You are a fact-extraction engine for the Cignal System \
+market-intelligence platform. From the supplied headline and summary you extract \
+ONLY verifiable, attributable factual claims that are relevant to the FOCUS given \
+in the user message.
 
 Hard rules:
+- RELEVANCE GATE: keep a fact ONLY if it is news-worthy AND materially relevant \
+to the FOCUS. A fact can be true and still off-focus — drop those. If the entire \
+article is off-focus, set relevant=false and return no facts.
 - Facts only. A fact is a checkable statement about what happened, a measured \
 value, a reported figure, an announced policy, or a stated forecast.
 - Strip ALL editorial framing in EVERY direction: sentiment adjectives, spin, \
@@ -118,7 +144,7 @@ def db():
 def load_active_sources(conn):
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute(
-            "select id, name, feed_url, tier from news_sources "
+            "select id, name, feed_url, tier, vertical from news_sources "
             "where is_active = true and feed_url is not null"
         )
         return cur.fetchall()
@@ -182,6 +208,7 @@ def fetch_candidates(source):
         pub_iso = pub.isoformat() if pub else ""
         out.append({
             "source_id": source["id"],
+            "vertical": source.get("vertical", "multifamily"),
             "title": title,
             "url": url,
             "summary": summary,
@@ -203,7 +230,7 @@ def extraction_tool(allowed_slugs):
             "properties": {
                 "relevant": {
                     "type": "boolean",
-                    "description": "False if the article has no multifamily/CRE/macro relevance.",
+                    "description": "False if the article is off-focus for the FOCUS given in the user message.",
                 },
                 "neutral_summary": {
                     "type": "string",
@@ -240,8 +267,9 @@ def extraction_tool(allowed_slugs):
     }
 
 
-def extract_facts(article, allowed_slugs):
+def extract_facts(article, allowed_slugs, focus):
     user = (
+        f"FOCUS: {focus}\n\n"
         f"Allowed metric_slug values: {', '.join(allowed_slugs)}\n\n"
         f"HEADLINE: {article['title']}\n\n"
         f"SUMMARY: {article['summary'] or '(none provided)'}\n\n"
@@ -372,7 +400,8 @@ def main():
 
         total_facts = 0
         for i, art in enumerate(fresh, 1):
-            extraction = extract_facts(art, allowed_slugs)
+            focus = VERTICAL_FOCUS.get(art.get("vertical"), DEFAULT_FOCUS)
+            extraction = extract_facts(art, allowed_slugs, focus)
             try:
                 total_facts += persist(conn, art, extraction, allowed_slugs)
                 conn.commit()
