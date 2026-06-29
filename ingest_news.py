@@ -89,16 +89,21 @@ is_estimate=true.
 fact clearly maps to that indicator. Leave null otherwise.
 - period_start/period_end describe the time the fact is ABOUT, not the publish \
 date. Use ISO dates; leave null if not determinable.
-- NOVELTY (important): classify each fact as one of two values.
-  * "restatement" — the fact merely repeats an official metric/series that a \
-market-intelligence platform already ingests directly (e.g. "multifamily starts \
-fell 8%", "CPI rose 0.3%", "the 10-year Treasury is at 4.2%"). These are echoes \
-of measured data, useful only as mild corroboration.
-  * "net_new" — information NOT derivable from a standard economic series: \
-forward-looking commentary or guidance, deal- or property-level color, a policy \
-or regulatory announcement, financing/transaction activity, or stated sentiment. \
-This is the high-value slice. When unsure, prefer "net_new" only if the fact adds \
-something a data feed could not already tell you.
+- NOVELTY: classify each fact as exactly one of two values, judged ONLY against \
+the allowed metric_slug list provided above (those are the series the platform \
+already measures directly in its Hard layer):
+  * "restatement" — the fact's core figure or claim duplicates one of those \
+already-tracked indicators (e.g. if "mf_starts" is in the list, "multifamily \
+starts fell 8%" is a restatement). These are echoes of data we already have, \
+useful only as mild corroboration.
+  * "net_new" — anything else worth keeping: forward-looking commentary or \
+guidance, deal- or property-level color, financing/transaction activity, policy \
+or regulatory announcements, stated sentiment, OR official statistics that are \
+NOT in the tracked list (those are novel data to the platform, not echoes). \
+This is the high-value slice; when torn between the two, choose net_new.
+- Do not extract pure background trivia with no market-signal value (e.g. a \
+firm's nationality, founding date, or generic boilerplate). Skip such statements \
+entirely rather than recording them as facts.
 """
 
 
