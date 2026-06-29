@@ -24,7 +24,7 @@ export default function Footer() {
               <span className="mono text-sm tracking-[0.16em] text-ink">CIGNAL<span className="text-signal">·</span>SYSTEM</span>
             </div>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">
-              {COPY.footerTagline || "Military Grade Economic Intelligence for Multifamily Real Estate Owners, Operators, Investors and Property Management Teams."}
+              {COPY.footerTagline || "Military Grade Economic Intelligence for Multifamily Real Estate Owners, Operators, Investors, Management Firms, Lenders and Equity Groups."}
             </p>
             <div className="mt-5 flex items-center gap-2">
               <a href="#" aria-label="Facebook" className="flex h-9 w-9 items-center justify-center rounded-md border border-[var(--line)] text-muted transition-colors hover:border-signal/40 hover:text-signal">
