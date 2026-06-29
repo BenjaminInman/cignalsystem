@@ -6,6 +6,7 @@ import { ArrowRight, Lock, Newspaper, ArrowUpRight, Building2, SlidersHorizontal
 import { toneColor, Sparkline, StatusPill } from "@/components/ui";
 import SignalCard from "@/components/SignalCard";
 import CycleWheel from "@/components/CycleWheel";
+import FieldIntel from "@/components/FieldIntel";
 import { useContent } from "@/components/VerticalProvider";
 import { fetchTeaserSignals } from "@/lib/signals";
 
@@ -374,6 +375,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <FieldIntel />
 
       {/* FEATURED INDUSTRY NEWS */}
       <section className="mt-14">
