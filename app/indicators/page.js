@@ -5,6 +5,7 @@ import { ChevronDown } from "lucide-react";
 import { useContent } from "@/components/VerticalProvider";
 import { toneColor, StatusPill } from "@/components/ui";
 import IndicatorCompare from "@/components/IndicatorCompare";
+import PaywallBlur from "@/components/PaywallBlur";
 
 const TYPES = ["All Types", "Leading", "Trailing"];
 const CATS = ["All", "Supply", "Demand", "Capital", "Macro", "Performance"];
@@ -192,7 +193,13 @@ export default function IndicatorsPage() {
 
       {rows.length === 0 && <p className="mono mt-8 rounded-lg border border-[var(--line)] p-8 text-center text-sm text-muted">No indicators match this filter.</p>}
 
-      <IndicatorCompare />
+      <PaywallBlur
+        page="indicators"
+        title="Indicator Comparison"
+        blurb="Layer multiple indicators on one timeline to read divergence and confirmation across the cycle. Pro unlocks the full comparison studio."
+      >
+        <IndicatorCompare />
+      </PaywallBlur>
     </div>
   );
 }
