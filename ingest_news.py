@@ -38,6 +38,10 @@ LOOKBACK_DAYS = 14
 # Cap per run so a backfill / busy news day can't blow the Action budget.
 MAX_ARTICLES_PER_RUN = 120
 
+# Browser UA — several feeds (Cloudflare-fronted) 403 the default feedparser UA.
+FEED_UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                         "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36"}
+
 # ---------------------------------------------------------------------------
 # Extraction contract
 # ---------------------------------------------------------------------------
@@ -152,9 +156,11 @@ def fetch_candidates(source):
     """Return new-ish entries from one feed as dicts."""
     out = []
     try:
-        feed = feedparser.parse(source["feed_url"])
+        r = requests.get(source["feed_url"], headers=FEED_UA, timeout=25)
+        r.raise_for_status()
+        feed = feedparser.parse(r.content)
     except Exception as e:
-        log(f"  feed error {source['name']}: {e}")
+        log(f"  feed error {source['name']}: {type(e).__name__}")
         return out
 
     cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=LOOKBACK_DAYS)
