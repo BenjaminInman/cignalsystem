@@ -29,6 +29,25 @@ async function metroSignal(slug, cbsa) {
   return { value: v, yoyPct, delta, asOf: rows[0].obs_date };
 }
 
+// County real GDP (BEA CAGDP9), keyed by the Zillow-style county label that the
+// county region_code carries (e.g. "Harris County, TX"). A ZIP sits in exactly
+// one county, so this resolves from the ZIP's county; metro-only lookups span
+// multiple counties and return null. Returns latest level + YoY %.
+async function countyGdpSignal(countyLabel) {
+  if (!countyLabel) return null;
+  const enc = encodeURIComponent(countyLabel);
+  const rows = await sb(
+    `v_indicator_analytics?slug=eq.gdp_county&region_code=eq.${enc}` +
+      `&select=obs_date,value,yoy_change&order=obs_date.desc&limit=1`
+  );
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  const v = Number(rows[0].value);
+  const yoyAbs = rows[0].yoy_change;
+  const prior = yoyAbs != null ? v - Number(yoyAbs) : null;
+  const yoyPct = prior && prior !== 0 ? Math.round((yoyAbs / prior) * 1000) / 10 : null;
+  return { value: v, yoyPct, asOf: rows[0].obs_date, countyLabel };
+}
+
 // IRS SOI migration signals for a metro, looked up by Zillow "City, ST" code
 // (bridged from CBSA via cbsa_zillow_xwalk). Returns the in-migrant AGI number,
 // net domestic migration, and the 6-year AGI-differential trend.
@@ -80,12 +99,22 @@ export async function GET(req) {
     const reg = await sb(`regions?code=eq.${cbsa}&region_type=eq.metro&select=name&limit=1`);
     const metroName = reg?.[0]?.name || null;
 
+    // Resolve the county the lookup sits in (GDP is county-grain). A ZIP maps to
+    // one county via the crosswalk; a direct county search carries it already.
+    let countyLabel = null;
+    if (/^\d{5}$/.test(zip)) {
+      countyLabel = (await sb(`zip_crosswalk?zip=eq.${zip}&select=county_label&limit=1`))?.[0]?.county_label || null;
+    } else if (metro) {
+      const cr = await sb(`regions?name=eq.${encodeURIComponent(metro)}&region_type=eq.county&select=name&limit=1`);
+      countyLabel = cr?.[0]?.name || null;
+    }
+
     // bridge CBSA -> Zillow "City, ST" so we can attach IRS migration signals
     const xw = await sb(`cbsa_zillow_xwalk?cbsa=eq.${cbsa}&select=zillow_code&limit=1`);
     const zillowCode = xw?.[0]?.zillow_code || null;
     const migration = zillowCode ? await irsMigration(zillowCode) : null;
 
-    const [employment, unemployment, rentsRPP, allRPP, cpiRent, vacancy, daysOnMarket] =
+    const [employment, unemployment, rentsRPP, allRPP, cpiRent, vacancy, daysOnMarket, countyGdp] =
       await Promise.all([
         metroSignal("bls_metro_employment", cbsa),
         metroSignal("bls_metro_unemployment", cbsa),
@@ -94,11 +123,12 @@ export async function GET(req) {
         metroSignal("bls_metro_cpi_rent", cbsa),
         metroSignal("apt_vacancy", cbsa),
         metroSignal("apt_time_on_market", cbsa),
+        countyGdpSignal(countyLabel),
       ]);
 
-    const signals = { employment, unemployment, rentsRPP, allRPP, cpiRent, vacancy, daysOnMarket };
+    const signals = { employment, unemployment, rentsRPP, allRPP, cpiRent, vacancy, daysOnMarket, countyGdp };
     const any = Object.values(signals).some(Boolean);
-    return Response.json({ found: any || !!migration, cbsa, metroName, signals, migration });
+    return Response.json({ found: any || !!migration, cbsa, metroName, countyName: countyLabel, signals, migration });
   } catch {
     return Response.json({ found: false, zip, error: "Lookup failed." }, { status: 502 });
   }

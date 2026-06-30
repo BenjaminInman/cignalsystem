@@ -549,6 +549,7 @@ function ZipLookup() {
                   const s = signals.signals;
                   const cards = [];
                   if (s.employment) cards.push(["Job Growth (YoY)", s.employment.yoyPct != null ? `${s.employment.yoyPct >= 0 ? "+" : ""}${s.employment.yoyPct}%` : `${Math.round(s.employment.value)}K`, s.employment.yoyPct]);
+                  if (s.countyGdp) { const b = s.countyGdp.value / 1e6; const lvl = b >= 1 ? `$${b.toFixed(1)}B` : `$${Math.round(s.countyGdp.value / 1e3)}M`; cards.push(["Real GDP (County)", lvl, null, s.countyGdp.yoyPct != null ? `${s.countyGdp.yoyPct >= 0 ? "+" : ""}${s.countyGdp.yoyPct}% YoY · real` : "real, chained 2017$"]); }
                   if (s.unemployment) cards.push(["Unemployment", `${s.unemployment.value}%`, null]);
                   if (s.rentsRPP) cards.push(["Rent Price Level", `${Math.round(s.rentsRPP.value)}`, null, "US = 100"]);
                   if (s.cpiRent) cards.push(["Rent CPI (YoY)", s.cpiRent.yoyPct != null ? `${s.cpiRent.yoyPct >= 0 ? "+" : ""}${s.cpiRent.yoyPct}%` : `${Math.round(s.cpiRent.value)}`, s.cpiRent.yoyPct]);
@@ -563,7 +564,7 @@ function ZipLookup() {
                   ));
                 })()}
               </div>
-              <p className="mono mt-3 text-[10px] tracking-[0.08em] text-muted">Metro level (CBSA) · BLS jobs &amp; unemployment, BEA rent price parity, Apartment List vacancy &amp; days-on-market</p>
+              <p className="mono mt-3 text-[10px] tracking-[0.08em] text-muted">Metro level (CBSA) · BLS jobs &amp; unemployment, BEA rent price parity, Apartment List vacancy &amp; days-on-market{signals.signals?.countyGdp ? ` · real GDP is county-level (BEA CAGDP9${signals.countyName ? `, ${signals.countyName}` : ""})` : ""}</p>
 
               {signals.migration && (
                 <div className="mt-4 border-t border-[var(--line)] pt-4">
