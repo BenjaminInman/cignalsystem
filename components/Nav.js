@@ -7,6 +7,7 @@ import { Home, Newspaper, Radio, Info, Gauge, LayoutDashboard, Activity, BarChar
 import { useVertical } from "@/components/VerticalProvider";
 import { createClient } from "@/lib/supabase/client";
 import { FREE_PAGES } from "@/lib/access";
+import { hasTier } from "@/lib/tiers";
 
 const PRIMARY = [
   { label: "Home", href: "/", icon: Home },
@@ -128,7 +129,7 @@ export default function Nav() {
                 {SUITE.map(({ label, href, icon: Icon }) => {
                   const active = path === href;
                   const slug = href.replace(/^\//, "");
-                  const locked = !isAdmin && tier !== "pro" && !FREE_PAGES.includes(slug);
+                  const locked = !isAdmin && !hasTier(tier, "pro") && !FREE_PAGES.includes(slug);
                   return (
                     <Link key={label} href={href} onClick={() => setOpen(false)}
                       className={`mono flex items-center gap-2.5 rounded-md px-3 py-2.5 text-[12px] tracking-[0.04em] transition-colors ${active ? "bg-signal/10 text-signal" : "text-muted hover:bg-white/[0.04] hover:text-ink"}`}>

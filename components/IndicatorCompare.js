@@ -5,6 +5,7 @@ import { Lock, Plus, X } from "lucide-react";
 import { useContent } from "@/components/VerticalProvider";
 import { createClient } from "@/lib/supabase/client";
 import { SLUG_BY_NAME } from "@/lib/indicator-slugs";
+import { hasTier } from "@/lib/tiers";
 
 const SERIES_COLORS = ["#F5B544", "#5FB97C", "#6FA8DC", "#E5634D", "#B68FD6"];
 const CHART_TYPES = ["Line", "Area", "Bar"];
@@ -184,7 +185,7 @@ export default function IndicatorCompare() {
   const [raw, setRaw] = useState({}); // slug -> { points, unit, group, round }
   const [loading, setLoading] = useState(false);
 
-  const caps = tier === "pro" ? { maxSlugs: 5, years: ALL_RANGES } : { maxSlugs: 2, years: [10] };
+  const caps = hasTier(tier, "pro") ? { maxSlugs: 5, years: ALL_RANGES } : { maxSlugs: 2, years: [10] };
 
   // default: Inflation vs Interest Rates (same unit, the pair that exposed the bug)
   useEffect(() => {

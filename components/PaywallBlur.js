@@ -16,6 +16,7 @@
 import { useState, useEffect } from "react";
 import { Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { hasTier } from "@/lib/tiers";
 
 export default function PaywallBlur({ page = "indicators", title = "Pro feature", blurb, children }) {
   const [status, setStatus] = useState("loading"); // loading | allowed | locked
@@ -35,7 +36,7 @@ export default function PaywallBlur({ page = "indicators", title = "Pro feature"
         .single()
         .then(({ data }) => {
           if (!active) return;
-          setStatus(data?.is_admin || data?.tier === "pro" ? "allowed" : "locked");
+          setStatus(data?.is_admin || hasTier(data?.tier, "pro") ? "allowed" : "locked");
         });
     });
     return () => {
