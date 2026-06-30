@@ -44,8 +44,12 @@ async function syncSubscription(sub) {
   const priceId = sub.items?.data?.[0]?.price?.id;
   const tier = await tierForPrice(priceId);
   const status = sub.status; // active | trialing | past_due | canceled | ...
-  const periodEnd = sub.current_period_end
-    ? new Date(sub.current_period_end * 1000).toISOString()
+  // Recent Stripe API versions expose the billing period on the line item;
+  // older ones put it on the subscription. Read item-level first, then fall back.
+  const periodEndUnix =
+    sub.items?.data?.[0]?.current_period_end ?? sub.current_period_end ?? null;
+  const periodEnd = periodEndUnix
+    ? new Date(periodEndUnix * 1000).toISOString()
     : null;
 
   // Active / trialing / past_due still grant access (past_due = grace period).
