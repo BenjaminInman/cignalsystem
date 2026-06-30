@@ -56,6 +56,7 @@ async function syncSubscription(sub) {
   const grants = ["active", "trialing", "past_due"].includes(status);
 
   const patch = {
+    cancel_at_period_end: !!sub.cancel_at_period_end,
     stripe_subscription_id: sub.id,
     subscription_status: status,
     current_period_end: periodEnd,

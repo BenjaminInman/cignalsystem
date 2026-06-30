@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
-import { Home, Newspaper, Radio, Info, Gauge, LayoutDashboard, Activity, BarChart3, LineChart, TrendingUp, BookOpen, Briefcase, Users, Bell, ChevronDown, Terminal, LogOut, ShieldCheck, Lock } from "lucide-react";
+import { Home, Newspaper, Radio, Info, Gauge, LayoutDashboard, Activity, BarChart3, LineChart, TrendingUp, BookOpen, Briefcase, Users, Bell, ChevronDown, Terminal, LogOut, ShieldCheck, Lock, CreditCard } from "lucide-react";
 import { useVertical } from "@/components/VerticalProvider";
 import { createClient } from "@/lib/supabase/client";
 import { FREE_PAGES } from "@/lib/access";
@@ -159,6 +159,12 @@ export default function Nav() {
               <span className="mono hidden max-w-[160px] truncate text-[11px] tracking-[0.04em] text-muted lg:inline-block">
                 {user.email}
               </span>
+              <Link
+                href="/account"
+                className="mono flex items-center gap-1.5 rounded-sm border border-[var(--line-strong)] px-3 py-2 text-[12px] tracking-[0.08em] text-muted transition-colors hover:text-ink"
+              >
+                <CreditCard size={13} strokeWidth={1.8} /> Account
+              </Link>
               <button
                 onClick={signOut}
                 className="mono flex items-center gap-1.5 rounded-sm border border-[var(--line-strong)] px-3 py-2 text-[12px] tracking-[0.08em] text-muted transition-colors hover:text-ink"
