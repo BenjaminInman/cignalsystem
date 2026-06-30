@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 """
-Cignal System — BEA ingestion (Regional Price Parities by metro).
+Cignal System — BEA Regional ingestion (source_series-driven).
 
-BEA's API only serves MSA-level data through its MA-prefixed tables; the CA/SA
-income tables are county/state only. The metro-level signal we want is MARPP
-(Regional Price Parities by MSA), an index where US = 100:
+Generalized from the original RPP-only loader to be driven entirely by each
+indicator's `source_series`, encoded as TABLE-LINE against BEA's Regional
+dataset at MSA grain (GeoFips='MSA'). Mirrors the FRED ingest pattern: to add a
+new BEA metro series, register an indicator row with source='BEA' and
+source_series='<TABLE>-<LINE>' — no code change required.
 
-  LineCode 1 -> bea_rpp_all   (RPPs: All items)      overall metro price level
-  LineCode 3 -> bea_rpp_rents (RPPs: Services: Rents) metro rent price level
+Currently in use:
+  MARPP-1  -> bea_rpp_all   (RPPs: All items, index US=100)        annual
+  MARPP-3  -> bea_rpp_rents (RPPs: Services: Rents, index US=100)  annual
+  MAGDP9-1 -> gdp_metro     (Real GDP, all-industry, chained $k)   annual
 
-Both attach to the Census CBSA metro regions (regions.region_type='metro',
-numeric code = CBSA = BEA GeoFips), on the standard revision model. RPP is an
-annual series (obs_date = YYYY-12-31) refreshed by BEA roughly once a year, so
-this runs annually and no-ops on unchanged values.
+All series attach to Census CBSA metro regions (regions.region_type='metro',
+numeric 5-digit code = CBSA = BEA GeoFips), on the standard revision model
+(revision 0 = first print, never overwritten; changed values get next revision).
 
 Env:  BEA_API_KEY, SUPABASE_DB_URL
 Deps: pip install psycopg2-binary requests
@@ -21,24 +24,25 @@ import os, sys, datetime as dt
 import requests, psycopg2
 
 BASE = "https://apps.bea.gov/api/data"
-LINES = {"1": "bea_rpp_all", "3": "bea_rpp_rents"}
 
 
-def bea_msa(key, line):
-    """Return list of (geofips, year, value) for one MARPP line, all MSAs/years."""
+def bea_msa(key, table, line):
+    """Return list of (geofips, year, value) for one Regional TABLE/LINE, all MSAs/years."""
     params = {
         "UserID": key, "method": "GetData", "datasetname": "Regional",
-        "TableName": "MARPP", "LineCode": line, "GeoFips": "MSA",
+        "TableName": table, "LineCode": line, "GeoFips": "MSA",
         "Year": "ALL", "ResultFormat": "JSON",
     }
     try:
         r = requests.get(BASE, params=params, timeout=120)
         res = r.json().get("BEAAPI", {}).get("Results", {})
     except Exception as e:
-        print(f"  line {line}: request failed ({e})")
+        print(f"  {table}-{line}: request failed ({e})")
         return []
+    if isinstance(res, list):
+        res = res[0] if res else {}
     if not isinstance(res, dict) or "Error" in res:
-        print(f"  line {line}: API error {res.get('Error') if isinstance(res, dict) else res}")
+        print(f"  {table}-{line}: API error {res.get('Error') if isinstance(res, dict) else res}")
         return []
     out = []
     for row in res.get("Data", []):
@@ -46,7 +50,7 @@ def bea_msa(key, line):
         try:
             fv = float(v)
         except ValueError:
-            continue
+            continue  # (NA), (D), (L) suppressed cells
         out.append((row["GeoFips"], row["TimePeriod"], fv))
     return out
 
@@ -63,16 +67,19 @@ def main():
             cur.execute("SELECT code, id FROM regions "
                         "WHERE region_type='metro' AND code ~ '^[0-9]{5}$'")
             cbsa_rid = {c: i for c, i in cur.fetchall()}
-            cur.execute("SELECT slug, id FROM indicators WHERE source='BEA'")
-            ind = {s: i for s, i in cur.fetchall()}
+            cur.execute("SELECT slug, id, source_series FROM indicators "
+                        "WHERE source='BEA' AND source_series ~ '^[A-Z0-9]+-[0-9]+$'")
+            series = cur.fetchall()  # (slug, id, 'TABLE-LINE')
 
-            ins = skip = miss = 0
-            for line, slug in LINES.items():
-                iid = ind.get(slug)
-                if not iid:
-                    print(f"  indicator {slug} not registered; skipping")
+            total_ins = total_skip = total_miss = 0
+            for slug, iid, src in series:
+                table, line = src.split("-", 1)
+                rows = bea_msa(key, table, line)
+                if not rows:
+                    print(f"  {slug} ({src}): no data returned")
                     continue
-                for geofips, year, val in bea_msa(key, line):
+                ins = skip = miss = 0
+                for geofips, year, val in rows:
                     rid = cbsa_rid.get(geofips)
                     if not rid:
                         miss += 1
@@ -93,8 +100,10 @@ def main():
                                     (iid, rid, od, val, prev[1] + 1, release)); ins += 1
                     else:
                         skip += 1
-            print(f"BEA RPP: inserted {ins}, unchanged {skip}, unmatched MSAs {miss}")
-            cur.execute("REFRESH MATERIALIZED VIEW mv_indicator_analytics;")
+                print(f"  {slug} ({src}): inserted {ins}, unchanged {skip}, unmatched {miss}")
+                total_ins += ins; total_skip += skip; total_miss += miss
+            print(f"BEA total: inserted {total_ins}, unchanged {total_skip}, unmatched {total_miss}")
+            cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_indicator_analytics;")
         conn.commit()
     finally:
         conn.close()
