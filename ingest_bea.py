@@ -1,21 +1,27 @@
 #!/usr/bin/env python3
 """
-Cignal System — BEA Regional ingestion (source_series-driven).
+Cignal System — BEA Regional ingestion (source_series-driven, multi-grain).
 
-Generalized from the original RPP-only loader to be driven entirely by each
-indicator's `source_series`, encoded as TABLE-LINE against BEA's Regional
-dataset at MSA grain (GeoFips='MSA'). Mirrors the FRED ingest pattern: to add a
-new BEA metro series, register an indicator row with source='BEA' and
+Driven entirely by each indicator's `source_series`, encoded as TABLE-LINE
+against BEA's Regional dataset. Grain is inferred from the BEA table-family
+prefix, which is semantically meaningful in BEA's taxonomy:
+
+  MA* tables (Metro Area)  -> GeoFips='MSA',    matched to regions.code (CBSA)
+  CA* tables (County Area) -> GeoFips='COUNTY', matched to regions.fips (FIPS)
+
+To add a new BEA series, register an indicator row with source='BEA' and
 source_series='<TABLE>-<LINE>' — no code change required.
 
-Currently in use:
-  MARPP-1  -> bea_rpp_all   (RPPs: All items, index US=100)        annual
-  MARPP-3  -> bea_rpp_rents (RPPs: Services: Rents, index US=100)  annual
-  MAGDP9-1 -> gdp_metro     (Real GDP, all-industry, chained $k)   annual
+In use:
+  MARPP-1  -> bea_rpp_all   (RPPs: All items, index US=100)        metro, annual
+  MARPP-3  -> bea_rpp_rents (RPPs: Services: Rents, index US=100)  metro, annual
+  CAGDP9-1 -> gdp_county    (Real GDP, all-industry, chained 2017$) county, annual
 
-All series attach to Census CBSA metro regions (regions.region_type='metro',
-numeric 5-digit code = CBSA = BEA GeoFips), on the standard revision model
-(revision 0 = first print, never overwritten; changed values get next revision).
+Note: BEA discontinued metro/CSA/division GDP in its Feb 2026 release, so real
+GDP is now carried at county grain (the finest official level) via CAGDP9.
+
+Revision model: revision 0 = first print, never overwritten; a changed value
+for an existing (indicator, region, date) gets the next revision number.
 
 Env:  BEA_API_KEY, SUPABASE_DB_URL
 Deps: pip install psycopg2-binary requests
@@ -26,15 +32,15 @@ import requests, psycopg2
 BASE = "https://apps.bea.gov/api/data"
 
 
-def bea_msa(key, table, line):
-    """Return list of (geofips, year, value) for one Regional TABLE/LINE, all MSAs/years."""
+def bea_fetch(key, table, line, geo):
+    """Return list of (geofips, year, value) for one Regional TABLE/LINE at a GeoFips scope."""
     params = {
         "UserID": key, "method": "GetData", "datasetname": "Regional",
-        "TableName": table, "LineCode": line, "GeoFips": "MSA",
+        "TableName": table, "LineCode": line, "GeoFips": geo,
         "Year": "ALL", "ResultFormat": "JSON",
     }
     try:
-        r = requests.get(BASE, params=params, timeout=120)
+        r = requests.get(BASE, params=params, timeout=180)
         res = r.json().get("BEAAPI", {}).get("Results", {})
     except Exception as e:
         print(f"  {table}-{line}: request failed ({e})")
@@ -50,7 +56,7 @@ def bea_msa(key, table, line):
         try:
             fv = float(v)
         except ValueError:
-            continue  # (NA), (D), (L) suppressed cells
+            continue  # (NA)/(D)/(L) suppressed cells
         out.append((row["GeoFips"], row["TimePeriod"], fv))
     return out
 
@@ -64,23 +70,30 @@ def main():
     conn = psycopg2.connect(db); conn.autocommit = False
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT code, id FROM regions "
-                        "WHERE region_type='metro' AND code ~ '^[0-9]{5}$'")
-            cbsa_rid = {c: i for c, i in cur.fetchall()}
+            # metro key = 5-digit CBSA code; county key = 5-digit FIPS
+            cur.execute("SELECT code, id FROM regions WHERE region_type='metro' AND code ~ '^[0-9]{5}$'")
+            metro_rid = {c: i for c, i in cur.fetchall()}
+            cur.execute("SELECT fips, id FROM regions WHERE region_type='county' AND fips IS NOT NULL")
+            county_rid = {f: i for f, i in cur.fetchall()}
             cur.execute("SELECT slug, id, source_series FROM indicators "
                         "WHERE source='BEA' AND source_series ~ '^[A-Z0-9]+-[0-9]+$'")
-            series = cur.fetchall()  # (slug, id, 'TABLE-LINE')
+            series = cur.fetchall()
 
             total_ins = total_skip = total_miss = 0
             for slug, iid, src in series:
                 table, line = src.split("-", 1)
-                rows = bea_msa(key, table, line)
+                # County-Area tables -> COUNTY/FIPS; Metro-Area (and others) -> MSA/CBSA
+                if table.startswith("CA"):
+                    geo, rmap = "COUNTY", county_rid
+                else:
+                    geo, rmap = "MSA", metro_rid
+                rows = bea_fetch(key, table, line, geo)
                 if not rows:
                     print(f"  {slug} ({src}): no data returned")
                     continue
                 ins = skip = miss = 0
                 for geofips, year, val in rows:
-                    rid = cbsa_rid.get(geofips)
+                    rid = rmap.get(geofips)
                     if not rid:
                         miss += 1
                         continue
@@ -100,7 +113,7 @@ def main():
                                     (iid, rid, od, val, prev[1] + 1, release)); ins += 1
                     else:
                         skip += 1
-                print(f"  {slug} ({src}): inserted {ins}, unchanged {skip}, unmatched {miss}")
+                print(f"  {slug} ({src}, {geo}): inserted {ins}, unchanged {skip}, unmatched {miss}")
                 total_ins += ins; total_skip += skip; total_miss += miss
             print(f"BEA total: inserted {total_ins}, unchanged {total_skip}, unmatched {total_miss}")
             cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_indicator_analytics;")
