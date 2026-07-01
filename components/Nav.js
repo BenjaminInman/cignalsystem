@@ -156,9 +156,6 @@ export default function Nav() {
                   <ShieldCheck size={13} strokeWidth={1.8} /> Admin
                 </Link>
               )}
-              <span className="mono hidden max-w-[160px] truncate text-[11px] tracking-[0.04em] text-muted lg:inline-block">
-                {user.email}
-              </span>
               <Link
                 href="/account"
                 className="mono flex items-center gap-1.5 rounded-sm border border-[var(--line-strong)] px-3 py-2 text-[12px] tracking-[0.08em] text-muted transition-colors hover:text-ink"
