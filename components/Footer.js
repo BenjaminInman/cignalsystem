@@ -5,7 +5,7 @@ import { getActiveContent } from "@/lib/active-vertical";
 const COLS = [
   { title: "PLATFORM", links: [["Dashboard", "/"], ["Indicators", "/indicators"], ["Market Maps", "/market-maps"], ["Signals", "/signals"]] },
   { title: "ANALYSIS", links: [["Forecasts", "/forecasts"], ["Research", "/research"], ["Portfolio Tracker", "/portfolio"], ["Benchmarks", "/market-maps"]] },
-  { title: "COMPANY", links: [["About", "/about"], ["Methodology", "/about"], ["Data Sources", "#"], ["Contact", "#"]] },
+  { title: "COMPANY", links: [["About", "/about"], ["Methodology", "/about"], ["Disclaimer", "/disclaimer"], ["Contact", "#"]] },
 ];
 
 export default function Footer() {
@@ -61,7 +61,7 @@ export default function Footer() {
         </div>
         <div className="mt-12 flex flex-col gap-2 border-t border-[var(--line)] pt-6 text-[11px] text-muted/70 md:flex-row md:items-center md:justify-between">
           <span className="mono">© {new Date().getFullYear()} Cignal System. All rights reserved.</span>
-          <span className="mono">Data is indicative. Not investment advice. Always verify with primary sources.</span>
+          <Link href="/disclaimer" className="mono transition-colors hover:text-ink">Data is indicative. Not investment advice — see full Disclaimer. Always verify with primary sources.</Link>
         </div>
       </div>
     </footer>

@@ -174,6 +174,15 @@ export default function AuthForm({ mode }) {
           {busy ? <Loader2 size={15} className="animate-spin" /> : <ArrowRight size={15} strokeWidth={2} />}
           {isSignup ? "Create account" : "Sign in"}
         </button>
+
+        {isSignup && (
+          <p className="mt-1 text-[11px] leading-relaxed text-muted/80">
+            By creating an account, you acknowledge that Cignal System is provided
+            for informational and educational purposes only and does not
+            constitute investment, financial, legal, or tax advice. See our{" "}
+            <Link href="/disclaimer" className="text-signal hover-line">Disclaimer</Link>.
+          </p>
+        )}
       </form>
 
       <div className="my-5 flex items-center gap-3">

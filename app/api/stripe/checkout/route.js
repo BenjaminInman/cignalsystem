@@ -82,6 +82,12 @@ export async function POST(req) {
     line_items: [{ price: row.stripe_price_id, quantity: 1 }],
     subscription_data: { metadata: { supabase_user_id: user.id, tier } },
     allow_promotion_codes: true,
+    custom_text: {
+      submit: {
+        message:
+          "By subscribing, you acknowledge that Cignal System is provided for informational and educational purposes only and does not constitute investment, financial, legal, or tax advice.",
+      },
+    },
     success_url: `${origin}/dashboard?upgraded=1`,
     cancel_url: `${origin}/upgrade?canceled=1`,
   });
