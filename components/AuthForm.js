@@ -177,10 +177,14 @@ export default function AuthForm({ mode }) {
 
         {isSignup && (
           <p className="mt-1 text-[11px] leading-relaxed text-muted/80">
-            By creating an account, you acknowledge that Cignal System is provided
-            for informational and educational purposes only and does not
-            constitute investment, financial, legal, or tax advice. See our{" "}
-            <Link href="/disclaimer" className="text-signal hover-line">Disclaimer</Link>.
+            By creating an account, you agree to our{" "}
+            <Link href="/terms" className="text-signal hover-line">Terms of Service</Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="text-signal hover-line">Privacy Policy</Link>, and
+            acknowledge our{" "}
+            <Link href="/disclaimer" className="text-signal hover-line">Disclaimer</Link> —
+            Cignal System is for informational and educational purposes only and is
+            not investment, financial, legal, or tax advice.
           </p>
         )}
       </form>

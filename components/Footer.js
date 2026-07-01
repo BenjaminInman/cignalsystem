@@ -59,9 +59,18 @@ export default function Footer() {
             </div>
           ))}
         </div>
-        <div className="mt-12 flex flex-col gap-2 border-t border-[var(--line)] pt-6 text-[11px] text-muted/70 md:flex-row md:items-center md:justify-between">
-          <span className="mono">© {new Date().getFullYear()} Cignal System. All rights reserved.</span>
-          <Link href="/disclaimer" className="mono transition-colors hover:text-ink">Data is indicative. Not investment advice — see full Disclaimer. Always verify with primary sources.</Link>
+        <div className="mt-12 border-t border-[var(--line)] pt-6">
+          <div className="flex flex-col gap-3 text-[11px] text-muted/70 md:flex-row md:items-center md:justify-between">
+            <span className="mono">© {new Date().getFullYear()} Cignal System. All rights reserved.</span>
+            <div className="mono flex flex-wrap items-center gap-x-4 gap-y-1">
+              <Link href="/terms" className="transition-colors hover:text-ink">Terms of Service</Link>
+              <Link href="/privacy" className="transition-colors hover:text-ink">Privacy Policy</Link>
+              <Link href="/disclaimer" className="transition-colors hover:text-ink">Disclaimer</Link>
+            </div>
+          </div>
+          <p className="mono mt-3 text-[11px] leading-relaxed text-muted/70">
+            Data is indicative and for informational and educational purposes only. Not investment advice. Always verify with primary sources.
+          </p>
         </div>
       </div>
     </footer>
