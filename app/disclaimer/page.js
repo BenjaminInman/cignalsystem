@@ -67,7 +67,7 @@ export default function DisclaimerPage() {
 
       <p className="mono mt-12 border-t border-[var(--line)] pt-6 text-[12px] leading-relaxed text-muted/80">
         Cignal System LLC · Questions about this disclaimer:
-        ben@benjamininman.com
+        info@cignalsystem.com
       </p>
     </div>
   );

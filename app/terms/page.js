@@ -35,7 +35,7 @@ export default function TermsPage() {
       effective="June 30, 2026"
       intro="Please read these Terms carefully. They form a binding agreement between you and Cignal System LLC governing your use of the Platform."
       sections={SECTIONS}
-      contact="Cignal System LLC · Questions about these Terms: ben@benjamininman.com"
+      contact="Cignal System LLC · Questions about these Terms: info@cignalsystem.com"
     />
   );
 }

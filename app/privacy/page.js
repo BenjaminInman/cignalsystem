@@ -31,7 +31,7 @@ export default function PrivacyPage() {
       effective="June 30, 2026"
       intro="Your privacy matters. This policy describes what we collect, how we use it, and the choices you have."
       sections={SECTIONS}
-      contact="Cignal System LLC · Privacy questions: ben@benjamininman.com"
+      contact="Cignal System LLC · Privacy questions: info@cignalsystem.com"
     />
   );
 }
