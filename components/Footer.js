@@ -5,7 +5,7 @@ import { getActiveContent } from "@/lib/active-vertical";
 const COLS = [
   { title: "PLATFORM", links: [["Dashboard", "/"], ["Indicators", "/indicators"], ["Market Maps", "/market-maps"], ["Signals", "/signals"]] },
   { title: "ANALYSIS", links: [["Forecasts", "/forecasts"], ["Research", "/research"], ["Portfolio Tracker", "/portfolio"], ["Benchmarks", "/market-maps"]] },
-  { title: "COMPANY", links: [["About", "/about"], ["Methodology", "/about"], ["Disclaimer", "/disclaimer"], ["Contact", "#"]] },
+  { title: "COMPANY", links: [["About", "/about"], ["Methodology", "/about"], ["FAQ", "/faq"], ["Disclaimer", "/disclaimer"]] },
 ];
 
 export default function Footer() {
@@ -63,6 +63,7 @@ export default function Footer() {
           <div className="flex flex-col gap-3 text-[11px] text-muted/70 md:flex-row md:items-center md:justify-between">
             <span className="mono">© {new Date().getFullYear()} Cignal System. All rights reserved.</span>
             <div className="mono flex flex-wrap items-center gap-x-4 gap-y-1">
+              <Link href="/faq" className="transition-colors hover:text-ink">FAQ</Link>
               <Link href="/terms" className="transition-colors hover:text-ink">Terms of Service</Link>
               <Link href="/privacy" className="transition-colors hover:text-ink">Privacy Policy</Link>
               <Link href="/disclaimer" className="transition-colors hover:text-ink">Disclaimer</Link>
