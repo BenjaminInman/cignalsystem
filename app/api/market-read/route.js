@@ -129,11 +129,15 @@ async function localRing(zip) {
     out.push({ ring: "local", label: "Job Growth", sub: "BLS · metro", grain: "Metro", source: "BLS", leading: true, ...(s || { pending: true }) });
   }
 
-  // Wage growth — LOCAL. QCEW not yet ingested -> defined but pending.
-  out.push({
-    ring: "local", label: "Wage Growth", sub: "QCEW · county", grain: "County", source: "BLS QCEW",
-    pending: true, note: "Awaiting QCEW ingest", weight: 1,
-  });
+  // Wage growth — county (BLS QCEW avg weekly wage, YoY). Resolves off the same
+  // county the GDP signal uses. Q1 carries bonus seasonality; YoY handles it.
+  if (county) {
+    const rs = await rows("county_wages", county);
+    const s = rs ? scoreSignal({ kind: "wages", rows: rs, weight: 1 }) : null;
+    out.push({ ring: "local", label: "Wage Growth", sub: "County · QCEW", grain: "County", source: "BLS QCEW", ...(s || { pending: true, note: "No county QCEW" }) });
+  } else {
+    out.push({ ring: "local", label: "Wage Growth", sub: "County · QCEW", grain: "County", source: "BLS QCEW", pending: true, note: "No county resolved" });
+  }
 
   return { signals: out, resolved: { grain: rent?.grain || (cbsa ? "Metro" : null), cbsa, metroName, county } };
 }
