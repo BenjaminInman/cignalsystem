@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
-import { Home, Newspaper, Radio, Info, Gauge, LayoutDashboard, Activity, BarChart3, LineChart, TrendingUp, BookOpen, Briefcase, Users, Bell, ChevronDown, Terminal, LogOut, ShieldCheck, Lock, CreditCard } from "lucide-react";
+import { Home, Newspaper, Radio, Info, Gauge, LayoutDashboard, Activity, BarChart3, LineChart, TrendingUp, BookOpen, Briefcase, Users, Bell, ChevronDown, Terminal, LogOut, ShieldCheck, Lock, CreditCard, Compass } from "lucide-react";
 import { useVertical } from "@/components/VerticalProvider";
 import { createClient } from "@/lib/supabase/client";
 import { FREE_PAGES } from "@/lib/access";
@@ -21,6 +21,7 @@ const SUITE = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Indicators", href: "/indicators", icon: Activity },
   { label: "Market Maps", href: "/market-maps", icon: BarChart3 },
+  { label: "Where Are We", href: "/where-are-we", icon: Compass, tier: "cignal_plus" },
   { label: "Forecasts", href: "/forecasts", icon: LineChart },
   { label: "Indices", href: "/indices", icon: TrendingUp },
   { label: "Research", href: "/research", icon: BookOpen },
@@ -126,15 +127,20 @@ export default function Nav() {
             {open && (
               <div className="absolute left-0 top-full z-50 mt-2 w-60 overflow-hidden rounded-lg border border-[var(--line-strong)] bg-bg2 p-1.5 shadow-2xl shadow-black/50">
                 <p className="kicker px-3 py-2">Subscriber Suite</p>
-                {SUITE.map(({ label, href, icon: Icon }) => {
+                {SUITE.map(({ label, href, icon: Icon, tier: reqTier }) => {
                   const active = path === href;
                   const slug = href.replace(/^\//, "");
-                  const locked = !isAdmin && !hasTier(tier, "pro") && !FREE_PAGES.includes(slug);
+                  const req = reqTier || "pro";
+                  const locked =
+                    !isAdmin && !hasTier(tier, req) && !(req === "pro" && FREE_PAGES.includes(slug));
                   return (
                     <Link key={label} href={href} onClick={() => setOpen(false)}
                       className={`mono flex items-center gap-2.5 rounded-md px-3 py-2.5 text-[12px] tracking-[0.04em] transition-colors ${active ? "bg-signal/10 text-signal" : "text-muted hover:bg-white/[0.04] hover:text-ink"}`}>
                       <Icon size={14} strokeWidth={1.8} />
                       <span className="flex-1">{label}</span>
+                      {reqTier === "cignal_plus" && (
+                        <span className="mono rounded-sm border border-signal/40 px-1 py-0.5 text-[8px] tracking-[0.08em] text-signal">+</span>
+                      )}
                       {locked && <Lock size={12} className="text-muted/70" />}
                     </Link>
                   );
