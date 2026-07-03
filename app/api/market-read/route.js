@@ -57,18 +57,6 @@ async function rentGrowth(zip, xw) {
   return null;
 }
 
-// ACS occupancy -> vacancy proxy at ZCTA (all-housing, annual). Single point.
-async function acsVacancyProxy(zip) {
-  const r = await sb(`v_zip_demographics?zip=eq.${zip}&order=as_of.desc&limit=1`);
-  const d = Array.isArray(r) && r[0] ? r[0] : null;
-  if (!d || !d.housing_units) return null;
-  const occ = Number(d.occupied_units);
-  const tot = Number(d.housing_units);
-  if (!tot) return null;
-  const vac = Math.round((1 - occ / tot) * 1000) / 10; // % vacant, all housing
-  return { vac, asOf: d.as_of };
-}
-
 // ---- LOCAL RING (requires a resolvable ZIP) ---------------------------------
 async function localRing(zip) {
   const xw = (await sb(`zip_crosswalk?zip=eq.${zip}&select=city_label,county_label,metro_label`))?.[0] || null;
@@ -96,16 +84,6 @@ async function localRing(zip) {
     out.push({ ring: "local", label: "Vacancy", sub: "Apartment List", grain: "Metro", source: "Apartment List", ...(s || { pending: true, note: "No metro series" }) });
   } else {
     out.push({ ring: "local", label: "Vacancy", sub: "Apartment List", grain: "—", source: "Apartment List", pending: true, note: "ZIP has no metro" });
-  }
-
-  // Vacancy — ACS ZCTA proxy (secondary grain, single-point, no momentum)
-  const acs = await acsVacancyProxy(zip);
-  if (acs) {
-    out.push({
-      ring: "local", label: "Vacancy (ACS)", sub: "ZCTA proxy", grain: "ZIP", source: "Census ACS",
-      metric: acs.vac, unit: "%", momentum: 0, phase: acs.vac <= 7 ? "expansion" : "contraction",
-      sentiment: "a", weight: 0.5, trend: [], asOf: acs.asOf, structural: true,
-    });
   }
 
   // Local GDP — county (BEA CAGDP9), structural backdrop
