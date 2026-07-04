@@ -66,7 +66,20 @@ function compute(cfg, rows) {
     cfg.type === "rate" ? `${x.toFixed(1)}%` : `${sgn(x)}${x.toFixed(1)}%`;
 
   let sentiment;
-  if (cfg.type === "growth") sentiment = cur > 0.5 ? "g" : cur < -0.5 ? "r" : "a";
+  if (cfg.slug === "employment") {
+    // Jobs: any positive job growth is green; still-negative but improving
+    // (trending the right way) is yellow; negative and not improving is red.
+    const back = metricOf(cfg, rows[Math.min(3, rows.length - 1)]);
+    const improving = back != null && Number.isFinite(back) ? cur > back : false;
+    sentiment = cur > 0 ? "g" : improving ? "a" : "r";
+  } else if (cfg.slug === "treasury_10y") {
+    // Rates: level bands — 4.5% is "not bad" (yellow), not red.
+    sentiment = cur <= 3.5 ? "g" : cur <= 5.0 ? "a" : "r";
+  } else if (cfg.slug === "rental_vacancy") {
+    // Vacancy: occupancy bands — >92% occ (<8% vac) green, 90-92% (8-10%)
+    // yellow, <90% occ (>10% vac) red.
+    sentiment = cur < 8 ? "g" : cur <= 10 ? "a" : "r";
+  } else if (cfg.type === "growth") sentiment = cur > 0.5 ? "g" : cur < -0.5 ? "r" : "a";
   else if (cfg.type === "inflation") sentiment = cur <= 2.5 ? "g" : cur <= 4 ? "a" : "r";
   else if (cfg.type === "rate") {
     const d = yoyAbs ?? 0;
