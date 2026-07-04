@@ -7,6 +7,7 @@ import { useVertical, useContent } from "@/components/VerticalProvider";
 import { isPageReady } from "@/lib/verticals";
 import ComingSoonInline from "@/components/ComingSoonInline";
 import MyZipCodes from "@/components/MyZipCodes";
+import MarketSnapshot from "@/components/MarketSnapshot";
 import { createClient } from "@/lib/supabase/client";
 import { toneColor } from "@/components/ui";
 
@@ -55,21 +56,8 @@ function DashboardInner() {
 
 
       <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,360px)_1fr]">
-        {/* LEFT: placeholder panel — swap for featured content (cycle phase, portfolio snapshot, etc.) */}
-        <div className="card p-7">
-          <p className="kicker mb-3">Market snapshot</p>
-          <h2 className="headline text-2xl text-ink">Cycle phase</h2>
-          <p className="mt-3 text-sm leading-relaxed text-muted">
-            The four-phase cycle read for your markets surfaces here once the phase
-            engine is online. For now, start with the indicators that feed it.
-          </p>
-          <Link
-            href="/indicators"
-            className="mono mt-5 inline-flex items-center gap-2 rounded-md bg-signal px-4 py-2.5 text-[13px] font-medium tracking-[0.06em] text-bg transition-all hover:brightness-110"
-          >
-            Open indicators <ArrowUpRight size={15} strokeWidth={2} />
-          </Link>
-        </div>
+        {/* LEFT: live market snapshot — cycle read for the user's tracked markets */}
+        <MarketSnapshot />
 
         {/* RIGHT: live suite navigation (unlocked — these are now active links) */}
         <div>
