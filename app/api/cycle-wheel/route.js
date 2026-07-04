@@ -79,12 +79,22 @@ function compute(cfg, rows) {
     // Vacancy: occupancy bands — >92% occ (<8% vac) green, 90-92% (8-10%)
     // yellow, <90% occ (>10% vac) red.
     sentiment = cur < 8 ? "g" : cur <= 10 ? "a" : "r";
+  } else if (cfg.slug === "unemployment") {
+    // Unemployment: healthy middle band 2.5-4.5% green; below 2.5% (too hot)
+    // yellow; 4.5-5% yellow; above 5% red.
+    sentiment = cur < 2.5 ? "a" : cur <= 4.5 ? "g" : cur <= 5 ? "a" : "r";
   } else if (cfg.type === "growth") sentiment = cur > 0.5 ? "g" : cur < -0.5 ? "r" : "a";
-  else if (cfg.type === "inflation") sentiment = cur <= 2.5 ? "g" : cur <= 4 ? "a" : "r";
+  else if (cfg.type === "inflation") sentiment = cur <= 3 ? "g" : cur <= 4 ? "a" : "r";
   else if (cfg.type === "rate") {
     const d = yoyAbs ?? 0;
     sentiment = d > 0.15 ? "r" : d < -0.15 ? "g" : "a";
-  } else sentiment = cur >= 1.5 ? "g" : cur < 0 ? "r" : "a";
+  } else {
+    // GDP: normal 4-5% green; 3.5-4% and 5-6% yellow; <3.5% or >6% red.
+    sentiment =
+      cur >= 4 && cur <= 5 ? "g"
+      : (cur >= 3.5 && cur < 4) || (cur > 5 && cur <= 6) ? "a"
+      : "r";
+  }
 
   // where it sits: position of the current reading within its typical range.
   // Use the 5th-95th percentile band so one-off outliers (e.g. 2020) don't
