@@ -6,6 +6,8 @@ import { useContent } from "@/components/VerticalProvider";
 import { toneColor, StatusPill } from "@/components/ui";
 import IndicatorCompare from "@/components/IndicatorCompare";
 import PaywallBlur from "@/components/PaywallBlur";
+import OnionFramework from "@/components/OnionFramework";
+import { layerOf, LAYER_META } from "@/lib/onion";
 
 const TYPES = ["All Types", "Leading", "Trailing"];
 const CATS = ["All", "Supply", "Demand", "Capital", "Macro", "Performance"];
@@ -81,6 +83,7 @@ export default function IndicatorsPage() {
   const { INDICATORS = [] } = useContent();
   const [type, setType] = useState("All Types");
   const [cat, setCat] = useState("All");
+  const [layer, setLayer] = useState(null);
   const [open, setOpen] = useState({});
   const [live, setLive] = useState({});
 
@@ -97,10 +100,18 @@ export default function IndicatorsPage() {
 
   const merged = INDICATORS.map((r) => (live[r.name] ? { ...r, ...live[r.name] } : r));
 
+  // Stable per-layer totals for the onion (unaffected by type/cat filters).
+  const layerCounts = merged.reduce((acc, r) => {
+    const id = layerOf(r.name);
+    if (id) acc[id] = (acc[id] || 0) + 1;
+    return acc;
+  }, {});
+
   const rows = merged.filter(
     (r) =>
       (type === "All Types" || r.type === type.toUpperCase()) &&
-      (cat === "All" || r.cat === cat.toUpperCase())
+      (cat === "All" || r.cat === cat.toUpperCase()) &&
+      (!layer || layerOf(r.name) === layer)
   );
 
   const reRows = rows.filter((r) => r.group !== "macro");
@@ -164,6 +175,8 @@ export default function IndicatorsPage() {
       <h1 className="headline text-4xl text-ink md:text-5xl">Economic Indicators</h1>
       <p className="mt-3 max-w-2xl text-muted">Comprehensive leading and trailing indicators driving multifamily performance. Select any indicator to expand the detail.</p>
 
+      <OnionFramework active={layer} onSelect={setLayer} counts={layerCounts} />
+
       <div className="mt-8 flex flex-wrap items-center gap-3">
         <div className="inline-flex rounded-md border border-[var(--line)] p-1">
           {TYPES.map((t) => (
@@ -177,21 +190,49 @@ export default function IndicatorsPage() {
         </div>
       </div>
 
-      {reRows.length > 0 && (
+      {layer === "submarket" ? (
+        <div className="mt-10 card p-8 text-center">
+          <p className="kicker">Layer 1 · Submarket</p>
+          <p className="mt-3 headline text-2xl text-ink">This layer lives at the local grain</p>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-muted">
+            The Indicators tab reads the market nationally. Submarket signals — metro- and
+            ZIP-level rent, jobs, migration and demographics — are where you localize that read.
+            Explore them on the map.
+          </p>
+          <a
+            href="/market-maps"
+            className="mono mt-6 inline-flex items-center gap-2 rounded-md border border-signal/40 bg-signal/10 px-4 py-2 text-[12px] tracking-[0.06em] text-signal transition-colors hover:bg-signal/15"
+          >
+            OPEN MARKET MAPS →
+          </a>
+        </div>
+      ) : layer ? (
         <div className="mt-10">
-          <SectionHead label="REAL ESTATE INDICATORS" count={reRows.length} />
-          <div className="mt-4 space-y-4">{reRows.map(renderRow)}</div>
+          <SectionHead label={`LAYER ${LAYER_META[layer].num} · ${LAYER_META[layer].label.toUpperCase()}`} count={rows.length} />
+          <div className="mt-4 space-y-4">{rows.map(renderRow)}</div>
+          {rows.length === 0 && (
+            <p className="mono mt-4 rounded-lg border border-[var(--line)] p-8 text-center text-sm text-muted">No indicators match this filter.</p>
+          )}
         </div>
-      )}
+      ) : (
+        <>
+          {reRows.length > 0 && (
+            <div className="mt-10">
+              <SectionHead label="REAL ESTATE INDICATORS" count={reRows.length} />
+              <div className="mt-4 space-y-4">{reRows.map(renderRow)}</div>
+            </div>
+          )}
 
-      {macroRows.length > 0 && (
-        <div className="mt-12">
-          <SectionHead label="NON–REAL ESTATE INDICATORS" count={macroRows.length} />
-          <div className="mt-4 space-y-4">{macroRows.map(renderRow)}</div>
-        </div>
-      )}
+          {macroRows.length > 0 && (
+            <div className="mt-12">
+              <SectionHead label="NON–REAL ESTATE INDICATORS" count={macroRows.length} />
+              <div className="mt-4 space-y-4">{macroRows.map(renderRow)}</div>
+            </div>
+          )}
 
-      {rows.length === 0 && <p className="mono mt-8 rounded-lg border border-[var(--line)] p-8 text-center text-sm text-muted">No indicators match this filter.</p>}
+          {rows.length === 0 && <p className="mono mt-8 rounded-lg border border-[var(--line)] p-8 text-center text-sm text-muted">No indicators match this filter.</p>}
+        </>
+      )}
 
       <PaywallBlur
         page="indicators"
