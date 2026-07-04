@@ -62,7 +62,15 @@ export default function IndicatorsPage() {
       <h1 className="headline text-4xl text-ink md:text-5xl">Economic Indicators</h1>
       <p className="mt-3 max-w-2xl text-muted">Comprehensive leading and trailing indicators driving multifamily performance. Select any indicator to expand the detail.</p>
 
-      <OnionFramework active={layer} onSelect={setLayer} counts={layerCounts} />
+      <PaywallBlur
+        page="indicators"
+        title="The Onion Framework"
+        hard
+        wrapClass="mt-8"
+        blurb="The proprietary lens at the core of the Cignal method — it organizes every signal into layered rings so you can read the cycle from the outside in. Unlock it with Pro."
+      >
+        <OnionFramework active={layer} onSelect={setLayer} counts={layerCounts} />
+      </PaywallBlur>
 
       {layer !== "submarket" && (
         <div className="mt-8 flex flex-wrap items-center gap-3">

@@ -21,7 +21,7 @@ const SUITE = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Indicators", href: "/indicators", icon: Activity },
   { label: "Market Maps", href: "/market-maps", icon: BarChart3 },
-  { label: "Where Are We", href: "/where-are-we", icon: Compass, tier: "cignal_plus" },
+  { label: "Where Are We", href: "/where-are-we", icon: Compass, tier: "pro" },
   { label: "Forecasts", href: "/forecasts", icon: LineChart },
   { label: "Indices", href: "/indices", icon: TrendingUp },
   { label: "Research", href: "/research", icon: BookOpen },

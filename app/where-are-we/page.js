@@ -6,7 +6,7 @@ export default function WhereAreWePage() {
   return (
     <main className="relative z-10 mx-auto max-w-[1400px] px-5 py-10">
       <div className="mb-8">
-        <p className="kicker mb-2">Cignal+ · Market Read</p>
+        <p className="kicker mb-2">Pro · Market Read</p>
         <h1 className="headline text-4xl text-ink sm:text-5xl">Where Are We</h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">
           The national cycle sets the clock; your market confirms or diverges from it.
