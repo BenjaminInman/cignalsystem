@@ -76,9 +76,9 @@ function compute(cfg, rows) {
     // Rates: level bands — 4.5% is "not bad" (yellow), not red.
     sentiment = cur <= 3.5 ? "g" : cur <= 5.0 ? "a" : "r";
   } else if (cfg.slug === "rental_vacancy") {
-    // Vacancy: occupancy bands — >92% occ (<8% vac) green, 90-92% (8-10%)
-    // yellow, <90% occ (>10% vac) red.
-    sentiment = cur < 8 ? "g" : cur <= 10 ? "a" : "r";
+    // Vacancy: occupancy bands — >92% occ (<8% vac) green, 88-92% (8-12%)
+    // yellow, <88% occ (>12% vac) red.
+    sentiment = cur < 8 ? "g" : cur <= 12 ? "a" : "r";
   } else if (cfg.slug === "unemployment") {
     // Unemployment: healthy middle band 2.5-4.5% green; below 2.5% (too hot)
     // yellow; 4.5-5% yellow; above 5% red.
