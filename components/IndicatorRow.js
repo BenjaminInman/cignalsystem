@@ -22,6 +22,26 @@ function niceScaleZero(max, maxTicks = 4) {
 
 const fmtTick = (v) => (Number.isInteger(v) ? String(v) : v.toFixed(1));
 
+// Range-based (non-zero) axis: pads around the data's own min/max so tight-range
+// series (rates, vacancy, price indices) show real movement instead of a flat
+// line pinned near a 0-based ceiling. Handles negative values too.
+function niceScaleRange(min, max, maxTicks = 4) {
+  if (!isFinite(min) || !isFinite(max)) return { lo: 0, hi: 1, ticks: [0, 1] };
+  if (min === max) { const p = Math.abs(min) * 0.1 || 1; min -= p; max += p; }
+  const pad = (max - min) * 0.12;
+  let lo = min - pad, hi = max + pad;
+  const rawStep = (hi - lo) / maxTicks;
+  const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const norm = rawStep / mag;
+  const niceNorm = norm <= 1 ? 1 : norm <= 1.5 ? 1.5 : norm <= 2 ? 2 : norm <= 2.5 ? 2.5 : norm <= 5 ? 5 : 10;
+  const step = niceNorm * mag;
+  lo = Math.floor(lo / step) * step;
+  hi = Math.ceil(hi / step) * step;
+  const ticks = [];
+  for (let v = lo; v <= hi + step * 0.5; v += step) ticks.push(+v.toFixed(6));
+  return { lo, hi, ticks };
+}
+
 function smooth(pts) {
   if (pts.length < 2) return "";
   let d = `M ${pts[0].x} ${pts[0].y}`;
@@ -34,14 +54,17 @@ function smooth(pts) {
   return d;
 }
 
-export function IndicatorTrend({ data, tone, periods }) {
+export function IndicatorTrend({ data, tone, periods, zeroBased = true }) {
   const color = toneColor(tone);
   const W = 480, H = 140, padL = 42, padR = 12, padT = 10, padB = 22;
   const innerW = W - padL - padR, innerH = H - padT - padB;
-  const { niceMax, ticks } = niceScaleZero(Math.max(...data), 4);
+  const scale = zeroBased
+    ? (() => { const { niceMax, ticks } = niceScaleZero(Math.max(...data), 4); return { lo: 0, hi: niceMax, ticks }; })()
+    : niceScaleRange(Math.min(...data), Math.max(...data), 4);
+  const { lo, hi, ticks } = scale;
   const labels = periods && periods.length === data.length ? periods : DEFAULT_PERIODS.slice(-data.length);
   const xAt = (i) => padL + (i / (data.length - 1)) * innerW;
-  const yAt = (v) => padT + (1 - v / niceMax) * innerH;
+  const yAt = (v) => padT + (1 - (v - lo) / (hi - lo)) * innerH;
   const pts = data.map((v, i) => ({ x: xAt(i), y: yAt(v) }));
   const linePath = smooth(pts);
   const areaPath = `${linePath} L ${xAt(data.length - 1).toFixed(1)},${H - padB} L ${padL},${H - padB} Z`;
@@ -121,7 +144,7 @@ export default function IndicatorRow({ row }) {
             <div>
               <p className="mono text-[10px] tracking-[0.18em] text-muted">HISTORICAL TREND</p>
               <div className="mt-2">
-                <IndicatorTrend data={r.trend} tone={r.tone} periods={r.periods} />
+                <IndicatorTrend data={r.trend} tone={r.tone} periods={r.periods} zeroBased={r.zeroBased !== false} />
               </div>
             </div>
           )}

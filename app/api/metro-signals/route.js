@@ -12,13 +12,24 @@ async function sb(path) {
   return r.ok ? r.json() : null;
 }
 
-// Latest reading for a metro indicator, keyed by CBSA (Census metro region_code).
-// Returns { value, yoyPct, delta, asOf } — yoyPct from the view's yoy_change,
-// delta = month-over-month change (for level series like unemployment).
-async function metroSignal(slug, cbsa) {
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// Compact axis label for a trend point. Annual series -> "2024"; monthly -> "May '25".
+function periodLabel(dateStr, annual) {
+  const s = String(dateStr);
+  const y = s.slice(0, 4);
+  if (annual) return y;
+  const m = Number(s.slice(5, 7)) - 1;
+  return `${MON[m] || ""} '${y.slice(2)}`;
+}
+
+// Latest reading + history for a metro indicator, keyed by CBSA (Census metro
+// region_code). Returns { value, yoyPct, delta, asOf, trend, periods } — trend
+// is the underlying series oldest->newest so the row can chart it like Layer 2/3.
+async function metroSignal(slug, cbsa, { annual = false, points = 18 } = {}) {
   const rows = await sb(
     `v_indicator_analytics?slug=eq.${slug}&region_code=eq.${cbsa}` +
-      `&select=obs_date,value,yoy_change&order=obs_date.desc&limit=2`
+      `&select=obs_date,value,yoy_change&order=obs_date.desc&limit=${points}`
   );
   if (!Array.isArray(rows) || rows.length === 0) return null;
   const v = Number(rows[0].value);
@@ -26,7 +37,10 @@ async function metroSignal(slug, cbsa) {
   const prior = yoyAbs != null ? v - Number(yoyAbs) : null;
   const yoyPct = prior && prior !== 0 ? Math.round((yoyAbs / prior) * 1000) / 10 : null;
   const delta = rows.length > 1 ? Math.round((v - Number(rows[1].value)) * 100) / 100 : null;
-  return { value: v, yoyPct, delta, asOf: rows[0].obs_date };
+  const series = rows.slice().reverse(); // oldest -> newest
+  const trend = series.map((r) => Math.round(Number(r.value) * 10) / 10);
+  const periods = series.map((r) => periodLabel(r.obs_date, annual));
+  return { value: v, yoyPct, delta, asOf: rows[0].obs_date, trend, periods };
 }
 
 // County real GDP (BEA CAGDP9), keyed by the Zillow-style county label that the
@@ -38,14 +52,17 @@ async function countyGdpSignal(countyLabel) {
   const enc = encodeURIComponent(countyLabel);
   const rows = await sb(
     `v_indicator_analytics?slug=eq.gdp_county&region_code=eq.${enc}` +
-      `&select=obs_date,value,yoy_change&order=obs_date.desc&limit=1`
+      `&select=obs_date,value,yoy_change&order=obs_date.desc&limit=12`
   );
   if (!Array.isArray(rows) || rows.length === 0) return null;
   const v = Number(rows[0].value);
   const yoyAbs = rows[0].yoy_change;
   const prior = yoyAbs != null ? v - Number(yoyAbs) : null;
   const yoyPct = prior && prior !== 0 ? Math.round((yoyAbs / prior) * 1000) / 10 : null;
-  return { value: v, yoyPct, asOf: rows[0].obs_date, countyLabel };
+  const series = rows.slice().reverse();
+  const trend = series.map((r) => Math.round(Number(r.value) / 1e3)); // $M for a compact axis
+  const periods = series.map((r) => periodLabel(r.obs_date, true));
+  return { value: v, yoyPct, asOf: rows[0].obs_date, countyLabel, trend, periods };
 }
 
 // IRS SOI migration signals for a metro, looked up by Zillow "City, ST" code
@@ -118,8 +135,8 @@ export async function GET(req) {
       await Promise.all([
         metroSignal("bls_metro_employment", cbsa),
         metroSignal("bls_metro_unemployment", cbsa),
-        metroSignal("bea_rpp_rents", cbsa),
-        metroSignal("bea_rpp_all", cbsa),
+        metroSignal("bea_rpp_rents", cbsa, { annual: true, points: 10 }),
+        metroSignal("bea_rpp_all", cbsa, { annual: true, points: 10 }),
         metroSignal("bls_metro_cpi_rent", cbsa),
         metroSignal("apt_vacancy", cbsa),
         metroSignal("apt_time_on_market", cbsa),

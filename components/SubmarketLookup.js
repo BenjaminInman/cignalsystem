@@ -5,10 +5,26 @@ import { Search } from "lucide-react";
 import IndicatorRow from "@/components/IndicatorRow";
 
 const GRAIN = { zip: "ZIP", city: "CITY", county: "COUNTY", metro: "METRO" };
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// Monthly axis labels ending at asOf, for the ZORI anchor series (which arrives
+// as values without dates).
+function monthLabels(asOf, count) {
+  const [y, m] = String(asOf).split("-").map(Number);
+  let sy = y, sm = m - (count - 1);
+  while (sm <= 0) { sm += 12; sy -= 1; }
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    out.push(`${MON[sm - 1]} '${String(sy).slice(2)}`);
+    sm++; if (sm > 12) { sm = 1; sy++; }
+  }
+  return out;
+}
 
 // Build the Indicators-tab row shape from a metro-signals payload + the ZORI
 // anchor read. Only present signals produce rows; each carries its own grain
-// label so the user always knows the resolution they're seeing.
+// label and, where history exists, a trend series charted like Layer 2/3.
+// Local series use a range-based (non-zero) axis so tight ranges read clearly.
 function buildRows(zip, sig, place) {
   const rows = [];
   const asOfOf = (o) => (o?.asOf ? String(o.asOf) : "");
@@ -16,6 +32,7 @@ function buildRows(zip, sig, place) {
 
   // Anchor: observed rent (ZORI) at the best available grain — carries a real trend.
   if (place?.found && place.rent != null) {
+    const trend = Array.isArray(place.trend) ? place.trend : null;
     rows.push({
       name: "Observed Rent (ZORI)",
       cat: "PERFORMANCE",
@@ -25,7 +42,9 @@ function buildRows(zip, sig, place) {
       tone: place.yoyPct == null ? "neutral" : place.yoyPct >= 0 ? "bull" : "bear",
       change: place.yoyPct == null ? "—" : `${pctStr(place.yoyPct)} YoY`,
       note: `${place.label} · Zillow · as of ${place.asOf}`,
-      trend: Array.isArray(place.trend) ? place.trend : null,
+      trend,
+      periods: trend && place.asOf ? monthLabels(place.asOf, trend.length) : null,
+      zeroBased: false,
       measures:
         "Zillow Observed Rent Index for the tightest geography that covers your search — the same rent read as the national industry layer, brought down to your submarket.",
       impact:
@@ -46,6 +65,7 @@ function buildRows(zip, sig, place) {
       tone: yp != null ? (yp >= 0 ? "bull" : "bear") : "neutral",
       change: yp != null ? `${pctStr(yp)} YoY` : "—",
       note: `Metro · BLS · as of ${asOfOf(s.employment)}`,
+      trend: s.employment.trend, periods: s.employment.periods, zeroBased: false,
       measures: "Total nonfarm employment for the metro (CBSA). The clearest leading read on local rental demand.",
       impact: "Jobs move first. Accelerating metro employment precedes absorption and rent growth; a rollover is your earliest warning.",
     });
@@ -64,6 +84,7 @@ function buildRows(zip, sig, place) {
       tone: yp != null ? (yp >= 0 ? "bull" : "bear") : "neutral",
       change: yp != null ? `${pctStr(yp)} YoY` : "real GDP",
       note: `County${sig?.countyName ? ` · ${sig.countyName}` : ""} · BEA · as of ${asOfOf(s.countyGdp)}`,
+      trend: s.countyGdp.trend, periods: s.countyGdp.periods, zeroBased: false,
       measures: "Inflation-adjusted county output (BEA CAGDP9). The broadest measure of the local economy's size and direction.",
       impact: "A rising local economy underwrites durable demand. Confirms — rather than leads — what the labor signals are already telling you.",
     });
@@ -79,6 +100,7 @@ function buildRows(zip, sig, place) {
       tone: "neutral",
       change: s.unemployment.delta != null ? `${s.unemployment.delta >= 0 ? "+" : ""}${s.unemployment.delta} MoM` : "—",
       note: `Metro · BLS LAUS · as of ${asOfOf(s.unemployment)}`,
+      trend: s.unemployment.trend, periods: s.unemployment.periods, zeroBased: false,
       measures: "Metro unemployment rate (BLS LAUS). A lagging confirmation of labor-market health.",
       impact: "Low and falling supports household formation and rent-paying capacity; a rising rate confirms softening that leading signals flagged earlier.",
     });
@@ -94,6 +116,7 @@ function buildRows(zip, sig, place) {
       tone: "neutral",
       change: "vs US avg",
       note: `Metro · BEA RPP · as of ${asOfOf(s.rentsRPP)}`,
+      trend: s.rentsRPP.trend, periods: s.rentsRPP.periods, zeroBased: false,
       measures: "Regional price parity for rents (BEA). How expensive this metro's rents are relative to the national average (100).",
       impact: "Frames affordability headroom. High levels can cap further rent growth; low levels can signal room to run as demand arrives.",
     });
@@ -110,6 +133,7 @@ function buildRows(zip, sig, place) {
       tone: yp != null ? (yp >= 0 ? "bull" : "bear") : "neutral",
       change: yp != null ? `${pctStr(yp)} YoY` : "—",
       note: `Metro · BLS · as of ${asOfOf(s.cpiRent)}`,
+      trend: s.cpiRent.trend, periods: s.cpiRent.periods, zeroBased: false,
       measures: "Consumer price index for rent of primary residence in the metro. A slower-moving, survey-based rent gauge.",
       impact: "Cross-check on the ZORI rent read. Divergence between the two is a cue to look closer at what's driving local pricing.",
     });
@@ -125,6 +149,7 @@ function buildRows(zip, sig, place) {
       tone: "neutral",
       change: "—",
       note: `Metro · Apartment List · as of ${asOfOf(s.vacancy)}`,
+      trend: s.vacancy.trend, periods: s.vacancy.periods, zeroBased: false,
       measures: "Apartment vacancy index for the metro (Apartment List). The balance of supply and demand right now.",
       impact: "Tightening vacancy precedes pricing power; rising vacancy alongside new deliveries is the classic hypersupply tell.",
     });
@@ -140,6 +165,7 @@ function buildRows(zip, sig, place) {
       tone: "neutral",
       change: "avg lease-up",
       note: `Metro · Apartment List · as of ${asOfOf(s.daysOnMarket)}`,
+      trend: s.daysOnMarket.trend, periods: s.daysOnMarket.periods, zeroBased: false,
       measures: "Average time a listed apartment takes to lease (Apartment List). A fast, real-time demand pulse.",
       impact: "Shrinking days-on-market signals demand outrunning supply — often the earliest local sign of firming rents.",
     });
@@ -186,6 +212,7 @@ function buildRows(zip, sig, place) {
       note: "Metro · IRS SOI · ~2-yr lag",
       trend: Array.isArray(m.diffTrend) ? m.diffTrend.map((d) => d.v) : null,
       periods: Array.isArray(m.diffTrend) ? m.diffTrend.map((d) => String(d.y)) : null,
+      zeroBased: false,
       measures: "AGI differential between households moving in versus out (IRS SOI). Whether the metro is trading up or down over time.",
       impact: "A rising differential means the income base is strengthening — a slow but powerful leading signal for long-run rent growth.",
     });
