@@ -40,8 +40,9 @@ function MarketRow({ zip, name, read }) {
     );
   }
 
-  const lean = leanOf(read);
-  const t = read.tally || { green: 0, neutral: 0, red: 0, total: 0 };
+  const covered = read.found !== false && !read.error;
+  const lean = covered ? leanOf(read) : null;
+  const t = (covered && read.tally) || { green: 0, neutral: 0, red: 0, total: 0 };
   const total = t.total || 1;
 
   return (
