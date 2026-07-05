@@ -521,7 +521,7 @@ export default function PortfolioArchitect({ properties = [] }) {
         </div>
       </div>
 
-      <style jsx>{`
+      <style jsx global>{`
         .pa-root { --pc: #F5B544; }
         .pa-grid { display: grid; grid-template-columns: 320px 1fr; gap: 22px; align-items: start; }
         @media (max-width: 900px) { .pa-grid { grid-template-columns: 1fr; } }
