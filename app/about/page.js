@@ -5,12 +5,36 @@ import CignalScoreCTA from "@/components/CignalScoreCTA";
 import { getActiveContent } from "@/lib/active-vertical";
 
 const SUITE = [
-  { icon: Activity, name: "Indicators", desc: "Leading vs. trailing, scored and classified." },
-  { icon: Radio, name: "Signals", desc: "Bull, bear, and watch calls as they fire." },
-  { icon: LineChart, name: "Forecasts", desc: "Base, bull, and bear scenarios by market." },
-  { icon: BarChart3, name: "Market Maps", desc: "Where the cycle is turning, geographically." },
-  { icon: BookOpen, name: "Research", desc: "Ask the desk — synthesized analyst reads." },
-  { icon: Briefcase, name: "Portfolio", desc: "Your assets, scored against the cycle." },
+  {
+    icon: Activity,
+    name: "Indicators",
+    desc: "Dozens of leading and lagging indicators that drive multifamily, each classified by whether it turns before or after the cycle and grouped by supply, demand, capital, and macro. Live values, full history, and submarket lookup down to your ZIP — so you track the signals that move first, not the ones that only confirm the move.",
+  },
+  {
+    icon: Radio,
+    name: "Signals",
+    desc: "Plain-language bull, bear, and watch calls the moment the underlying data flips, so you know what a shift actually means without digging through charts. Includes the yield-curve read for the capital-market backdrop sitting behind every call.",
+  },
+  {
+    icon: LineChart,
+    name: "Forecasts",
+    desc: "Where the cycle sits today and where it projects next — base, bull, and bear scenarios across the leading indicators. The Brief sets the expert consensus against the live signal, showing exactly where the crowd and the data disagree.",
+  },
+  {
+    icon: BarChart3,
+    name: "Market Maps",
+    desc: "Hundreds of U.S. metros scored and ranked on the fundamentals that matter — rent momentum, supply, jobs, and migration — with emerging markets and consensus picks surfaced for you. Drill into any market to see where it sits in the cycle and how the sources agree or diverge.",
+  },
+  {
+    icon: BookOpen,
+    name: "Research",
+    desc: "An intelligence desk you can just ask. Pose any question about the cycle, a signal, or a specific market and get a synthesized, source-grounded answer in seconds — analyst-grade work without the wait.",
+  },
+  {
+    icon: Briefcase,
+    name: "Portfolio",
+    desc: "Track your properties against the live market read to see which holdings ride a tailwind and which are exposed to a turn. Auto-fill the numbers straight from a rent roll or income statement, with NOI, expenses, and cycle position in one place.",
+  },
 ];
 
 function smoothPath(pts) {
