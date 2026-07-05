@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useContent, useVertical } from "@/components/VerticalProvider";
 import { isPageReady } from "@/lib/verticals";
 import ComingSoonInline from "@/components/ComingSoonInline";
+import PortfolioArchitect from "@/components/PortfolioArchitect";
 
 const CLASS_OPTIONS = ["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","D-"];
 
@@ -392,6 +393,11 @@ function PortfolioInner() {
             </div>
           );
         })}
+      </div>
+
+      {/* cycle-conditional diversification tool */}
+      <div className="mt-14 border-t border-[var(--line)] pt-12">
+        <PortfolioArchitect />
       </div>
     </div>
   );
