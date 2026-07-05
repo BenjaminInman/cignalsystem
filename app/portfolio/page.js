@@ -12,6 +12,11 @@ import ComingSoonInline from "@/components/ComingSoonInline";
 import PortfolioArchitect from "@/components/PortfolioArchitect";
 
 const CLASS_OPTIONS = ["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","D-"];
+const STRATEGY_OPTIONS = [
+  { value: "core", label: "Core" },
+  { value: "va", label: "Value-add" },
+  { value: "opp", label: "Opportunistic" },
+];
 
 const ICONS = {
   "PROPERTIES": Building2,
@@ -61,7 +66,7 @@ const EMPTY_SNAP = {
   total_rental_income: "", loss_to_lease: "", vacancy_loss: "", bad_debt: "", concessions: "",
   net_rental_income: "", other_income: "", total_income: "", total_expenses: "", noi: "",
 };
-const EMPTY_PROP = { name: "", city: "", state: "", unit_count: "", class: "" };
+const EMPTY_PROP = { name: "", city: "", state: "", unit_count: "", class: "", strategy: "" };
 
 // ---------- gate ----------
 export default function PortfolioPage() {
@@ -151,7 +156,7 @@ function PortfolioInner() {
     setOpenId(p.id);
     setProp({
       name: p.name || "", city: p.city || "", state: p.state || "",
-      unit_count: p.unit_count ?? "", class: p.class || "",
+      unit_count: p.unit_count ?? "", class: p.class || "", strategy: p.strategy || "",
     });
     const { data: rows } = await supabase
       .from("portfolio_snapshots").select("*")
@@ -197,6 +202,7 @@ function PortfolioInner() {
         state: prop.state.trim() || null,
         unit_count: num(prop.unit_count),
         class: prop.class || null,
+        strategy: prop.strategy || null,
         updated_at: new Date().toISOString(),
       };
       if (openId === "new") {
@@ -397,7 +403,7 @@ function PortfolioInner() {
 
       {/* cycle-conditional diversification tool */}
       <div className="mt-14 border-t border-[var(--line)] pt-12">
-        <PortfolioArchitect />
+        <PortfolioArchitect properties={properties || []} />
       </div>
     </div>
   );
@@ -540,6 +546,12 @@ function Editor({ prop, setProp, snap, setSnap, month, loadMonth, snaps, overrid
           <select value={prop.class} onChange={sp("class")} className="input">
             <option value="">—</option>
             {CLASS_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </Field>
+        <Field label="Strategy" hint="for cycle rebalancing">
+          <select value={prop.strategy} onChange={sp("strategy")} className="input">
+            <option value="">—</option>
+            {STRATEGY_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
         </Field>
       </Section>

@@ -167,7 +167,7 @@ function Dial({ label, value, note }) {
 }
 
 // ---------- main component ----------
-export default function PortfolioArchitect() {
+export default function PortfolioArchitect({ properties = [] }) {
   const [mode, setMode] = useState("A");
   const [phase, setPhase] = useState("expansion");
   const [position, setPosition] = useState("mid");
@@ -183,6 +183,28 @@ export default function PortfolioArchitect() {
   const [rxStrategy, setRxStrategy] = useState("core");
   const [rxClass, setRxClass] = useState("A");
   const [rxUnits, setRxUnits] = useState(100);
+
+  // real tracked properties -> restructure input
+  const trackable = useMemo(() => {
+    const eligible = [], missing = [];
+    (properties || []).forEach((p) => {
+      const units = Number(p.unit_count) || 0;
+      if (p.strategy && units > 0) eligible.push({ stg: p.strategy, cls: p.class || "—", units, market: [p.city, p.state].filter(Boolean).join(", ") || "—", name: p.name, real: true });
+      else missing.push(p);
+    });
+    return { eligible, missing };
+  }, [properties]);
+  const loadPortfolio = () => { if (trackable.eligible.length) setCurrent(trackable.eligible); };
+
+  const byMarket = useMemo(() => {
+    const withMkt = current.filter((h) => h.market && h.market !== "—");
+    if (!withMkt.length) return null;
+    const groups = {};
+    withMkt.forEach((h) => { const k = h.market; if (!groups[k]) groups[k] = { units: 0, core: 0, va: 0, opp: 0, n: 0 }; groups[k].units += h.units; groups[k][h.stg] += h.units; groups[k].n++; });
+    return Object.entries(groups).map(([market, g]) => ({ market, units: g.units, n: g.n,
+      mix: { core: Math.round(g.core / g.units * 100), va: Math.round(g.va / g.units * 100), opp: Math.round(g.opp / g.units * 100) } }))
+      .sort((a, b) => b.units - a.units);
+  }, [current]);
 
   const M = useMemo(() => buildModel({ mode, phase, position, risk, units, holdings, city, stateAbbr, nmarkets, marketnames, seed }),
     [mode, phase, position, risk, units, holdings, city, stateAbbr, nmarkets, marketnames, seed]);
@@ -406,11 +428,22 @@ export default function PortfolioArchitect() {
             <summary>
               <div>
                 <div className="pa-h3" style={{ margin: 0 }}>Re-structure an existing book</div>
-                <div className="pa-ch" style={{ margin: "2px 0 0" }}>Add what you own today. See where you&apos;re over- or under-weight versus the cycle-optimal target.</div>
+                <div className="pa-ch" style={{ margin: "2px 0 0" }}>Pull in your tracked properties (or add holdings manually) to see where you&apos;re over- or under-weight versus the cycle-optimal target — overall and by market.</div>
               </div>
               <ChevronDown size={18} className="pa-caret text-muted" />
             </summary>
             <div className="pa-rxbody">
+              {properties && properties.length > 0 && (
+                <div className="pa-load">
+                  <button className="pa-loadbtn" onClick={loadPortfolio} disabled={!trackable.eligible.length}>
+                    ↓ Load my tracked portfolio ({trackable.eligible.length})
+                  </button>
+                  {trackable.missing.length > 0 && (
+                    <p className="pa-warn">{trackable.missing.length} propert{trackable.missing.length === 1 ? "y" : "ies"} missing a strategy tag — set Core / Value-add / Opportunistic on the property above to include {trackable.missing.length === 1 ? "it" : "them"}.</p>
+                  )}
+                </div>
+              )}
+
               <div className="pa-rxadd">
                 <label><span className="pa-lbl">Strategy</span>
                   <select className="pa-input" value={rxStrategy} onChange={(e) => setRxStrategy(e.target.value)}>
@@ -429,12 +462,21 @@ export default function PortfolioArchitect() {
               </div>
 
               {current.length > 0 && (
-                <ul className="pa-rxlist">
-                  {current.map((h, i) => (
-                    <li key={i}><span>{STRAT_LABEL[h.stg]} · Class {h.cls} · <b style={{ color: "#ECEDEF" }}>{h.units.toLocaleString()}</b> units</span>
-                      <button className="pa-del" onClick={() => setCurrent((c) => c.filter((_, j) => j !== i))} aria-label="Remove">×</button></li>
-                  ))}
-                </ul>
+                <>
+                  <ul className="pa-rxlist">
+                    {current.map((h, i) => (
+                      <li key={i}>
+                        <span>
+                          {h.name ? <b style={{ color: "#ECEDEF" }}>{h.name} · </b> : null}
+                          {STRAT_LABEL[h.stg]} · Class {h.cls} · <b style={{ color: "#ECEDEF" }}>{h.units.toLocaleString()}</b> units
+                          {h.market && h.market !== "—" ? <span style={{ color: "#5a6068" }}> · {h.market}</span> : null}
+                        </span>
+                        <button className="pa-del" onClick={() => setCurrent((c) => c.filter((_, j) => j !== i))} aria-label="Remove">×</button>
+                      </li>
+                    ))}
+                  </ul>
+                  <button className="pa-clear" onClick={() => setCurrent([])}>Clear all</button>
+                </>
               )}
 
               {!gap ? (
@@ -448,6 +490,26 @@ export default function PortfolioArchitect() {
                       <span className="pa-act" style={{ color: g.kind === "over" ? "#E5634D" : g.kind === "under" ? "#5FB97C" : "#797E85" }}><b>{g.word}</b>{g.note}</span>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {byMarket && (
+                <div className="pa-mkt">
+                  <p className="pa-lbl" style={{ marginTop: 18, marginBottom: 10 }}>By market</p>
+                  {byMarket.map((m, i) => (
+                    <div key={i} className="pa-mktrow">
+                      <div className="pa-mkthead">
+                        <span className="pa-mktname">{m.market}</span>
+                        <span className="pa-mktu">{m.units.toLocaleString()} units · {m.n} {m.n === 1 ? "asset" : "assets"}</span>
+                      </div>
+                      <div className="pa-bar" style={{ height: 18 }}>
+                        {m.mix.core > 0 && <span style={{ width: m.mix.core + "%", background: SEG2 }}>{m.mix.core >= 14 ? m.mix.core + "%" : ""}</span>}
+                        {m.mix.va > 0 && <span style={{ width: m.mix.va + "%", background: SEG1 }}>{m.mix.va >= 14 ? m.mix.va + "%" : ""}</span>}
+                        {m.mix.opp > 0 && <span style={{ width: m.mix.opp + "%", background: SEG3 }}>{m.mix.opp >= 14 ? m.mix.opp + "%" : ""}</span>}
+                      </div>
+                    </div>
+                  ))}
+                  <p className="pa-mkthint">Core, Value-add, Opportunistic by market. Compare each against the blueprint above to spot geographic concentration.</p>
                 </div>
               )}
             </div>
@@ -562,6 +624,19 @@ export default function PortfolioArchitect() {
         .pa-gl { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: #ECEDEF; }
         .pa-mini { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #A7ADB4; }
         .pa-act { font-size: 13px; }
+        .pa-load { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+        .pa-loadbtn { background: rgba(245,181,68,.1); border: 1px solid rgba(245,181,68,.5); color: #F5B544; border-radius: 6px; padding: 9px 16px; font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; cursor: pointer; transition: .15s; }
+        .pa-loadbtn:hover:not(:disabled) { background: rgba(245,181,68,.18); }
+        .pa-loadbtn:disabled { opacity: .4; cursor: not-allowed; }
+        .pa-warn { font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.5; color: #E8934B; margin: 10px 0 0; }
+        .pa-clear { background: none; border: none; color: #797E85; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; cursor: pointer; padding: 0; margin: 0 0 4px; }
+        .pa-clear:hover { color: #E5634D; }
+        .pa-mkt { margin-top: 6px; }
+        .pa-mktrow { margin-bottom: 12px; }
+        .pa-mkthead { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+        .pa-mktname { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #ECEDEF; letter-spacing: .02em; }
+        .pa-mktu { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: #797E85; }
+        .pa-mkthint { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; line-height: 1.5; color: #5a6068; font-style: italic; margin: 10px 0 0; }
       `}</style>
     </section>
   );
