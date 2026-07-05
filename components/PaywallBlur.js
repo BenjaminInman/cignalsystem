@@ -85,11 +85,28 @@ export default function PaywallBlur({
     </div>
   );
 
-  // Hard lock: no protected content in the DOM at all — just the upgrade card.
+  // Hard lock: no protected content in the DOM at all. Rendered as a compact
+  // HORIZONTAL banner (not a tall block) so the content below stays visible and
+  // the page doesn't read as a dead end — keeps bounce down.
   if (hard) {
     return (
-      <div className={`${wrapClass} flex items-center justify-center rounded-2xl border border-signal/25 bg-bg2/40 px-6 py-16`}>
-        {card}
+      <div className={`${wrapClass} flex flex-col items-center gap-4 rounded-2xl border border-signal/25 bg-bg2/40 px-6 py-6 text-center sm:flex-row sm:justify-between sm:gap-6 sm:text-left`}>
+        <div className="flex items-center gap-3.5">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-signal/40 bg-signal/10">
+            <Lock size={16} className="text-signal" />
+          </span>
+          <div className="min-w-0">
+            <p className="kicker mb-0.5">Pro feature</p>
+            <h3 className="headline text-lg text-ink">{title}</h3>
+            {blurb && <p className="mt-1 max-w-xl text-[13px] leading-relaxed text-muted">{blurb}</p>}
+          </div>
+        </div>
+        <a
+          href={`/upgrade?page=${page}`}
+          className="mono inline-flex shrink-0 items-center gap-1.5 rounded-md bg-signal px-4 py-2 text-[12px] tracking-[0.06em] text-bg hover:brightness-110"
+        >
+          <Lock size={12} /> Upgrade to Pro
+        </a>
       </div>
     );
   }
