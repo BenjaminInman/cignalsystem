@@ -13,6 +13,8 @@ import MarketRanker from "@/components/MarketRanker";
 import MigrationDivergence from "@/components/MigrationDivergence";
 import MarketConsensus from "@/components/MarketConsensus";
 import RentRadial from "@/components/RentRadial";
+import IndicatorRow from "@/components/IndicatorRow";
+import { metroSignalRows } from "@/lib/submarket-rows";
 
 function fmtMonth(d) {
   if (!d) return "";
@@ -544,25 +546,10 @@ function ZipLookup() {
               <p className="mono text-[10px] tracking-[0.1em] text-muted">
                 METRO SIGNALS{signals.metroName ? ` · ${signals.metroName.replace(/ \(Metropolitan.*\)$/, "")}` : ""}
               </p>
-              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {(() => {
-                  const s = signals.signals;
-                  const cards = [];
-                  if (s.employment) cards.push(["Job Growth (YoY)", s.employment.yoyPct != null ? `${s.employment.yoyPct >= 0 ? "+" : ""}${s.employment.yoyPct}%` : `${Math.round(s.employment.value)}K`, s.employment.yoyPct]);
-                  if (s.countyGdp) { const b = s.countyGdp.value / 1e6; const lvl = b >= 1 ? `$${b.toFixed(1)}B` : `$${Math.round(s.countyGdp.value / 1e3)}M`; cards.push(["Real GDP (County)", lvl, null, s.countyGdp.yoyPct != null ? `${s.countyGdp.yoyPct >= 0 ? "+" : ""}${s.countyGdp.yoyPct}% YoY · real` : "real, chained 2017$"]); }
-                  if (s.unemployment) cards.push(["Unemployment", `${s.unemployment.value}%`, null]);
-                  if (s.rentsRPP) cards.push(["Rent Price Level", `${Math.round(s.rentsRPP.value)}`, null, "US = 100"]);
-                  if (s.cpiRent) cards.push(["Rent CPI (YoY)", s.cpiRent.yoyPct != null ? `${s.cpiRent.yoyPct >= 0 ? "+" : ""}${s.cpiRent.yoyPct}%` : `${Math.round(s.cpiRent.value)}`, s.cpiRent.yoyPct]);
-                  if (s.vacancy) cards.push(["Apt Vacancy", `${Number(s.vacancy.value).toFixed(1)}%`, null]);
-                  if (s.daysOnMarket) cards.push(["Rental Days on Market", `${Math.round(s.daysOnMarket.value)} days`, null, "avg. apartment lease-up"]);
-                  return cards.map(([k, v, tone, sub]) => (
-                    <div key={k} className="rounded-lg border border-[var(--line)] bg-bg2/40 p-3">
-                      <p className="mono text-[9px] tracking-[0.08em] text-muted">{k.toUpperCase()}</p>
-                      <p className="mt-1 text-lg font-semibold" style={{ color: tone == null ? "var(--ink)" : toneColor(tone >= 0 ? "bull" : "bear") }}>{v}</p>
-                      {sub && <p className="mono text-[8px] tracking-[0.08em] text-muted">{sub}</p>}
-                    </div>
-                  ));
-                })()}
+              <div className="mt-3 space-y-3">
+                {metroSignalRows(signals).map((row) => (
+                  <IndicatorRow key={row.name} row={row} />
+                ))}
               </div>
               <p className="mono mt-3 text-[10px] tracking-[0.08em] text-muted">Metro level (CBSA) · BLS jobs &amp; unemployment, BEA rent price parity, Apartment List vacancy &amp; days-on-market{signals.signals?.countyGdp ? ` · real GDP is county-level (BEA CAGDP9${signals.countyName ? `, ${signals.countyName}` : ""})` : ""}</p>
 
