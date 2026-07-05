@@ -573,8 +573,9 @@ export default function PortfolioArchitect({ properties = [] }) {
         .pa-bphead { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
         .pa-bpt { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #ECEDEF; }
         .pa-bpn { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5a6068; }
-        .pa-bar { display: flex; height: 24px; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); }
-        .pa-bar span { display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: #0A0B0A; font-weight: 600; min-width: 0; }
+        .pa-bar { display: flex; height: 30px; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); }
+        .pa-bar span { display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 15px; color: #0A0B0A; font-weight: 600; min-width: 0; }
+        .pa-mkt .pa-bar span { font-size: 11px; }
         .pa-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 7px; }
         .pa-lg { display: flex; align-items: center; gap: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: #A7ADB4; }
         .pa-lg i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
