@@ -86,13 +86,58 @@ export function IndicatorTrend({ data, tone, periods, zeroBased = true }) {
       ))}
       <path className="trend-fade" d={areaPath} fill={`url(#${gid})`} />
       <path className="draw-line" d={linePath} pathLength={1} style={{ strokeDasharray: 1, strokeDashoffset: 1 }} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
-      {labels.map((q, i) =>
-        i % 2 === 0 || i === labels.length - 1 ? (
+      {labels.map((q, i) => {
+        const step = Math.max(1, Math.ceil(labels.length / 7));
+        return i % step === 0 || i === labels.length - 1 ? (
           <text key={i} x={xAt(i)} y={H - 9} textAnchor="middle" fontSize="9" fill="#AEB4BB" fontFamily="monospace">{q}</text>
-        ) : null
-      )}
+        ) : null;
+      })}
     </svg>
   );
+}
+
+// Which way is "good" for each indicator, so a direction read can say
+// improving vs deteriorating rather than just up vs down. Rows may also set
+// `goodUp` directly (submarket rows do); that takes precedence over this map.
+const GOOD_UP = {
+  "Wage Growth": true, "Job Growth": true, "Gross Domestic Product": true,
+  "Real Consumer Spending": true, "Consumer Sentiment (UMich)": true,
+  "Inflation": false, "Interest Rates": false, "Days On Market": false,
+  "Multifamily Building Permits": false, "National Vacancy Rate": false,
+  "Market Rent Growth (All Rentals)": true, "Market Rent Growth (Multifamily)": true,
+  "Home Value Index": true, "Yield Curve Spread": true, "Initial Jobless Claims": false,
+  "Leading Indicator (OECD)": true, "Cap Rate (National Avg)": false,
+  "Net Absorption Rate": true, "Debt Service Coverage": true,
+  "Net Renter Migration Index": true, "National Foreclosure Rate": false,
+  "Renter-Age Employment (18-34)": true, "Renter Delinquency Rate": false,
+  "CRE Loan Delinquency Rate": false,
+  // submarket
+  "Observed Rent (ZORI)": true, "Local Job Growth": true, "Real GDP (County)": true,
+  "Unemployment Rate": false, "Apartment Vacancy": false, "Rental Days on Market": false,
+  "Rent CPI": true, "Affluence Trend": true,
+};
+
+// Read the trajectory of a trend series (oldest->newest): recent third vs the
+// prior third. Returns arrow + label + tone. When `goodUp` is known it reports
+// improving/deteriorating (direction relative to what's good); otherwise it
+// reports plain rising/falling. This is what lets a red, still-negative number
+// read "improving" when it's climbing.
+function trendRead(trend, goodUp) {
+  if (!Array.isArray(trend) || trend.length < 4) return null;
+  const n = trend.length;
+  const mean = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0);
+  const t = Math.max(1, Math.floor(n / 3));
+  const recent = mean(trend.slice(n - t));
+  const earlier = mean(trend.slice(n - 2 * t, n - t));
+  const delta = recent - earlier;
+  const range = Math.max(...trend) - Math.min(...trend);
+  const flat = range === 0 || Math.abs(delta) < 0.08 * range;
+  const up = delta > 0;
+  const arrow = flat ? "\u2192" : up ? "\u2197" : "\u2198";
+  if (flat) return { arrow, label: goodUp == null ? "Flat" : "Holding steady", tone: "neutral" };
+  if (goodUp == null) return { arrow, label: up ? "Rising" : "Falling", tone: "neutral" };
+  const improving = up === goodUp;
+  return { arrow, label: improving ? "Improving" : "Deteriorating", tone: improving ? "bull" : "bear" };
 }
 
 // Presentational indicator row used by both the national Indicators list and the
@@ -103,6 +148,7 @@ export default function IndicatorRow({ row }) {
   const r = row;
   const hasTrend = Array.isArray(r.trend) && r.trend.length > 1;
   const hasDetail = r.measures || r.impact;
+  const dir = hasTrend ? trendRead(r.trend, r.goodUp != null ? r.goodUp : GOOD_UP[r.name]) : null;
 
   return (
     <div className="card overflow-hidden">
@@ -119,7 +165,10 @@ export default function IndicatorRow({ row }) {
           <p className="mono text-[11px] text-muted">{r.unit}</p>
         </div>
         <div className="hidden md:block">
-          <p className="mono text-sm" style={{ color: toneColor(r.tone) }}>{r.change}</p>
+          <p className="mono flex items-center gap-1.5 text-sm" style={{ color: toneColor(r.tone) }}>
+            {r.change}
+            {dir && <span className="text-[13px]" style={{ color: toneColor(dir.tone) }} title={dir.label}>{dir.arrow}</span>}
+          </p>
           <p className="mono mt-0.5 text-[11px] text-muted">{r.note}</p>
         </div>
         <div className="flex items-center justify-end gap-3">
@@ -142,10 +191,24 @@ export default function IndicatorRow({ row }) {
           </div>
           {hasTrend && (
             <div>
-              <p className="mono text-[10px] tracking-[0.18em] text-muted">HISTORICAL TREND</p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="mono text-[10px] tracking-[0.18em] text-muted">HISTORICAL TREND</p>
+                {dir && (
+                  <span
+                    className="mono inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] tracking-[0.08em]"
+                    style={{ color: toneColor(dir.tone), borderColor: `${toneColor(dir.tone)}55` }}
+                  >
+                    <span className="text-[12px]">{dir.arrow}</span> {dir.label}
+                  </span>
+                )}
+              </div>
               <div className="mt-2">
                 <IndicatorTrend data={r.trend} tone={r.tone} periods={r.periods} zeroBased={r.zeroBased !== false} />
               </div>
+              <p className="mono mt-2 text-[10px] leading-relaxed text-muted">
+                Direction reads the recent trajectory — a red level that is climbing back still reads
+                <span style={{ color: "#5FB97C" }}> improving</span>.
+              </p>
             </div>
           )}
         </div>

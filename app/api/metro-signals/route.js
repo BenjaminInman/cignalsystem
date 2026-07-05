@@ -26,7 +26,7 @@ function periodLabel(dateStr, annual) {
 // Latest reading + history for a metro indicator, keyed by CBSA (Census metro
 // region_code). Returns { value, yoyPct, delta, asOf, trend, periods } — trend
 // is the underlying series oldest->newest so the row can chart it like Layer 2/3.
-async function metroSignal(slug, cbsa, { annual = false, points = 18 } = {}) {
+async function metroSignal(slug, cbsa, { annual = false, points = 24 } = {}) {
   const rows = await sb(
     `v_indicator_analytics?slug=eq.${slug}&region_code=eq.${cbsa}` +
       `&select=obs_date,value,yoy_change&order=obs_date.desc&limit=${points}`

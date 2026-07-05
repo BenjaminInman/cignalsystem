@@ -15,7 +15,7 @@ async function sb(path) {
 async function fetchSeries(slug, code, ci = false) {
   const op = ci ? "ilike" : "eq";
   const enc = encodeURIComponent(code);
-  const rows = await sb(`v_indicator_analytics?slug=eq.${slug}&region_code=${op}.${enc}&select=obs_date,value,yoy_change,region_code&order=obs_date.desc&limit=13`);
+  const rows = await sb(`v_indicator_analytics?slug=eq.${slug}&region_code=${op}.${enc}&select=obs_date,value,yoy_change,region_code&order=obs_date.desc&limit=24`);
   if (!Array.isArray(rows) || rows.length === 0) return null;
   const latest = rows[0];
   const rent = Math.round(latest.value);
