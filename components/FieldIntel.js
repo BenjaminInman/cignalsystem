@@ -44,9 +44,9 @@ export default function FieldIntel() {
       <div className="mb-6 flex items-end justify-between">
         <div>
           <p className="kicker mb-3 flex items-center gap-2">
-            <Crosshair size={12} className="text-signal" /> Field Intel &middot; Soft Signals
+            <Crosshair size={12} className="text-signal" /> Soft Signals
           </p>
-          <h2 className="headline text-3xl text-ink md:text-4xl">Scrubbed from the wire</h2>
+          <h2 className="headline text-3xl text-ink md:text-4xl">Field Intel</h2>
           <p className="mt-2.5 max-w-2xl text-[13.5px] leading-relaxed text-muted">
             Forward-looking facts pulled from public reporting, stripped of spin and reduced to what&apos;s
             checkable &mdash; the open-source read that often moves before the measured data prints.
