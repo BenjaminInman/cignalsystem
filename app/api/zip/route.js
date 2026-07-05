@@ -51,8 +51,14 @@ export async function GET(req) {
       const zip = q;
       const xw = (await sb(`zip_crosswalk?zip=eq.${zip}&select=*`))?.[0];
       const place = xw?.city_label || null; // exact "City, ST" for this ZIP
+      // Parent-metro rent, for the submarket-vs-metro divergence read.
+      let metro = null;
+      if (xw?.metro_label) {
+        const m = await fetchSeries("zori_metro", xw.metro_label);
+        if (m) metro = { label: xw.metro_label, rent: m.rent, yoyPct: m.yoyPct, asOf: m.asOf };
+      }
       const z = await fetchSeries("zori_zip", zip);
-      if (z) return Response.json({ found: true, grain: "zip", label: `ZIP ${zip}`, place, query: zip, ...z });
+      if (z) return Response.json({ found: true, grain: "zip", label: `ZIP ${zip}`, place, query: zip, metro, ...z });
       if (xw) {
         const ladder = [
           ["city", "zori_city", xw.city_label],
@@ -62,7 +68,7 @@ export async function GET(req) {
         for (const [grain, slug, code] of ladder) {
           if (!code) continue;
           const res = await fetchSeries(slug, code);
-          if (res) return Response.json({ found: true, grain, label: grain === "metro" ? `${code} metro` : code, place, query: zip, rolledUp: true, rolledFrom: `ZIP ${zip}`, ...res });
+          if (res) return Response.json({ found: true, grain, label: grain === "metro" ? `${code} metro` : code, place, query: zip, rolledUp: true, rolledFrom: `ZIP ${zip}`, metro: grain === "metro" ? null : metro, ...res });
         }
       }
       return Response.json({ found: false, query: zip, kind: "zip", place });
@@ -75,7 +81,12 @@ export async function GET(req) {
       const res = await fetchSeries(slug, parsed.code, true);
       if (res) {
         const name = res.code || parsed.code;
-        return Response.json({ found: true, grain, label: grain === "metro" ? `${name} metro` : name, place: name, query: q, ...res });
+        let metro = null;
+        if (grain !== "metro") {
+          const m = await fetchSeries("zori_metro", parsed.code, true);
+          if (m) metro = { label: m.code || parsed.code, rent: m.rent, yoyPct: m.yoyPct, asOf: m.asOf };
+        }
+        return Response.json({ found: true, grain, label: grain === "metro" ? `${name} metro` : name, place: name, query: q, metro, ...res });
       }
     }
     return Response.json({ found: false, query: q, kind: "city" });

@@ -82,13 +82,13 @@ function MarketMapsInner() {
 
       <div className="card mt-8 p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-semibold text-ink">{labels[0]} — Tracked Markets</h2>
+          <h2 className="font-semibold text-ink">{labels[0]} — Tracked Markets <span className="text-muted">· metro</span></h2>
           <span className="mono text-[10px] tracking-[0.08em] text-muted">
-            {growth?.asOf ? <><span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-up align-middle" />LIVE · ZORI YoY · as of {fmtMonth(growth.asOf)}</> : "Loading live data…"}
+            {growth?.asOf ? <><span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-up align-middle" />LIVE · ZORI YoY · metro · as of {fmtMonth(growth.asOf)}</> : "Loading live data…"}
           </span>
         </div>
         <RentRadial markets={all} />
-        <p className="mono mt-3 text-[10px] tracking-[0.06em] text-muted">Live ZORI year-over-year · ring grouped by U.S. region, wedge sized by the size of the move · hover any market for the exact figure.</p>
+        <p className="mono mt-3 text-[10px] tracking-[0.06em] text-muted">Live ZORI year-over-year, metro-level · ring grouped by U.S. region, wedge sized by the size of the move · hover any market for the exact figure.</p>
       </div>
 
       <div className="mt-8 flex flex-wrap gap-2">
@@ -489,6 +489,19 @@ function ZipLookup() {
                   <span style={{ color: toneColor(data.yoyPct >= 0 ? "bull" : "bear") }}>{data.yoyPct >= 0 ? "+" : ""}{data.yoyPct}% YoY</span>
                 )}
               </p>
+              {data.metro && data.grain !== "metro" && data.metro.yoyPct != null && data.yoyPct != null && (() => {
+                const delta = Math.round((data.yoyPct - data.metro.yoyPct) * 10) / 10;
+                const tag = delta < -0.5 ? "softening faster than its metro" : delta > 0.5 ? "outperforming its metro" : "in line with its metro";
+                return (
+                  <p className="mono mt-1.5 text-[11px] tracking-[0.02em] text-muted">
+                    vs <span className="text-ink">{data.metro.label}</span> metro{" "}
+                    <span style={{ color: toneColor(data.metro.yoyPct >= 0 ? "bull" : "bear") }}>
+                      {data.metro.yoyPct >= 0 ? "+" : ""}{data.metro.yoyPct}%
+                    </span>{" "}
+                    YoY · <span className="text-ink/70">{tag}</span>
+                  </p>
+                );
+              })()}
             </div>
             <div className="flex flex-col items-end gap-3">
               {data.trend?.length > 1 && (
