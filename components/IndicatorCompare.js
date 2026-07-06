@@ -14,6 +14,16 @@ const SCALE_MODES = [
   { key: "indexed", label: "Indexed to 100" },
 ];
 const ALL_RANGES = [10, 20, 40];
+// U.S. recessions (NBER) — the cycle's contraction phases. Shaded as an overlay
+// so a series can be read against every downturn of the past ~40 years.
+const CYCLE_BANDS = [
+  { start: "1980-01-01", end: "1980-07-01", label: "'80" },
+  { start: "1981-07-01", end: "1982-11-01", label: "'82" },
+  { start: "1990-07-01", end: "1991-03-01", label: "'90" },
+  { start: "2001-03-01", end: "2001-11-01", label: "'01" },
+  { start: "2007-12-01", end: "2009-06-01", label: "'08" },
+  { start: "2020-02-01", end: "2020-04-01", label: "'20" },
+];
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const yrLab = (ts) => String(new Date(ts).getUTCFullYear());
 const monLab = (ts) => { const d = new Date(ts); return `${MON[d.getUTCMonth()]} '${String(d.getUTCFullYear()).slice(2)}`; };
@@ -57,7 +67,7 @@ function smooth(pts) {
 }
 
 /* ---------- chart ---------- */
-function CompareChart({ lines, scale, chartType, yLabel }) {
+function CompareChart({ lines, scale, chartType, yLabel, cycle }) {
   const [hoverX, setHoverX] = useState(null);
   const wrapRef = useRef(null);
   const W = 940, H = 380, padL = 54, padR = 16, padT = 16, padB = 30;
@@ -109,6 +119,17 @@ function CompareChart({ lines, scale, chartType, yLabel }) {
       <div className="mb-2 mono text-[10px] tracking-[0.16em] text-muted">{yLabel}</div>
       <div ref={wrapRef} onMouseMove={onMove} onMouseLeave={() => setHoverX(null)} style={{ width: "100%" }}>
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: "auto" }}>
+          {cycle && CYCLE_BANDS.map((b) => {
+            const bs = Date.parse(`${b.start}T00:00:00Z`), be = Date.parse(`${b.end}T00:00:00Z`);
+            if (be < tMin || bs > tMax) return null;
+            const x0 = xAt(Math.max(bs, tMin)), x1 = xAt(Math.min(be, tMax));
+            return (
+              <g key={b.label} pointerEvents="none">
+                <rect x={x0} y={padT} width={Math.max(1.5, x1 - x0)} height={innerH} fill="#E5634D" fillOpacity="0.12" />
+                <text x={(x0 + x1) / 2} y={padT + 10} textAnchor="middle" fontSize="8.5" fill="#E5634D" fillOpacity="0.75" fontFamily="'IBM Plex Mono', monospace">{b.label}</text>
+              </g>
+            );
+          })}
           {yticks.map((v) => (
             <g key={v}>
               <line x1={padL} y1={yAt(v)} x2={W - padR} y2={yAt(v)} stroke="var(--line)" strokeWidth="1" strokeDasharray="2 4" />
@@ -163,6 +184,12 @@ function CompareChart({ lines, scale, chartType, yLabel }) {
             <span className="text-ink">{hoverT != null ? fmtValue(l, valAt(l.data, hoverT), scale) : ""}</span>
           </span>
         ))}
+        {cycle && (
+          <span className="mono flex items-center gap-1.5 text-[11px]">
+            <span className="h-2 w-3 rounded-[1px]" style={{ background: "#E5634D", opacity: 0.28 }} />
+            <span className="text-muted">recessions</span>
+          </span>
+        )}
       </div>
     </div>
   );
@@ -181,6 +208,7 @@ export default function IndicatorCompare() {
   const [years, setYears] = useState(10);
   const [chartType, setChartType] = useState("Line");
   const [scale, setScale] = useState("native");
+  const [cycle, setCycle] = useState(false);
   const [picker, setPicker] = useState(false);
   const [raw, setRaw] = useState({}); // slug -> { points, unit, group, round }
   const [loading, setLoading] = useState(false);
@@ -358,6 +386,16 @@ export default function IndicatorCompare() {
               ))}
             </div>
           </div>
+          <div className="flex items-center gap-2">
+            <span className="mono text-[10px] tracking-[0.16em] text-muted">CYCLE</span>
+            <button
+              onClick={() => setCycle((c) => !c)}
+              className={seg(cycle)}
+              title="Shade U.S. recessions — the cycle's contraction phases"
+            >
+              {cycle ? "Shown" : "Overlay"}
+            </button>
+          </div>
           {loading && <span className="mono animate-pulse text-[11px] text-muted">loading…</span>}
         </div>
 
@@ -367,12 +405,15 @@ export default function IndicatorCompare() {
         {mixedUnits && (
           <p className="mono mt-3 text-[11px] text-muted/80">These indicators use different units. Switch to Indexed to compare their shape on one scale.</p>
         )}
+        {cycle && (
+          <p className="mono mt-3 text-[11px] text-muted/80">Shaded bands mark U.S. recessions — the cycle's contraction phases. Widen the range to read a series against 1990, 2001, 2008, and 2020.</p>
+        )}
 
         <div className="mt-5">
           {selected.length === 0 ? (
             <div className="mono flex h-[300px] items-center justify-center text-[12px] text-muted">Add an indicator to begin.</div>
           ) : (
-            <CompareChart lines={lines} scale={effScale} chartType={chartType} yLabel={yLabel} />
+            <CompareChart lines={lines} scale={effScale} chartType={chartType} yLabel={yLabel} cycle={cycle} />
           )}
         </div>
       </div>
