@@ -27,13 +27,19 @@ const METROS = [
   { name: "Columbus, OH", cbsa: "18140", zori: "Columbus, OH" },
 ];
 
-// Latest YoY% per region for a slug (fetch all metros recent, pick latest each).
-async function latestYoY(slug, months = 5) {
+// Latest YoY% for a slug across a specific set of region codes (region-filtered
+// so the query is indexed and fast — an unfiltered scan trips the anon timeout).
+async function latestYoY(slug, codes, months = 6) {
   const since = new Date();
   since.setMonth(since.getMonth() - months);
+  const inList = codes
+    .map((c) => (/[,\s]/.test(c) ? `"${c}"` : c))
+    .join(",")
+    .replace(/ /g, "%20");
   const rows = await sb(
-    `v_indicator_analytics?slug=eq.${slug}&obs_date=gte.${since.toISOString().slice(0, 10)}` +
-      `&select=region_code,obs_date,value,yoy_change&order=obs_date.desc&limit=8000`
+    `v_indicator_analytics?slug=eq.${slug}&region_code=in.(${inList})` +
+      `&obs_date=gte.${since.toISOString().slice(0, 10)}` +
+      `&select=region_code,obs_date,value,yoy_change&order=obs_date.desc&limit=800`
   );
   const latest = {};
   for (const r of rows || []) if (!latest[r.region_code]) latest[r.region_code] = r;
@@ -50,9 +56,11 @@ const z = (v, m, s) => (s ? (v - m) / s : 0);
 
 export async function GET() {
   try {
+    const cbsas = METROS.map((m) => m.cbsa);
+    const zoris = [...new Set(METROS.map((m) => m.zori))];
     const [jobs, rents] = await Promise.all([
-      latestYoY("bls_metro_employment"),
-      latestYoY("zori_metro"),
+      latestYoY("bls_metro_employment", cbsas),
+      latestYoY("zori_metro", zoris),
     ]);
 
     let rows = METROS.map((m) => ({
