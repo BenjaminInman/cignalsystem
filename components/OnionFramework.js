@@ -6,9 +6,10 @@ import { ONION_LAYERS } from "@/lib/onion";
 
 // Concentric onion. Rings are drawn outer -> inner so each ring's onClick only
 // receives hits on its own exposed band (inner circles sit on top).
-function OnionRing({ active, onSelect, counts }) {
+function OnionRing({ active, onSelect, counts, countText = {} }) {
   const C = 110;
   const core = 20;
+  const disp = (id) => countText[id] ?? String(counts[id] || 0);
   return (
     <svg
       viewBox="0 0 220 220"
@@ -26,7 +27,7 @@ function OnionRing({ active, onSelect, counts }) {
             onClick={() => onSelect(active === l.id ? null : l.id)}
             style={{ cursor: "pointer" }}
           >
-            <title>{`Layer ${l.num} · ${l.label} — ${counts[l.id] || 0} indicators`}</title>
+            <title>{`Layer ${l.num} · ${l.label} — ${disp(l.id)} indicators`}</title>
             <circle
               cx={C}
               cy={C}
@@ -58,13 +59,14 @@ function OnionRing({ active, onSelect, counts }) {
   );
 }
 
-export default function OnionFramework({ active, onSelect, counts = {} }) {
+export default function OnionFramework({ active, onSelect, counts = {}, countText = {} }) {
   const [teachOpen, setTeachOpen] = useState(false);
+  const disp = (id) => countText[id] ?? String(counts[id] || 0);
 
   return (
     <div className="card mt-8 overflow-hidden">
       <div className="flex flex-col gap-6 p-6 md:flex-row md:items-center md:gap-8">
-        <OnionRing active={active} onSelect={onSelect} counts={counts} />
+        <OnionRing active={active} onSelect={onSelect} counts={counts} countText={countText} />
 
         <div className="min-w-0 flex-1">
           <p className="kicker">The Onion Framework</p>
@@ -76,7 +78,7 @@ export default function OnionFramework({ active, onSelect, counts = {} }) {
           <div className="mt-5 grid gap-2 sm:grid-cols-3">
             {ONION_LAYERS.map((l) => {
               const on = active === l.id;
-              const n = counts[l.id] || 0;
+              const d = disp(l.id);
               return (
                 <button
                   key={l.id}
@@ -98,7 +100,7 @@ export default function OnionFramework({ active, onSelect, counts = {} }) {
                   </div>
                   <p className="mt-1.5 text-sm font-semibold text-ink">{l.label}</p>
                   <p className="mono mt-0.5 text-[11px] text-muted">
-                    {l.scope} · {n} {n === 1 ? "signal" : "signals"}
+                    {l.scope} · {d} {d === "1" ? "signal" : "signals"}
                   </p>
                 </button>
               );

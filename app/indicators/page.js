@@ -7,7 +7,7 @@ import PaywallBlur from "@/components/PaywallBlur";
 import OnionFramework from "@/components/OnionFramework";
 import SubmarketLookup from "@/components/SubmarketLookup";
 import IndicatorRow from "@/components/IndicatorRow";
-import { layerOf, LAYER_META, SUBMARKET_SIGNALS } from "@/lib/onion";
+import { layerOf, LAYER_META, SUBMARKET_FLOOR } from "@/lib/onion";
 
 const TYPES = ["All Types", "Leading", "Trailing"];
 const CATS = ["All", "Supply", "Demand", "Capital", "Macro", "Performance"];
@@ -17,7 +17,8 @@ export default function IndicatorsPage() {
   const [type, setType] = useState("All Types");
   const [cat, setCat] = useState("All");
   const [layer, setLayer] = useState(null);
-  const [submarketCount, setSubmarketCount] = useState(SUBMARKET_SIGNALS.length);
+  const [submarketCount, setSubmarketCount] = useState(SUBMARKET_FLOOR);
+  const [submarketExact, setSubmarketExact] = useState(false);
   const [live, setLive] = useState({});
 
   useEffect(() => {
@@ -40,6 +41,7 @@ export default function IndicatorsPage() {
     return acc;
   }, {});
   layerCounts.submarket = submarketCount;
+  const countText = submarketExact ? {} : { submarket: `${SUBMARKET_FLOOR}+` };
 
   const rows = merged.filter(
     (r) =>
@@ -73,7 +75,7 @@ export default function IndicatorsPage() {
         wrapClass="mt-8"
         blurb="The proprietary lens at the core of the Cignal method — it organizes every signal into layered rings so you can read the cycle from the outside in. Unlock it with Pro."
       >
-        <OnionFramework active={layer} onSelect={setLayer} counts={layerCounts} />
+        <OnionFramework active={layer} onSelect={setLayer} counts={layerCounts} countText={countText} />
       </PaywallBlur>
 
       {layer !== "submarket" && (
@@ -92,7 +94,7 @@ export default function IndicatorsPage() {
       )}
 
       {layer === "submarket" ? (
-        <SubmarketLookup onCount={setSubmarketCount} />
+        <SubmarketLookup onCount={(n) => { setSubmarketCount(n); setSubmarketExact(true); }} />
       ) : layer ? (
         <div className="mt-10">
           <SectionHead label={`LAYER ${LAYER_META[layer].num} · ${LAYER_META[layer].label.toUpperCase()}`} count={rows.length} />
