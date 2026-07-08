@@ -50,20 +50,23 @@ SERIES = [
      "name": "Zillow Observed Rent Index — County (SFR+Condo+MF, smoothed, SA)",
      "source_series": "County_zori_uc_sfrcondomfr_sm_sa_month",
      "url": f"{ZORI_BASE}/County_zori_uc_sfrcondomfr_sm_sa_month.csv"},
-    # --- ZORDI: renter DEMAND (engagement) index, multifamily cut ------------------
-    # Leading demand-intent read: listing engagement precedes leasing, which precedes
-    # occupancy and rent. Directional index (no natural units) — read trend, z-score,
-    # and divergence vs. outcome metrics (vacancy, time on market), not the raw level.
+    # --- ZORDI: rental-market TIGHTNESS index, multifamily cut ---------------------
+    # Zillow describes ZORDI as a tightness gauge, not pure demand: engagement with
+    # listings relative to available supply. Higher = tighter. Empirically COINCIDENT
+    # with vacancy (corr -0.90 on YoY) and ~1 month ahead of time-on-market, so it is
+    # classified coincident and deliberately kept OUT of the Tell's leading composite
+    # (it is near-collinear with rental_vacancy on the lagging side and would
+    # double-count across the divide). Directional index — read trend, not level.
     # Note: ZORDI filenames have no "_sm" segment, unlike ZORI.
     {"slug": "zordi_metro", "region_type": "metro", "region_filter": "msa",
      "name": "Renter Demand Index (ZORDI) — Metro (Multifamily)",
      "source_series": "Metro_zordi_uc_mfr_month",
-     "units": "index", "classification": "leading", "higher_is_better": True,
+     "units": "index", "classification": "coincident", "higher_is_better": True,
      "url": f"{ZORDI_BASE}/Metro_zordi_uc_mfr_month.csv"},
     {"slug": "zordi", "region_type": "national", "region_filter": "country", "code_override": "US",
      "name": "Renter Demand Index (ZORDI)",
      "source_series": "Metro_zordi_uc_mfr_month",
-     "units": "index", "classification": "leading", "higher_is_better": True,
+     "units": "index", "classification": "coincident", "higher_is_better": True,
      "url": f"{ZORDI_BASE}/Metro_zordi_uc_mfr_month.csv"},
 ]
 ID_COLS = ["RegionID","SizeRank","RegionName","RegionType","StateName","State","City","Metro","CountyName","StateCodeFIPS","MunicipalCodeFIPS"]
