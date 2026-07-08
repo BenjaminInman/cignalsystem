@@ -9,8 +9,8 @@ import ComingSoonInline from "@/components/ComingSoonInline";
 const SUGGESTIONS = [
   "Where are we in the multifamily cycle right now?",
   "What are the leading indicators saying versus the lagging ones?",
-  "Which markets rank highest in the latest migration data?",
-  "What's the composite signal, and how much conviction is behind it?",
+  "How does Austin look right now — rent, jobs, and vacancy?",
+  "Which markets rank highest for in-migration?",
 ];
 
 export default function ResearchPage() {
@@ -102,10 +102,10 @@ function ResearchInner() {
             <h3 className="mono text-[12px] tracking-[0.2em] text-signal">HOW TO USE THE DESK</h3>
           </div>
           <p className="text-sm leading-relaxed text-muted">
-            The desk is a grounded analyst, not a web search. It answers only from Cignal&apos;s live data
-            &mdash; the composite signal, your leading and trailing indicators, the active signal feed, and
-            the top migration markets &mdash; and it will tell you plainly when a question falls outside that
-            data rather than guess. The more specific and on-cycle your question, the sharper the read.
+            The desk is a grounded analyst, not a web search &mdash; it reads Cignal&apos;s live market
+            intelligence and stays focused on the multifamily cycle. The more specific and on-cycle your
+            question, the sharper the read; when something falls outside its view, it&apos;ll tell you
+            plainly rather than guess.
           </p>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -114,16 +114,17 @@ function ResearchInner() {
               <ul className="list-disc space-y-2 pl-5 text-[13px] leading-relaxed text-muted marker:text-up/60">
                 <li>Where the cycle sits, and which phase the data points to</li>
                 <li>What the leading indicators signal &mdash; and whether the lagging ones confirm</li>
+                <li>How a major market is moving &mdash; rent, jobs, and vacancy</li>
                 <li>A national indicator&apos;s latest value and which way it&apos;s moving</li>
                 <li>The composite signal and how much conviction is behind it</li>
-                <li>The strongest markets in the latest migration rankings</li>
+                <li>Which markets are leading on in-migration and growth</li>
               </ul>
             </div>
             <div className="card p-5">
               <p className="mono mb-3 text-[10px] tracking-[0.16em] text-muted">OUTSIDE ITS SCOPE</p>
               <ul className="list-disc space-y-2 pl-5 text-[13px] leading-relaxed text-muted marker:text-muted/50">
                 <li>Cap rates, rents, or pricing for a specific property or deal</li>
-                <li>Deep metro-by-metro data beyond the national read and migration lists</li>
+                <li>Smaller submarkets or ZIP-level detail beyond the major metros</li>
                 <li>General web search, headlines, or historical events</li>
                 <li>Exact forecasts &mdash; it reads today&apos;s signals, it won&apos;t invent future numbers</li>
               </ul>
