@@ -6,6 +6,7 @@ import { Lock, Radio } from "lucide-react";
 import YieldCurve from "@/components/YieldCurve";
 import { createClient } from "@/lib/supabase/client";
 import { toneColor } from "@/components/ui";
+import AskCanary from "@/components/AskCanary";
 
 const UP = "#5FB97C", DOWN = "#E5634D", AMBER = "#E0A33A", GOLD = "#F5B544";
 const BLUE = "#5FA8D9", MUT = "#797E85", INK = "#ECEDEF", LINE = "#20242A";
@@ -69,6 +70,9 @@ export default function SignalsPage() {
               </div>
               {tell && <TellChart tell={tell} />}
               {tell && <Verdict tell={tell} />}
+              <div className="mt-4 border-t border-[var(--line)] pt-4">
+                <AskCanary variant="pill" question="What is the divergence between the leading and lagging indicators telling us right now?" />
+              </div>
             </div>
 
             {/* Per-market divergence board — gated (build #5) */}

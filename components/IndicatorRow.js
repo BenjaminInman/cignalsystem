@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { toneColor, StatusPill } from "@/components/ui";
+import AskCanary from "@/components/AskCanary";
 
 const DEFAULT_PERIODS = ["Q2 '24", "Q3 '24", "Q4 '24", "Q1 '25", "Q2 '25", "Q3 '25", "Q4 '25", "Q1 '26", "Q2 '26"];
 
@@ -143,7 +144,7 @@ function trendRead(trend, goodUp) {
 // Presentational indicator row used by both the national Indicators list and the
 // submarket lookup. Self-manages its expanded state. The historical-trend panel
 // only renders when a trend series is supplied (local signals may omit it).
-export default function IndicatorRow({ row }) {
+export default function IndicatorRow({ row, ask }) {
   const [open, setOpen] = useState(false);
   const r = row;
   const hasTrend = Array.isArray(r.trend) && r.trend.length > 1;
@@ -177,8 +178,10 @@ export default function IndicatorRow({ row }) {
         </div>
       </button>
 
-      {open && hasDetail && (
-        <div className={`grid gap-8 border-t border-[var(--line)] px-6 py-7 ${hasTrend ? "lg:grid-cols-2" : ""}`}>
+      {open && (hasDetail || ask) && (
+        <div className="border-t border-[var(--line)] px-6 py-7">
+          {hasDetail && (
+          <div className={`grid gap-8 ${hasTrend ? "lg:grid-cols-2" : ""}`}>
           <div>
             <p className="mono text-[10px] tracking-[0.18em] text-muted">WHAT THIS MEASURES</p>
             <p className="mt-2 text-sm leading-relaxed text-muted">{r.measures}</p>
@@ -209,6 +212,14 @@ export default function IndicatorRow({ row }) {
                 Direction reads the recent trajectory — a red level that is climbing back still reads
                 <span style={{ color: "#5FB97C" }}> improving</span>.
               </p>
+            </div>
+          )}
+          </div>
+          )}
+          {ask && (
+            <div className={hasDetail ? "mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--line)] pt-5" : "flex flex-wrap items-center justify-between gap-3"}>
+              <span className="mono text-[10px] tracking-[0.16em] text-muted">GO DEEPER</span>
+              <AskCanary variant="pill" question={ask} />
             </div>
           )}
         </div>

@@ -7,6 +7,7 @@ import PaywallBlur from "@/components/PaywallBlur";
 import OnionFramework from "@/components/OnionFramework";
 import SubmarketLookup from "@/components/SubmarketLookup";
 import IndicatorRow from "@/components/IndicatorRow";
+import AskCanary from "@/components/AskCanary";
 import { layerOf, LAYER_META, SUBMARKET_FLOOR } from "@/lib/onion";
 
 const TYPES = ["All Types", "Leading", "Trailing"];
@@ -53,7 +54,13 @@ export default function IndicatorsPage() {
   const reRows = rows.filter((r) => r.group !== "macro");
   const macroRows = rows.filter((r) => r.group === "macro");
 
-  const renderRow = (r) => <IndicatorRow key={r.name} row={r} />;
+  const renderRow = (r) => (
+    <IndicatorRow
+      key={r.name}
+      row={r}
+      ask={live[r.name] ? `What is ${r.name} telling us right now, and is it a leading or lagging signal?` : undefined}
+    />
+  );
 
   const SectionHead = ({ label, count }) => (
     <div className="flex items-center gap-3">
@@ -67,6 +74,7 @@ export default function IndicatorsPage() {
     <div className="pt-12 pb-10">
       <h1 className="headline text-4xl text-ink md:text-5xl">Economic Indicators</h1>
       <p className="mt-3 max-w-2xl text-muted">Comprehensive leading and trailing indicators driving multifamily performance. Select any indicator to expand the detail.</p>
+      <div className="mt-5"><AskCanary variant="pill" question="How do the leading indicators compare to the lagging ones right now?" /></div>
 
       <PaywallBlur
         page="indicators"

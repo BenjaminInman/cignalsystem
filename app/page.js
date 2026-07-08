@@ -6,6 +6,7 @@ import { ArrowRight, Lock, Newspaper, ArrowUpRight, Building2, SlidersHorizontal
 import { toneColor, Sparkline, StatusPill } from "@/components/ui";
 import SignalEventCard from "@/components/SignalEventCard";
 import CycleWheel from "@/components/CycleWheel";
+import AskCanary from "@/components/AskCanary";
 import { useContent } from "@/components/VerticalProvider";
 
 const AUD_ICONS = { Building2, SlidersHorizontal, TrendingUp, Users, Landmark };
@@ -351,6 +352,7 @@ export default function Home() {
                 See the live signals
                 <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
               </Link>
+              <div className="mt-5"><AskCanary variant="pill" question="Where are we in the multifamily cycle right now?" /></div>
             </div>
           </div>
         </section>
