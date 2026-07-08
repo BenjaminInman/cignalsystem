@@ -4,10 +4,9 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowRight, Lock, Newspaper, ArrowUpRight, Building2, SlidersHorizontal, TrendingUp, Users, Landmark } from "lucide-react";
 import { toneColor, Sparkline, StatusPill } from "@/components/ui";
-import SignalCard from "@/components/SignalCard";
+import SignalEventCard from "@/components/SignalEventCard";
 import CycleWheel from "@/components/CycleWheel";
 import { useContent } from "@/components/VerticalProvider";
-import { fetchTeaserSignals } from "@/lib/signals";
 
 const AUD_ICONS = { Building2, SlidersHorizontal, TrendingUp, Users, Landmark };
 
@@ -74,10 +73,25 @@ export default function Home() {
   const cards = (tab === "leading" ? LEADING_CARDS : TRAILING_CARDS).map((c) => mergeLiveCard(c, liveInd));
   const compColor = toneColor(composite.tone);
 
-  // Public teaser signals (live from the DB) to entice sign-ups.
+  // Live "what just changed" events — the same feed the Signals page runs on,
+  // interleaved leading/lagging so the four tiles show both layers.
   const [featured, setFeatured] = useState([]);
   useEffect(() => {
-    fetchTeaserSignals(4).then(setFeatured);
+    fetch("/api/signals-intel")
+      .then((r) => r.json())
+      .then((d) => {
+        const evs = d?.events || [];
+        const lead = evs.filter((e) => e.class === "leading");
+        const lag = evs.filter((e) => e.class !== "leading");
+        const picked = [];
+        for (let i = 0; i < 4; i++) {
+          const src = i % 2 === 0 ? lead : lag;
+          const next = src.shift() || (i % 2 === 0 ? lag : lead).shift();
+          if (next) picked.push(next);
+        }
+        setFeatured(picked);
+      })
+      .catch(() => {});
   }, []);
 
   // Live indicator values for the teaser tiles.
@@ -283,11 +297,11 @@ export default function Home() {
             <Link href="/signals" className="hover-line mono text-[12px] tracking-[0.08em] text-muted hover:text-ink">VIEW ALL →</Link>
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
-            {featured.map((s) => <SignalCard key={s.title} s={s} />)}
+            {featured.map((e, i) => <SignalEventCard key={`${e.slug}-${e.month}-${i}`} e={e} />)}
           </div>
           <div className="mt-4 flex flex-col items-center gap-3 rounded-lg border border-dashed border-[var(--line-strong)] p-5 text-center sm:flex-row sm:justify-between sm:text-left">
             <p className="text-sm text-muted">
-              These are public highlights. <span className="text-ink">Sign up to unlock the full signal feed</span> and set custom alerts.
+              A live look at what just changed. <span className="text-ink">Sign up to unlock the full signal feed</span> and market-level divergence.
             </p>
             <Link href="/register" className="mono shrink-0 rounded-sm bg-signal px-5 py-2.5 text-[12px] tracking-[0.08em] text-bg hover:opacity-90">UNLOCK ALL SIGNALS →</Link>
           </div>
