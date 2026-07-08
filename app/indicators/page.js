@@ -7,7 +7,7 @@ import PaywallBlur from "@/components/PaywallBlur";
 import OnionFramework from "@/components/OnionFramework";
 import SubmarketLookup from "@/components/SubmarketLookup";
 import IndicatorRow from "@/components/IndicatorRow";
-import { layerOf, LAYER_META } from "@/lib/onion";
+import { layerOf, LAYER_META, SUBMARKET_SIGNALS } from "@/lib/onion";
 
 const TYPES = ["All Types", "Leading", "Trailing"];
 const CATS = ["All", "Supply", "Demand", "Capital", "Macro", "Performance"];
@@ -17,6 +17,7 @@ export default function IndicatorsPage() {
   const [type, setType] = useState("All Types");
   const [cat, setCat] = useState("All");
   const [layer, setLayer] = useState(null);
+  const [submarketCount, setSubmarketCount] = useState(SUBMARKET_SIGNALS.length);
   const [live, setLive] = useState({});
 
   useEffect(() => {
@@ -31,11 +32,14 @@ export default function IndicatorsPage() {
   const merged = INDICATORS.map((r) => (live[r.name] ? { ...r, ...live[r.name] } : r));
 
   // Stable per-layer totals for the onion (unaffected by type/cat filters).
+  // Submarket has no national-catalog rows; its count reflects the local-signal
+  // module — seeded from the canonical set, refined to the searched market.
   const layerCounts = merged.reduce((acc, r) => {
     const id = layerOf(r.name);
     if (id) acc[id] = (acc[id] || 0) + 1;
     return acc;
   }, {});
+  layerCounts.submarket = submarketCount;
 
   const rows = merged.filter(
     (r) =>
@@ -88,7 +92,7 @@ export default function IndicatorsPage() {
       )}
 
       {layer === "submarket" ? (
-        <SubmarketLookup />
+        <SubmarketLookup onCount={setSubmarketCount} />
       ) : layer ? (
         <div className="mt-10">
           <SectionHead label={`LAYER ${LAYER_META[layer].num} · ${LAYER_META[layer].label.toUpperCase()}`} count={rows.length} />

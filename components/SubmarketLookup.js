@@ -5,7 +5,7 @@ import { Search } from "lucide-react";
 import IndicatorRow from "@/components/IndicatorRow";
 import { buildRows, GRAIN } from "@/lib/submarket-rows";
 
-export default function SubmarketLookup() {
+export default function SubmarketLookup({ onCount }) {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("idle"); // idle | loading | error
   const [msg, setMsg] = useState("");
@@ -39,6 +39,7 @@ export default function SubmarketLookup() {
       }
       setPlace(zr.d?.found ? zr.d : null);
       setRows(built);
+      onCount?.(built.length);
       setStatus("idle");
     } catch {
       setStatus("error"); setMsg("Lookup failed. Please try again.");
