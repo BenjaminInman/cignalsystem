@@ -10,6 +10,19 @@ import CanaryMark from "@/components/CanaryMark";
 export default function AskCanary({ question, label = "Ask Canary", variant = "pill", className = "" }) {
   const href = `/research?ask=${encodeURIComponent(question || label)}`;
 
+  if (variant === "icon") {
+    return (
+      <Link
+        href={href}
+        aria-label={`Ask Canary: ${question || label}`}
+        title={`Ask Canary — ${question || label}`}
+        className={`inline-flex shrink-0 align-middle text-signal/70 transition-colors hover:text-signal ${className}`}
+      >
+        <CanaryMark size={15} />
+      </Link>
+    );
+  }
+
   if (variant === "inline") {
     return (
       <Link

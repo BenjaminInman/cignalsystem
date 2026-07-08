@@ -15,6 +15,8 @@ import MarketConsensus from "@/components/MarketConsensus";
 import RentRadial from "@/components/RentRadial";
 import IndicatorRow from "@/components/IndicatorRow";
 import { metroSignalRows } from "@/lib/submarket-rows";
+import AskCanary from "@/components/AskCanary";
+import { canaryCovers } from "@/lib/canary-markets";
 
 function fmtMonth(d) {
   if (!d) return "";
@@ -211,6 +213,11 @@ function MarketRow({ m, i, labels, loaded }) {
               <p className="mt-4 text-[11px] leading-relaxed text-muted">
                 Sources: U.S. Bureau of Labor Statistics (employment, unemployment), Zillow Research (ZORI rent, ZHVI home value), Apartment List (vacancy), Bureau of Economic Analysis (Regional Price Parity), Census BPS (multifamily permits){sc.box?.aimi ? ", Freddie Mac (AIMI)" : ""}. Percentiles rank this metro against every U.S. metro reporting each series. The score weights employment — the only leading signal carried at metro level — most heavily; trailing series confirm rather than trigger.
               </p>
+              {canaryCovers(m.city) && (
+                <div className="mt-4 border-t border-[var(--line)] pt-4">
+                  <AskCanary variant="inline" question={`How does ${m.city} look right now — rent, jobs, and vacancy?`} />
+                </div>
+              )}
             </>
           )}
         </div>
