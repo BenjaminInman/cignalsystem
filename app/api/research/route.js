@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 import { createClient } from "@/lib/supabase/server";
 import { getLiveIndicators } from "@/lib/indicators-live";
 import { nationalIntel } from "@/lib/signals-engine";
+import { resolveMetro } from "@/lib/metro-crosswalk";
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -205,6 +206,25 @@ async function buildContext(focus) {
   return parts.join("\n");
 }
 
+// Free-text metro resolution: ask the model to name the metro, normalized to "City, ST".
+async function extractMetro(question) {
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "x-api-key": AKEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: 24,
+      system:
+        'Identify the single U.S. metropolitan area a question is about. Reply with ONLY the metro as "City, ST" using the principal city and its 2-letter state code (e.g. "New York, NY", "Washington, DC", "San Francisco, CA"). Normalize nicknames and boroughs: NYC/Manhattan/Brooklyn -> "New York, NY"; Bay Area/SF -> "San Francisco, CA"; DC -> "Washington, DC"; DFW/Dallas-Fort Worth -> "Dallas, TX"; LA -> "Los Angeles, CA". If the question is national, about multiple metros, or not about a specific metro at all, reply exactly: NONE',
+      messages: [{ role: "user", content: question }],
+    }),
+  });
+  const d = await r.json();
+  if (!r.ok || !Array.isArray(d.content)) return null;
+  const t = d.content.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
+  return t && t.toUpperCase() !== "NONE" ? t.slice(0, 60) : null;
+}
+
 export async function POST(req) {
   if (!AKEY)
     return Response.json({ error: "The research engine isn't connected yet. Please try again shortly." }, { status: 503 });
@@ -242,9 +262,21 @@ export async function POST(req) {
       { status: 429 }
     );
 
-  const metro = (body.metro || "").toString().slice(0, 80);
-  const cbsa = (body.cbsa || "").toString().replace(/[^0-9]/g, "").slice(0, 7);
-  const ctx = await buildContext({ metro, cbsa });
+  let focus = {
+    metro: (body.metro || "").toString().slice(0, 80),
+    cbsa: (body.cbsa || "").toString().replace(/[^0-9]/g, "").slice(0, 7),
+  };
+  // No chip hint -> let the model name the metro from the question, then resolve it to a market.
+  if (!focus.metro && !focus.cbsa) {
+    try {
+      const guess = await extractMetro(question);
+      const r = guess ? resolveMetro(guess) : null;
+      if (r) focus = { metro: r.metro, cbsa: r.cbsa || "" };
+    } catch {
+      /* resolver is best-effort; fall back to general context */
+    }
+  }
+  const ctx = await buildContext(focus);
 
   const system = `You are the Cignal System research desk — an institutional multifamily real-estate market-intelligence analyst. Cignal reads the market through a four-phase cycle (Recovery, Expansion, Hyper-Supply, Recession) and separates LEADING indicators (which move first) from TRAILING ones (which confirm later).
 
