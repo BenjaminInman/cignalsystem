@@ -91,3 +91,7 @@ html, body {
 }
 .notif-in  { animation: notifIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
 .notif-out { animation: notifOut 0.3s ease forwards; }
+
+@keyframes canaryBob { 0%,100% { transform: translateY(0); opacity: .8; } 50% { transform: translateY(-3px); opacity: 1; } }
+.canary-bob { animation: canaryBob 1.1s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .canary-bob { animation: none; opacity: 1; } }

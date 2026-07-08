@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ArrowUp, Lock } from "lucide-react";
 import { useVertical } from "@/components/VerticalProvider";
 import { isPageReady } from "@/lib/verticals";
@@ -62,6 +62,13 @@ function ResearchInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const answerRef = useRef(null);
+  useEffect(() => {
+    if (thread.length > 0 && answerRef.current) {
+      answerRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [thread.length]);
+
   return (
     <div className="pt-12 pb-12">
       <p className="kicker mb-3 flex items-center gap-2"><CanaryMark size={13} className="text-signal" /> Intelligence Desk</p>
@@ -101,7 +108,15 @@ function ResearchInner() {
             </div>
           </div>
 
-          {/* suggestions */}
+          {loading && (
+            <div className="mt-5 flex items-center justify-center gap-2.5">
+              <CanaryMark size={18} className="canary-bob text-signal" />
+              <span className="mono text-[12px] tracking-[0.04em] text-signal">Canary is reading the live signals — your answer forms below &darr;</span>
+            </div>
+          )}
+
+          {/* suggestions — step aside once a question is in flight */}
+          {thread.length === 0 && (
           <div className="mt-4 flex flex-wrap justify-center gap-2">
             {SUGGESTIONS.map((s) => (
               <button key={s} onClick={() => ask(s)} disabled={loading} className="rounded-full border border-[var(--line)] bg-bg px-4 py-2 text-[13px] text-muted transition-colors hover:border-signal/40 hover:text-ink disabled:opacity-50">
@@ -109,6 +124,7 @@ function ResearchInner() {
               </button>
             ))}
           </div>
+          )}
         </div>
       </div>
 
@@ -157,13 +173,17 @@ function ResearchInner() {
       {/* thread */}
       {thread.length > 0 && (
         <div className="mx-auto mt-10 max-w-3xl space-y-4">
+          <div ref={answerRef} className="scroll-mt-24" />
           {thread.map((item) => (
             <div key={item.id} className="card p-5">
               <p className="font-medium text-ink">{item.q}</p>
               <div className="mt-3 border-t border-[var(--line)] pt-3">
                 <span className="mono text-[10px] tracking-[0.16em] text-signal">CANARY</span>
                 {item.pending ? (
-                  <p className="mono mt-2 animate-pulse text-[12px] text-muted">Analyzing live signals…</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <CanaryMark size={15} className="canary-bob text-signal" />
+                    <span className="mono text-[12px] text-signal">Canary is reading the live signals…</span>
+                  </div>
                 ) : item.error ? (
                   <div className="mt-1">
                     <p className="text-sm leading-relaxed text-muted">{item.error}</p>
