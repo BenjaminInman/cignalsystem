@@ -109,6 +109,7 @@ const GOOD_UP = {
   "Home Value Index": true, "Yield Curve Spread": true, "Initial Jobless Claims": false,
   "Leading Indicator (OECD)": true, "Cap Rate (National Avg)": false,
   "Absorption Rate (3-Mo)": true, "Debt Service Coverage": true,
+  "Renter Demand Index (ZORDI)": true,
   "Net Renter Migration Index": true, "National Foreclosure Rate": false,
   "Renter-Age Employment (18-34)": true, "Renter Delinquency Rate": false,
   "CRE Loan Delinquency Rate": false,

@@ -20,6 +20,7 @@ import requests, pandas as pd, psycopg2
 from psycopg2.extras import execute_values
 
 ZORI_BASE = "https://files.zillowstatic.com/research/public_csvs/zori"
+ZORDI_BASE = "https://files.zillowstatic.com/research/public_csvs/zordi"
 SERIES = [
     {"slug": "zori_zip", "region_type": "zip", "region_filter": None,
      "name": "Zillow Observed Rent Index — ZIP (SFR+Condo+MF, smoothed, SA)",
@@ -49,6 +50,21 @@ SERIES = [
      "name": "Zillow Observed Rent Index — County (SFR+Condo+MF, smoothed, SA)",
      "source_series": "County_zori_uc_sfrcondomfr_sm_sa_month",
      "url": f"{ZORI_BASE}/County_zori_uc_sfrcondomfr_sm_sa_month.csv"},
+    # --- ZORDI: renter DEMAND (engagement) index, multifamily cut ------------------
+    # Leading demand-intent read: listing engagement precedes leasing, which precedes
+    # occupancy and rent. Directional index (no natural units) — read trend, z-score,
+    # and divergence vs. outcome metrics (vacancy, time on market), not the raw level.
+    # Note: ZORDI filenames have no "_sm" segment, unlike ZORI.
+    {"slug": "zordi_metro", "region_type": "metro", "region_filter": "msa",
+     "name": "Renter Demand Index (ZORDI) — Metro (Multifamily)",
+     "source_series": "Metro_zordi_uc_mfr_month",
+     "units": "index", "classification": "leading", "higher_is_better": True,
+     "url": f"{ZORDI_BASE}/Metro_zordi_uc_mfr_month.csv"},
+    {"slug": "zordi", "region_type": "national", "region_filter": "country", "code_override": "US",
+     "name": "Renter Demand Index (ZORDI)",
+     "source_series": "Metro_zordi_uc_mfr_month",
+     "units": "index", "classification": "leading", "higher_is_better": True,
+     "url": f"{ZORDI_BASE}/Metro_zordi_uc_mfr_month.csv"},
 ]
 ID_COLS = ["RegionID","SizeRank","RegionName","RegionType","StateName","State","City","Metro","CountyName","StateCodeFIPS","MunicipalCodeFIPS"]
 
@@ -85,8 +101,9 @@ def ensure_indicator(cur, s):
         """INSERT INTO indicators (slug, name, source, source_series, frequency, units,
                                    classification, higher_is_better, is_public)
            VALUES (%s,%s,%s,%s,%s,%s,%s::public.indicator_class,%s,%s) RETURNING id""",
-        (s["slug"], s["name"], "Zillow Research", s["source_series"], "monthly", "USD",
-         "trailing", None, True),
+        (s["slug"], s["name"], "Zillow Research", s["source_series"], "monthly",
+         s.get("units", "USD"), s.get("classification", "trailing"),
+         s.get("higher_is_better"), True),
     )
     new_id = cur.fetchone()[0]
     print(f"  created indicator {s['slug']} (id={new_id})")
