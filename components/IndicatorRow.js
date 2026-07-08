@@ -107,7 +107,7 @@ const GOOD_UP = {
   "Market Rent Growth (All Rentals)": true, "Market Rent Growth (Multifamily)": true,
   "Home Value Index": true, "Yield Curve Spread": true, "Initial Jobless Claims": false,
   "Leading Indicator (OECD)": true, "Cap Rate (National Avg)": false,
-  "Net Absorption Rate": true, "Debt Service Coverage": true,
+  "Absorption Rate (3-Mo)": true, "Debt Service Coverage": true,
   "Net Renter Migration Index": true, "National Foreclosure Rate": false,
   "Renter-Age Employment (18-34)": true, "Renter Delinquency Rate": false,
   "CRE Loan Delinquency Rate": false,

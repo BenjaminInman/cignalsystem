@@ -17,7 +17,7 @@ const fmtK = (n) =>
 function mergeLiveCard(card, live) {
   const map = {
     "Multifamily Permit Activity": "Multifamily Building Permits",
-    "Lease-Up Absorption Rate": "Net Absorption Rate",
+    "Lease-Up Absorption Rate": "Absorption Rate (3-Mo)",
     "Net Renter Migration Index": "Net Renter Migration Index",
     "National Vacancy Rate": "National Vacancy Rate",
     "Market Rent Growth": "Market Rent Growth (All Rentals)",
