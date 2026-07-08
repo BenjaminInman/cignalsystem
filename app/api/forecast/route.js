@@ -26,26 +26,26 @@ const BASKET = [
 ];
 
 const CITIES = [
-  { city: "Dallas, TX", metro: "Dallas, TX", tier: "Top" },
-  { city: "Jersey City, NJ", metro: "New York, NY", tier: "Top" },
-  { city: "Miami, FL", metro: "Miami, FL", tier: "Top" },
-  { city: "Atlanta, GA", metro: "Atlanta, GA", tier: "Top" },
-  { city: "Houston, TX", metro: "Houston, TX", tier: "Top" },
-  { city: "Phoenix, AZ", metro: "Phoenix, AZ", tier: "Sun Belt" },
-  { city: "Nashville, TN", metro: "Nashville, TN", tier: "Sun Belt" },
-  { city: "Orlando, FL", metro: "Orlando, FL", tier: "Sun Belt" },
-  { city: "San Antonio, TX", metro: "San Antonio, TX", tier: "Sun Belt" },
-  { city: "Austin, TX", metro: "Austin, TX", tier: "Sun Belt" },
-  { city: "Tampa, FL", metro: "Tampa, FL", tier: "Sun Belt" },
-  { city: "Jacksonville, FL", metro: "Jacksonville, FL", tier: "Sun Belt" },
-  { city: "Raleigh, NC", metro: "Raleigh, NC", tier: "Sun Belt" },
-  { city: "Indianapolis, IN", metro: "Indianapolis, IN", tier: "Secondary" },
-  { city: "NW Arkansas, AR", metro: "Fayetteville, AR", tier: "Secondary" },
-  { city: "Colorado Springs, CO", metro: "Colorado Springs, CO", tier: "Secondary" },
-  { city: "Birmingham, AL", metro: "Birmingham, AL", tier: "Secondary" },
-  { city: "Salt Lake City, UT", metro: "Salt Lake City, UT", tier: "Secondary" },
-  { city: "Lubbock, TX", metro: "Lubbock, TX", tier: "Secondary" },
-  { city: "Savannah, GA", metro: "Savannah, GA", tier: "Secondary" },
+  { city: "Dallas, TX", metro: "Dallas, TX", tier: "Top", cbsa: "19100" },
+  { city: "Jersey City, NJ", metro: "New York, NY", tier: "Top", cbsa: "35620" },
+  { city: "Miami, FL", metro: "Miami, FL", tier: "Top", cbsa: "33100" },
+  { city: "Atlanta, GA", metro: "Atlanta, GA", tier: "Top", cbsa: "12060" },
+  { city: "Houston, TX", metro: "Houston, TX", tier: "Top", cbsa: "26420" },
+  { city: "Phoenix, AZ", metro: "Phoenix, AZ", tier: "Sun Belt", cbsa: "38060" },
+  { city: "Nashville, TN", metro: "Nashville, TN", tier: "Sun Belt", cbsa: "34980" },
+  { city: "Orlando, FL", metro: "Orlando, FL", tier: "Sun Belt", cbsa: "36740" },
+  { city: "San Antonio, TX", metro: "San Antonio, TX", tier: "Sun Belt", cbsa: "41700" },
+  { city: "Austin, TX", metro: "Austin, TX", tier: "Sun Belt", cbsa: "12420" },
+  { city: "Tampa, FL", metro: "Tampa, FL", tier: "Sun Belt", cbsa: "45300" },
+  { city: "Jacksonville, FL", metro: "Jacksonville, FL", tier: "Sun Belt", cbsa: "27260" },
+  { city: "Raleigh, NC", metro: "Raleigh, NC", tier: "Sun Belt", cbsa: "39580" },
+  { city: "Indianapolis, IN", metro: "Indianapolis, IN", tier: "Secondary", cbsa: "26900" },
+  { city: "NW Arkansas, AR", metro: "Fayetteville, AR", tier: "Secondary", cbsa: "22220" },
+  { city: "Colorado Springs, CO", metro: "Colorado Springs, CO", tier: "Secondary", cbsa: "17820" },
+  { city: "Birmingham, AL", metro: "Birmingham, AL", tier: "Secondary", cbsa: "13820" },
+  { city: "Salt Lake City, UT", metro: "Salt Lake City, UT", tier: "Secondary", cbsa: "41620" },
+  { city: "Lubbock, TX", metro: "Lubbock, TX", tier: "Secondary", cbsa: "31180" },
+  { city: "Savannah, GA", metro: "Savannah, GA", tier: "Secondary", cbsa: "42340" },
 ];
 const TIER_CONF = { Top: 80, "Sun Belt": 72, Secondary: 66 };
 
@@ -172,7 +172,7 @@ export async function GET() {
         const inMigration = migSet.has(c.city.split(",")[0].trim().toLowerCase());
         let signal = "neutral";
         if (yoyPct != null) { if (yoyPct > 0.5 && trend !== "cooling") signal = "bull"; else if (yoyPct < 0 || trend === "cooling") signal = "bear"; }
-        return { city: c.city, tier: c.tier, rentYoY: yoyPct == null ? null : Math.round(yoyPct * 10) / 10, trend, migration: inMigration, signal, conf: TIER_CONF[c.tier] };
+        return { city: c.city, metro: c.metro, cbsa: c.cbsa, tier: c.tier, rentYoY: yoyPct == null ? null : Math.round(yoyPct * 10) / 10, trend, migration: inMigration, signal, conf: TIER_CONF[c.tier] };
       }).sort((a, b) => (b.rentYoY ?? -99) - (a.rentYoY ?? -99));
     }
 

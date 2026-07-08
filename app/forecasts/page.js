@@ -7,7 +7,6 @@ import { useContent, useVertical } from "@/components/VerticalProvider";
 import { isPageReady } from "@/lib/verticals";
 import ComingSoonInline from "@/components/ComingSoonInline";
 import AskCanary from "@/components/AskCanary";
-import { canaryCovers } from "@/lib/canary-markets";
 
 const SCENARIOS = ["Base Case", "Bull Case", "Bear Case"];
 const DEFAULT_METRICS = ["Rent Growth", "Vacancy", "Cap Rate", "NOI Growth"];
@@ -344,7 +343,7 @@ function ForecastsInner() {
               <span className="flex items-center gap-2 text-ink">
                 <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: toneColor(m.signal) }} />
                 {m.city}{m.migration && <span title="On migration in-flow lists" className="text-up">↑</span>}
-                {canaryCovers(m.city) && <AskCanary variant="icon" question={`How does ${m.city} look right now — rent, jobs, and vacancy?`} />}
+                {m.cbsa && <AskCanary variant="icon" question={`How does ${m.city} look right now?`} metro={m.metro || m.city} cbsa={m.cbsa} />}
               </span>
               <span className="mono" style={{ color: m.rentYoY == null ? "#797e85" : toneColor(m.rentYoY >= 0 ? "bull" : "bear") }}>
                 {m.rentYoY == null ? "—" : `${m.rentYoY >= 0 ? "+" : ""}${m.rentYoY}%`}

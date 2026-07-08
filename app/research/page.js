@@ -25,7 +25,7 @@ function ResearchInner() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const ask = async (q) => {
+  const ask = async (q, focus) => {
     const text = (q || "").trim();
     if (!text || loading) return;
     setInput("");
@@ -36,7 +36,7 @@ function ResearchInner() {
       const r = await fetch("/api/research", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ question: text }),
+        body: JSON.stringify({ question: text, ...(focus || {}) }),
       });
       const d = await r.json().catch(() => ({}));
       setThread((t) =>
@@ -54,9 +54,10 @@ function ResearchInner() {
   };
 
   useEffect(() => {
-    const p = new URLSearchParams(window.location.search).get("ask");
+    const sp = new URLSearchParams(window.location.search);
+    const p = sp.get("ask");
     if (p) {
-      ask(p);
+      ask(p, { metro: sp.get("m") || undefined, cbsa: sp.get("c") || undefined });
       window.history.replaceState(null, "", "/research");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

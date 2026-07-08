@@ -7,8 +7,11 @@ import CanaryMark from "@/components/CanaryMark";
 // it deep-links into the Canary desk (/research?ask=...), which auto-submits it.
 //   variant="pill"   -> gold outline pill (primary, for cards/panels)
 //   variant="inline" -> quiet dashed-underline link (for tight rows)
-export default function AskCanary({ question, label = "Ask Canary", variant = "pill", className = "" }) {
-  const href = `/research?ask=${encodeURIComponent(question || label)}`;
+export default function AskCanary({ question, label = "Ask Canary", variant = "pill", className = "", metro, cbsa }) {
+  const params = new URLSearchParams({ ask: question || label });
+  if (metro) params.set("m", metro);
+  if (cbsa) params.set("c", cbsa);
+  const href = `/research?${params.toString()}`;
 
   if (variant === "icon") {
     return (

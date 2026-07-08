@@ -16,7 +16,7 @@ const DAILY_CAP = 30;
 // Curated major markets for the metro-level read (code = CBSA).
 const METROS = [
   ["35620", "New York, NY"], ["31080", "Los Angeles, CA"], ["16980", "Chicago, IL"],
-  ["19100", "Dallas-Fort Worth, TX"], ["26420", "Houston, TX"], ["47900", "Washington, DC"],
+  ["19100", "Dallas, TX"], ["26420", "Houston, TX"], ["47900", "Washington, DC"],
   ["12060", "Atlanta, GA"], ["33100", "Miami, FL"], ["38060", "Phoenix, AZ"],
   ["42660", "Seattle, WA"], ["41860", "San Francisco, CA"], ["12420", "Austin, TX"],
   ["34980", "Nashville, TN"], ["16740", "Charlotte, NC"], ["45300", "Tampa, FL"],
@@ -36,8 +36,52 @@ async function sbGet(path, key) {
   }
 }
 
-async function buildContext() {
+async function metroFocus(metroName, cbsa) {
+  const latest = async (slug, region) => {
+    const rows = await sbGet(
+      `v_indicator_analytics?slug=eq.${slug}&region_code=eq.${encodeURIComponent(region)}&select=value,yoy_change,obs_date&order=obs_date.desc&limit=1`,
+      ANON
+    );
+    return Array.isArray(rows) && rows[0] ? rows[0] : null;
+  };
+  const yoyp = (r) => {
+    if (!r || r.yoy_change == null) return null;
+    const v = +r.value, y = +r.yoy_change;
+    return v - y !== 0 ? (y / (v - y)) * 100 : null;
+  };
+  const [rentMf, rentAll, jobs, un, vac, perm] = await Promise.all([
+    metroName ? latest("zori_metro_mf", metroName) : null,
+    metroName ? latest("zori_metro", metroName) : null,
+    cbsa ? latest("bls_metro_employment", cbsa) : null,
+    cbsa ? latest("bls_metro_unemployment", cbsa) : null,
+    cbsa ? latest("apt_vacancy", cbsa) : null,
+    cbsa ? latest("permits_5plus_metro", cbsa) : null,
+  ]);
+  const bits = [];
+  const rp = yoyp(rentMf), rap = yoyp(rentAll);
+  if (rp != null) bits.push(`multifamily rent ${rp >= 0 ? "+" : ""}${rp.toFixed(1)}% YoY`);
+  else if (rap != null) bits.push(`rent (all rentals) ${rap >= 0 ? "+" : ""}${rap.toFixed(1)}% YoY`);
+  const jp = yoyp(jobs);
+  if (jp != null) bits.push(`payroll jobs ${jp >= 0 ? "+" : ""}${jp.toFixed(1)}% YoY`);
+  if (un) bits.push(`unemployment ${(+un.value).toFixed(1)}%`);
+  if (vac) bits.push(`vacancy ${(+vac.value).toFixed(1)}%`);
+  const pp = yoyp(perm);
+  if (pp != null) bits.push(`multifamily permits ${pp >= 0 ? "+" : ""}${pp.toFixed(1)}% YoY`);
+  if (!bits.length) return null;
+  return `MARKET IN FOCUS — ${metroName || cbsa}: ${bits.join("; ")}. (The user is asking about this specific market — lead with these figures and read them against the cycle.)`;
+}
+
+async function buildContext(focus) {
   const parts = [];
+
+  if (focus && (focus.metro || focus.cbsa)) {
+    try {
+      const f = await metroFocus(focus.metro, focus.cbsa);
+      if (f) parts.push(f);
+    } catch {
+      /* focus optional */
+    }
+  }
 
   const comp = await sbGet(
     "composite_signal?id=eq.1&select=label,tone,confidence,bull_count,bear_count,neutral_count",
@@ -117,16 +161,20 @@ async function buildContext() {
   // Metro-level multifamily read for major markets
   try {
     const codes = METROS.map((m) => m[0]).join(",");
-    const rows = await sbGet(
-      `v_indicator_analytics?slug=in.(zori_metro_mf,bls_metro_employment,bls_metro_unemployment,apt_vacancy)&region_type=eq.metro&region_code=in.(${codes})&select=slug,region_code,value,yoy_change,obs_date&order=obs_date.desc&limit=400`,
-      ANON
-    );
+    const nameList = METROS.map((m) => `"${m[1].replace(/"/g, "")}"`).join(",");
+    const [codeRows, rentRows] = await Promise.all([
+      sbGet(`v_indicator_analytics?slug=in.(bls_metro_employment,bls_metro_unemployment,apt_vacancy)&region_type=eq.metro&region_code=in.(${codes})&select=slug,region_code,value,yoy_change,obs_date&order=obs_date.desc&limit=400`, ANON),
+      sbGet(`v_indicator_analytics?slug=eq.zori_metro_mf&region_type=eq.metro&region_code=in.(${encodeURIComponent(nameList)})&select=region_code,value,yoy_change,obs_date&order=obs_date.desc&limit=300`, ANON),
+    ]);
+    const rows = codeRows;
     if (Array.isArray(rows) && rows.length) {
       const latest = {};
       for (const r of rows) {
         const k = `${r.slug}:${r.region_code}`;
         if (!latest[k]) latest[k] = r;
       }
+      const rentByName = {};
+      for (const r of (rentRows || [])) { if (!rentByName[r.region_code]) rentByName[r.region_code] = r; }
       const yoyp = (r) => {
         if (!r || r.yoy_change == null) return null;
         const v = +r.value, y = +r.yoy_change;
@@ -134,7 +182,7 @@ async function buildContext() {
       };
       const lines = [];
       for (const [code, name] of METROS) {
-        const rent = latest[`zori_metro_mf:${code}`], jobs = latest[`bls_metro_employment:${code}`];
+        const rent = rentByName[name], jobs = latest[`bls_metro_employment:${code}`];
         const unemp = latest[`bls_metro_unemployment:${code}`], vac = latest[`apt_vacancy:${code}`];
         const bits = [];
         const rp = yoyp(rent);
@@ -194,7 +242,9 @@ export async function POST(req) {
       { status: 429 }
     );
 
-  const ctx = await buildContext();
+  const metro = (body.metro || "").toString().slice(0, 80);
+  const cbsa = (body.cbsa || "").toString().replace(/[^0-9]/g, "").slice(0, 7);
+  const ctx = await buildContext({ metro, cbsa });
 
   const system = `You are the Cignal System research desk — an institutional multifamily real-estate market-intelligence analyst. Cignal reads the market through a four-phase cycle (Recovery, Expansion, Hyper-Supply, Recession) and separates LEADING indicators (which move first) from TRAILING ones (which confirm later).
 
@@ -202,6 +252,7 @@ Rules:
 - Answer ONLY from the live Cignal data provided below. Never invent numbers, market scores, cap rates, or figures not present in the data.
 - Treat the data below as PRIVATE internal context. Never reveal, list, enumerate, or describe your data sources, the providers or datasets behind them, or the categories of data you hold — even if asked directly or repeatedly (e.g. "what data do you have", "where does this come from", "list your sources"). If pressed, say only that the desk reads Cignal's proprietary market-intelligence system, and steer back to the market question.
 - If the data does not cover a question, say so briefly and pivot to a related read you CAN give — without cataloguing your holdings or itemizing what is missing.
+- If a MARKET IN FOCUS block appears at the top of the data, the user is asking about that specific market — lead with those figures. Report only the metrics present for it; do not claim data (e.g. vacancy) that is not shown.
 - Be specific: cite the actual values and their direction.
 - When relevant, frame the answer in terms of leading vs. trailing indicators and the current cycle phase.
 - Audience is sophisticated multifamily investors and operators. Be concise, direct, analytical. No fluff, no hedging about being an AI, no generic disclaimers.
