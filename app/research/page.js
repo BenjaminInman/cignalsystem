@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { Sparkles, ArrowUp, Lock } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowUp, Lock } from "lucide-react";
 import { useVertical } from "@/components/VerticalProvider";
 import { isPageReady } from "@/lib/verticals";
 import ComingSoonInline from "@/components/ComingSoonInline";
+import CanaryMark from "@/components/CanaryMark";
 
 const SUGGESTIONS = [
   "Where are we in the multifamily cycle right now?",
@@ -52,24 +53,40 @@ function ResearchInner() {
     }
   };
 
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get("ask");
+    if (p) {
+      ask(p);
+      window.history.replaceState(null, "", "/research");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="pt-12 pb-12">
-      <p className="kicker mb-3 flex items-center gap-2"><Sparkles size={12} className="text-signal" /> Intelligence Desk</p>
-      <h1 className="headline text-4xl text-ink md:text-5xl">Research Assistant</h1>
-      <p className="mt-3 max-w-2xl text-muted">
-        Interrogate the market directly — ask a question and get a synthesized read drawn from Cignal&apos;s intelligence:
-        leading vs. trailing indicators, cycle phase, and market-level signals.
+      <p className="kicker mb-3 flex items-center gap-2"><CanaryMark size={13} className="text-signal" /> Intelligence Desk</p>
+      <div className="flex items-center gap-4">
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-signal">
+          <CanaryMark size={30} className="text-bg" title="Canary" />
+        </span>
+        <h1 className="headline text-4xl text-ink md:text-5xl">Canary</h1>
+      </div>
+      <p className="mt-4 max-w-2xl text-muted">
+        Canary is the original leading indicator &mdash; the signal that sounds before the trouble shows.
+        Ask it where the multifamily cycle is turning, how the leading data compares to the lagging, and how
+        the major markets are moving. It reads Cignal&apos;s live intelligence and tells you plainly when a
+        question is outside its view.
       </p>
 
       {/* Prominent ask */}
       <div className="mt-12 flex flex-col items-center text-center">
-        <h2 className="headline text-2xl text-ink md:text-3xl">Ask a Question</h2>
-        <p className="mt-2 max-w-xl text-muted">Pose a question about the cycle, the leading and lagging indicators, or the live signal feed.</p>
+        <h2 className="headline text-2xl text-ink md:text-3xl">Ask Canary</h2>
+        <p className="mt-2 max-w-xl text-muted">Pose a question about the cycle, the leading and lagging indicators, or how a major market is moving.</p>
 
         <div className="mt-6 w-full max-w-2xl">
           <div className="pulse-gold rounded-2xl border border-signal/40 bg-signal/[0.05] p-2">
             <div className="flex items-center gap-3 rounded-xl bg-bg2 px-4 py-3.5">
-              <Sparkles size={20} className="shrink-0 text-signal" strokeWidth={1.8} />
+              <CanaryMark size={20} className="shrink-0 text-signal" />
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -99,10 +116,10 @@ function ResearchInner() {
         <div className="mx-auto mt-14 max-w-3xl text-left">
           <div className="mb-4 flex items-center gap-3">
             <span className="h-px w-8 bg-signal/60" />
-            <h3 className="mono text-[12px] tracking-[0.2em] text-signal">HOW TO USE THE DESK</h3>
+            <h3 className="mono text-[12px] tracking-[0.2em] text-signal">HOW TO USE CANARY</h3>
           </div>
           <p className="text-sm leading-relaxed text-muted">
-            The desk is a grounded analyst, not a web search &mdash; it reads Cignal&apos;s live market
+            Canary is a grounded analyst, not a web search &mdash; it reads Cignal&apos;s live market
             intelligence and stays focused on the multifamily cycle. The more specific and on-cycle your
             question, the sharper the read; when something falls outside its view, it&apos;ll tell you
             plainly rather than guess.
@@ -144,7 +161,7 @@ function ResearchInner() {
             <div key={item.id} className="card p-5">
               <p className="font-medium text-ink">{item.q}</p>
               <div className="mt-3 border-t border-[var(--line)] pt-3">
-                <span className="mono text-[10px] tracking-[0.16em] text-signal">CIGNAL DESK</span>
+                <span className="mono text-[10px] tracking-[0.16em] text-signal">CANARY</span>
                 {item.pending ? (
                   <p className="mono mt-2 animate-pulse text-[12px] text-muted">Analyzing live signals…</p>
                 ) : item.error ? (
@@ -166,7 +183,7 @@ function ResearchInner() {
       )}
 
       <p className="mono mt-10 flex items-center justify-center gap-1.5 text-[11px] tracking-[0.06em] text-muted">
-        <Lock size={11} /> Cignal Pro — answers are grounded in your live indicators, signals, and migration data.
+        <Lock size={11} /> Cignal Pro — Canary is grounded in Cignal&apos;s live market intelligence.
       </p>
     </div>
   );
