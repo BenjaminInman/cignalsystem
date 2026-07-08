@@ -8,9 +8,9 @@ import ComingSoonInline from "@/components/ComingSoonInline";
 
 const SUGGESTIONS = [
   "Where are we in the multifamily cycle right now?",
-  "Which markets show the strongest leading indicators?",
-  "What's the risk from the debt maturity wall?",
-  "Is rent growth bottoming?",
+  "What are the leading indicators saying versus the lagging ones?",
+  "Which markets rank highest in the latest migration data?",
+  "What's the composite signal, and how much conviction is behind it?",
 ];
 
 export default function ResearchPage() {
@@ -64,7 +64,7 @@ function ResearchInner() {
       {/* Prominent ask */}
       <div className="mt-12 flex flex-col items-center text-center">
         <h2 className="headline text-2xl text-ink md:text-3xl">Ask a Question</h2>
-        <p className="mt-2 max-w-xl text-muted">Pose anything about the cycle, the signals, or a specific market.</p>
+        <p className="mt-2 max-w-xl text-muted">Pose a question about the cycle, the leading and lagging indicators, or the live signal feed.</p>
 
         <div className="mt-6 w-full max-w-2xl">
           <div className="pulse-gold rounded-2xl border border-signal/40 bg-signal/[0.05] p-2">
@@ -94,6 +94,47 @@ function ResearchInner() {
           </div>
         </div>
       </div>
+
+      {thread.length === 0 && (
+        <div className="mx-auto mt-14 max-w-3xl text-left">
+          <div className="mb-4 flex items-center gap-3">
+            <span className="h-px w-8 bg-signal/60" />
+            <h3 className="mono text-[12px] tracking-[0.2em] text-signal">HOW TO USE THE DESK</h3>
+          </div>
+          <p className="text-sm leading-relaxed text-muted">
+            The desk is a grounded analyst, not a web search. It answers only from Cignal&apos;s live data
+            &mdash; the composite signal, your leading and trailing indicators, the active signal feed, and
+            the top migration markets &mdash; and it will tell you plainly when a question falls outside that
+            data rather than guess. The more specific and on-cycle your question, the sharper the read.
+          </p>
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <div className="card p-5">
+              <p className="mono mb-3 text-[10px] tracking-[0.16em] text-up">WORKS WELL</p>
+              <ul className="list-disc space-y-2 pl-5 text-[13px] leading-relaxed text-muted marker:text-up/60">
+                <li>Where the cycle sits, and which phase the data points to</li>
+                <li>What the leading indicators signal &mdash; and whether the lagging ones confirm</li>
+                <li>A national indicator&apos;s latest value and which way it&apos;s moving</li>
+                <li>The composite signal and how much conviction is behind it</li>
+                <li>The strongest markets in the latest migration rankings</li>
+              </ul>
+            </div>
+            <div className="card p-5">
+              <p className="mono mb-3 text-[10px] tracking-[0.16em] text-muted">OUTSIDE ITS SCOPE</p>
+              <ul className="list-disc space-y-2 pl-5 text-[13px] leading-relaxed text-muted marker:text-muted/50">
+                <li>Cap rates, rents, or pricing for a specific property or deal</li>
+                <li>Deep metro-by-metro data beyond the national read and migration lists</li>
+                <li>General web search, headlines, or historical events</li>
+                <li>Exact forecasts &mdash; it reads today&apos;s signals, it won&apos;t invent future numbers</li>
+              </ul>
+            </div>
+          </div>
+
+          <p className="mono mt-5 text-[11px] leading-relaxed text-muted">
+            Tip: be specific and frame it around the cycle or a named indicator. Tap an example above to see the shape of a question that lands.
+          </p>
+        </div>
+      )}
 
       {/* thread */}
       {thread.length > 0 && (
