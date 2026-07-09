@@ -34,7 +34,30 @@ export async function POST(req) {
   const r = await sb(`newsletter_signups?status=eq.active&frequency=eq.${frequency}&select=email,unsubscribe_token`);
   const subs = r.ok ? await r.json() : [];
   if (!subs.length) return Response.json({ ok: true, frequency, recipients: 0, articles: articles.length, note: "no active subscribers" });
-  if (dryRun) return Response.json({ ok: true, dryRun: true, frequency, recipients: subs.length, articles: articles.length });
+  if (dryRun) {
+    const from = process.env.RESEND_FROM || "";
+    const checks = {
+      RESEND_API_KEY: isEmailConfigured() ? "set" : "MISSING",
+      RESEND_FROM: from
+        ? from
+        : "NOT SET — will fall back to onboarding@resend.dev, which can only email your own Resend account address",
+      NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || "NOT SET — links/unsubscribe will use the default production URL",
+      CRON_SECRET: "set (you authenticated)",
+    };
+    const readyToSend = isEmailConfigured() && Boolean(from);
+    return Response.json({
+      ok: true,
+      dryRun: true,
+      readyToSend,
+      frequency,
+      recipients: subs.length,
+      articles: articles.length,
+      checks,
+      note: readyToSend
+        ? "Config looks good. Re-run with dryRun=false to send."
+        : "Fix the items marked MISSING / NOT SET before sending to real subscribers.",
+    });
+  }
 
   const subject = frequency === "daily"
     ? `Daily Brief — ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
