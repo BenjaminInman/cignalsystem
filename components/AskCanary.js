@@ -18,7 +18,7 @@ export default function AskCanary({ question, label = "Ask Canary", variant = "p
       <Link
         href={href}
         aria-label={`Ask Canary: ${question || label}`}
-        title={`Ask Canary — ${question || label}`}
+        title={`Ask Canary — Cignal's intelligence desk: ${question || label}`}
         className={`inline-flex shrink-0 align-middle text-signal/70 transition-colors hover:text-signal ${className}`}
       >
         <CanaryMark size={15} />
@@ -31,6 +31,7 @@ export default function AskCanary({ question, label = "Ask Canary", variant = "p
       <Link
         href={href}
         aria-label={`Ask Canary: ${question || label}`}
+        title={`Ask Canary — Cignal's intelligence desk: ${question || label}`}
         className={`group inline-flex items-center gap-1.5 text-muted transition-colors hover:text-ink ${className}`}
       >
         <CanaryMark size={14} className="shrink-0 text-signal" />
@@ -45,6 +46,7 @@ export default function AskCanary({ question, label = "Ask Canary", variant = "p
     <Link
       href={href}
       aria-label={`Ask Canary: ${question || label}`}
+      title={`Ask Canary — Cignal's intelligence desk: ${question || label}`}
       className={`inline-flex items-center gap-2 rounded-full border border-signal/45 bg-signal/[0.06] px-3 py-1.5 transition-colors hover:bg-signal/[0.12] ${className}`}
     >
       <CanaryMark size={16} className="shrink-0 text-signal" />

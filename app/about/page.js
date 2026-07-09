@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Activity, Radio, LineChart, BarChart3, BookOpen, Briefcase, ArrowRight } from "lucide-react";
 import CommunityCTA from "@/components/CommunityCTA";
 import CignalScoreCTA from "@/components/CignalScoreCTA";
+import CanaryMark from "@/components/CanaryMark";
 import { getActiveContent } from "@/lib/active-vertical";
 
 const SUITE = [
@@ -27,7 +28,7 @@ const SUITE = [
   },
   {
     icon: BookOpen,
-    name: "Research",
+    name: "Canary",
     desc: "An intelligence desk you can just ask. Pose any question about the cycle, a signal, or a specific market and get a synthesized, source-grounded answer in seconds — analyst-grade work without the wait.",
   },
   {
@@ -215,6 +216,50 @@ export default function AboutPage() {
                   <p className="mt-1 text-sm leading-relaxed text-muted">{desc}</p>
                 </div>
               ))}
+            </div>
+          </section>
+
+          {/* Canary */}
+          <section className="relative overflow-hidden rounded-2xl border border-[var(--line)] bg-gradient-to-b from-bg2/70 via-bg2/30 to-bg/10 p-6 md:p-8">
+            <div className="flex flex-col gap-6 md:flex-row md:items-start md:gap-8">
+              <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-signal">
+                <CanaryMark size={42} className="text-bg" title="Canary" />
+              </span>
+              <div>
+                <p className="kicker mb-1">Meet Canary</p>
+                <h2 className="headline text-2xl text-ink">The original leading indicator</h2>
+                <p className="mt-4 leading-relaxed text-muted">
+                  Miners carried a canary underground because the bird registered danger long before any person
+                  could. It was the signal that arrived before the evidence &mdash; which is exactly what a leading
+                  indicator is, and exactly how Cignal reads a market.
+                </p>
+                <p className="mt-4 leading-relaxed text-muted">
+                  Canary is the intelligence desk at the center of the system. Ask it where the cycle is turning,
+                  whether the leading data agrees with the lagging, or how a specific market is moving, and it
+                  answers from Cignal&apos;s live market intelligence &mdash; in seconds, grounded in the data, and
+                  candid when a question falls outside what it can see.
+                </p>
+
+                <div className="mt-6 rounded-xl border border-[var(--line)] bg-bg/40 p-5">
+                  <p className="mono text-[11px] tracking-[0.16em] text-signal">WHEN YOU SEE THE BIRD</p>
+                  <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm leading-relaxed text-muted">
+                    <span>Wherever this mark appears</span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-signal/45 bg-signal/[0.06] px-2.5 py-1">
+                      <CanaryMark size={13} className="text-signal" />
+                      <span className="mono text-[10px] tracking-[0.12em] text-signal">ASK CANARY</span>
+                    </span>
+                    <span>
+                      &mdash; on an indicator, a market, or the cycle wheel &mdash; you can ask about that exact thing
+                      in one click. Canary opens with the question already posed and the live read in hand.
+                    </span>
+                  </p>
+                </div>
+
+                <Link href="/research" className="mono group mt-6 inline-flex items-center gap-2 text-[13px] tracking-[0.08em] text-signal hover:text-ink">
+                  Ask Canary
+                  <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
+                </Link>
+              </div>
             </div>
           </section>
 
