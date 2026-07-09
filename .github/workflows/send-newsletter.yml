@@ -1,0 +1,59 @@
+name: send-newsletter
+
+# Sends the industry brief. Runs AFTER ingest-news (11:00 UTC) so the digest
+# always contains that morning's stories.
+#   daily  -> every day at 12:30 UTC (~7-8am ET)
+#   weekly -> Mondays at 12:30 UTC
+on:
+  schedule:
+    - cron: "30 12 * * *"    # daily brief
+    - cron: "30 12 * * 1"    # weekly summary (Mondays)
+  workflow_dispatch:
+    inputs:
+      frequency:
+        description: "Which digest to send"
+        required: true
+        default: "daily"
+        type: choice
+        options: [daily, weekly]
+      dryRun:
+        description: "Count recipients without sending"
+        required: false
+        default: "false"
+
+concurrency:
+  group: send-newsletter-${{ github.event.inputs.frequency || github.event.schedule }}
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Determine frequency
+        id: freq
+        run: |
+          if [ -n "${{ github.event.inputs.frequency }}" ]; then
+            echo "value=${{ github.event.inputs.frequency }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "30 12 * * 1" ]; then
+            echo "value=weekly" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=daily" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Send digest
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          FREQ: ${{ steps.freq.outputs.value }}
+          DRY: ${{ github.event.inputs.dryRun || 'false' }}
+        run: |
+          set -euo pipefail
+          BODY="{\"frequency\":\"${FREQ}\",\"dryRun\":${DRY}}"
+          echo "Sending ${FREQ} digest (dryRun=${DRY})"
+          CODE=$(curl -s -o /tmp/out.json -w "%{http_code}" -X POST "${SITE_URL}/api/newsletter/send" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "content-type: application/json" \
+            --data "${BODY}")
+          cat /tmp/out.json; echo
+          if [ "$CODE" != "200" ]; then echo "::error::send failed with HTTP $CODE"; exit 1; fi

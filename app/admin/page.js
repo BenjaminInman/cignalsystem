@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AdminUsers from "@/components/AdminUsers";
 import AdminDataCoverage from "@/components/AdminDataCoverage";
+import AdminNewsletter from "@/components/AdminNewsletter";
 
 export const metadata = { title: "Admin · Cignal System" };
 export const dynamic = "force-dynamic";
@@ -140,9 +141,18 @@ export default async function AdminPage() {
   const statsP = supabase.rpc("platform_stats");
   const indsP = supabase.from("indicators").select("source");
   const migP = supabase.from("migration_rankings").select("source");
+  const subsP = supabase
+    .from("newsletter_signups")
+    .select("email,name,frequency,status,created_at,last_sent_at")
+    .order("created_at", { ascending: false });
+  const sendsP = supabase
+    .from("newsletter_sends")
+    .select("frequency,sent_at,recipients,ok,failed")
+    .order("sent_at", { ascending: false })
+    .limit(5);
 
-  const [{ data: users }, { data: stats }, { data: inds }, { data: mig }] =
-    await Promise.all([usersP, statsP, indsP, migP]);
+  const [{ data: users }, { data: stats }, { data: inds }, { data: mig }, { data: subs }, { data: sends }] =
+    await Promise.all([usersP, statsP, indsP, migP, subsP, sendsP]);
 
   const tally = (rows, key) =>
     (rows || []).reduce((acc, r) => {
@@ -173,6 +183,7 @@ export default async function AdminPage() {
     <>
       <AdminDataCoverage coverage={coverage} />
       <AdminUsers initialUsers={users || []} />
+      <AdminNewsletter subscribers={subs || []} sends={sends || []} />
     </>
   );
 }
