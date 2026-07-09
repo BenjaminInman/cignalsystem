@@ -24,6 +24,12 @@ import requests, psycopg2
 UA = "CignalSystem/1.0 (ben@benjamininman.com)"
 SM_CATALOG = "https://download.bls.gov/pub/time.series/sm/sm.series"
 LA_AREA = "https://download.bls.gov/pub/time.series/la/la.area"
+# County unemployment comes from the LAUS flat file rather than the API: ~3,100
+# county series would burn the API's per-request series cap, while this is one
+# download and needs no key. series_id = LAUCN{fips5}0000000003 (measure 03 =
+# unemployment rate, NSA). Loaded from LA_COUNTY_START so YoY has a full year.
+LA_COUNTY = "https://download.bls.gov/pub/time.series/la/la.data.64.County"
+LA_COUNTY_START = 2021
 API = "https://api.bls.gov/publicAPI/v2/timeseries/data/"
 RECENT_YEARS = 2
 
@@ -70,6 +76,68 @@ def laus_series():
         ac = f[1]                          # MT{state2}{cbsa5}000000
         out["LAU" + ac + "03"] = ac[4:9]
     return out
+
+
+def load_county_unemployment(cur, release):
+    """Load county unemployment (LAUS measure 03) from the flat file.
+
+    Same first-print/revision contract as the rest of the pipeline: revision 0 is
+    never overwritten; a changed value lands as the next revision.
+    """
+    cur.execute("SELECT id FROM indicators WHERE slug='county_unemployment'")
+    row = cur.fetchone()
+    if not row:
+        print("  county_unemployment not registered; skipping")
+        return
+    iid = row[0]
+    cur.execute("SELECT fips, id FROM regions WHERE region_type='county' AND fips IS NOT NULL")
+    rid_by_fips = {f: i for f, i in cur.fetchall()}
+
+    try:
+        r = requests.get(LA_COUNTY, headers={"User-Agent": UA}, timeout=300)
+        r.raise_for_status()
+    except Exception as e:
+        print(f"  county unemployment fetch failed ({e}); skipping")
+        return
+
+    ins = rev = skip = 0
+    for line in r.text.splitlines()[1:]:
+        p = line.split("\t")
+        if len(p) < 4:
+            continue
+        sid = p[0].strip()
+        if not (sid.startswith("LAUCN") and sid.endswith("03")):
+            continue
+        yr = p[1].strip()
+        if not yr.isdigit() or int(yr) < LA_COUNTY_START:
+            continue
+        per = p[2].strip()
+        if not per.startswith("M") or per == "M13":
+            continue
+        raw = p[3].strip()
+        if not raw or raw == "-":
+            continue
+        rid = rid_by_fips.get(sid[5:10])
+        if not rid:
+            continue
+        try:
+            val = float(raw)
+        except ValueError:
+            continue
+        od = month_end(int(yr), int(per[1:]))
+        cur.execute("SELECT value, revision FROM observations WHERE indicator_id=%s "
+                    "AND region_id=%s AND obs_date=%s ORDER BY revision DESC LIMIT 1",
+                    (iid, rid, od))
+        prev = cur.fetchone()
+        if prev is None:
+            cur.execute("INSERT INTO observations(indicator_id,region_id,obs_date,value,revision,release_date)"
+                        " VALUES(%s,%s,%s,%s,0,%s)", (iid, rid, od, val, release)); ins += 1
+        elif float(prev[0]) != val:
+            cur.execute("INSERT INTO observations(indicator_id,region_id,obs_date,value,revision,release_date)"
+                        " VALUES(%s,%s,%s,%s,%s,%s)", (iid, rid, od, val, prev[1] + 1, release)); rev += 1
+        else:
+            skip += 1
+    print(f"LAUS county — inserted {ins}, revised {rev}, unchanged {skip}")
 
 
 def main():
@@ -138,6 +206,7 @@ def main():
                         else:
                             skip += 1
             print(f"BLS: inserted {ins}, unchanged {skip}, series {len(ids)}")
+            load_county_unemployment(cur, release)
             cur.execute("REFRESH MATERIALIZED VIEW mv_indicator_analytics;")
         conn.commit()
     finally:

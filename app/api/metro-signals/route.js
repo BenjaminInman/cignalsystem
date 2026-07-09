@@ -91,6 +91,27 @@ async function irsMigration(code) {
 // interpretable on its own. We attach the cross-sectional percentile among all
 // metros for the same month (v_zordi_metro_rank), which is a pure descriptive rank:
 // "13 = 13th percentile of 840 metros" means something; "13" alone does not.
+// County unemployment (BLS LAUS, NSA). Same county grain as GDP and wages, so a
+// ZIP lookup resolves jobs, pay and labor slack together. Metro-only lookups span
+// several counties and return null.
+async function countyUnempSignal(countyLabel) {
+  if (!countyLabel) return null;
+  const enc = encodeURIComponent(countyLabel);
+  const rows = await sb(
+    `v_indicator_analytics?slug=eq.county_unemployment&region_code=eq.${enc}` +
+      `&select=obs_date,value,yoy_change&order=obs_date.desc&limit=24`
+  );
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  const series = rows.slice().reverse();
+  return {
+    value: Number(rows[0].value),
+    yoyAbs: rows[0].yoy_change != null ? Number(rows[0].yoy_change) : null,
+    asOf: rows[0].obs_date,
+    trend: series.map((r) => Math.round(Number(r.value) * 10) / 10),
+    periods: series.map((r) => periodLabel(r.obs_date, false)),
+  };
+}
+
 async function zordiSignal(zillowCode) {
   if (!zillowCode) return null;
   const enc = encodeURIComponent(zillowCode);
@@ -163,7 +184,7 @@ export async function GET(req) {
     const zillowCode = xw?.[0]?.zillow_code || null;
     const migration = zillowCode ? await irsMigration(zillowCode) : null;
 
-    const [employment, unemployment, rentsRPP, allRPP, cpiRent, vacancy, daysOnMarket, countyGdp] =
+    const [employment, unemployment, rentsRPP, allRPP, cpiRent, vacancy, daysOnMarket, countyGdp, metroWages, countyUnemp] =
       await Promise.all([
         metroSignal("bls_metro_employment", cbsa),
         metroSignal("bls_metro_unemployment", cbsa),
@@ -173,11 +194,13 @@ export async function GET(req) {
         metroSignal("apt_vacancy", cbsa),
         metroSignal("apt_time_on_market", cbsa),
         countyGdpSignal(countyLabel),
+        metroSignal("metro_wages", cbsa),
+        countyUnempSignal(countyLabel),
       ]);
 
     const zordi = await zordiSignal(zillowCode);
 
-    const signals = { employment, unemployment, rentsRPP, allRPP, cpiRent, vacancy, daysOnMarket, countyGdp, zordi };
+    const signals = { employment, unemployment, rentsRPP, allRPP, cpiRent, vacancy, daysOnMarket, countyGdp, metroWages, countyUnemp, zordi };
     const any = Object.values(signals).some(Boolean);
     return Response.json({ found: any || !!migration, cbsa, metroName, countyName: countyLabel, signals, migration });
   } catch {
