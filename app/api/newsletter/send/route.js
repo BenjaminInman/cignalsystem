@@ -22,18 +22,24 @@ const sb = async (path, init = {}) =>
 export async function POST(req) {
   if (!CRON_SECRET || req.headers.get("authorization") !== `Bearer ${CRON_SECRET}`)
     return Response.json({ error: "unauthorized" }, { status: 401 });
-  if (!isEmailConfigured()) return Response.json({ error: "RESEND_API_KEY not set" }, { status: 500 });
-
   let b = {};
   try { b = await req.json(); } catch { /* ignore */ }
   const frequency = b.frequency === "daily" ? "daily" : "weekly";
   const dryRun = Boolean(b.dryRun);
 
+  // A real send needs the key; a dry run should still report what's missing.
+  if (!dryRun && !isEmailConfigured())
+    return Response.json(
+      { error: "RESEND_API_KEY is not set in this environment. Add it in Vercel → Settings → Environment Variables (Production), then redeploy. Run again with dryRun:true to verify." },
+      { status: 500 }
+    );
+
   const articles = await fetchArticles(frequency === "daily" ? 1 : 7, frequency === "daily" ? 6 : 12);
 
   const r = await sb(`newsletter_signups?status=eq.active&frequency=eq.${frequency}&select=email,unsubscribe_token`);
   const subs = r.ok ? await r.json() : [];
-  if (!subs.length) return Response.json({ ok: true, frequency, recipients: 0, articles: articles.length, note: "no active subscribers" });
+  if (!dryRun && !subs.length)
+    return Response.json({ ok: true, frequency, recipients: 0, articles: articles.length, note: "no active subscribers" });
   if (dryRun) {
     const from = process.env.RESEND_FROM || "";
     const checks = {
@@ -45,6 +51,7 @@ export async function POST(req) {
       CRON_SECRET: "set (you authenticated)",
     };
     const readyToSend = isEmailConfigured() && Boolean(from);
+    if (!subs.length) checks.SUBSCRIBERS = `0 active ${frequency} subscribers — subscribe at /news to test a real send`;
     return Response.json({
       ok: true,
       dryRun: true,
