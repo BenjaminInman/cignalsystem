@@ -86,6 +86,38 @@ async function irsMigration(code) {
   };
 }
 
+// Metro ZORDI (Zillow rental-market tightness), keyed by the Zillow "City, ST" code.
+// The index has no natural zero or fixed scale, so an absolute level is not
+// interpretable on its own. We attach the cross-sectional percentile among all
+// metros for the same month (v_zordi_metro_rank), which is a pure descriptive rank:
+// "13 = 13th percentile of 840 metros" means something; "13" alone does not.
+async function zordiSignal(zillowCode) {
+  if (!zillowCode) return null;
+  const enc = encodeURIComponent(zillowCode);
+  const rows = await sb(
+    `v_indicator_analytics?slug=eq.zordi_metro&region_code=eq.${enc}` +
+      `&select=obs_date,value,yoy_change&order=obs_date.desc&limit=24`
+  );
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  const v = Number(rows[0].value);
+  const yoyAbs = rows[0].yoy_change != null ? Number(rows[0].yoy_change) : null;
+  const rank = await sb(
+    `v_zordi_metro_rank?region_code=eq.${enc}&select=pct_rank,n_metros&limit=1`
+  );
+  const pctRank = rank?.[0]?.pct_rank ?? null;
+  const nMetros = rank?.[0]?.n_metros ?? null;
+  const series = rows.slice().reverse();
+  return {
+    value: v,
+    yoyAbs,
+    pctRank,
+    nMetros,
+    asOf: rows[0].obs_date,
+    trend: series.map((r) => Math.round(Number(r.value) * 10) / 10),
+    periods: series.map((r) => periodLabel(r.obs_date, false)),
+  };
+}
+
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const zip = (searchParams.get("zip") || "").trim();
@@ -143,7 +175,9 @@ export async function GET(req) {
         countyGdpSignal(countyLabel),
       ]);
 
-    const signals = { employment, unemployment, rentsRPP, allRPP, cpiRent, vacancy, daysOnMarket, countyGdp };
+    const zordi = await zordiSignal(zillowCode);
+
+    const signals = { employment, unemployment, rentsRPP, allRPP, cpiRent, vacancy, daysOnMarket, countyGdp, zordi };
     const any = Object.values(signals).some(Boolean);
     return Response.json({ found: any || !!migration, cbsa, metroName, countyName: countyLabel, signals, migration });
   } catch {

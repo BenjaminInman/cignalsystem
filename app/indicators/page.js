@@ -10,7 +10,7 @@ import IndicatorRow from "@/components/IndicatorRow";
 import AskCanary from "@/components/AskCanary";
 import { layerOf, LAYER_META, SUBMARKET_FLOOR } from "@/lib/onion";
 
-const TYPES = ["All Types", "Leading", "Trailing"];
+const TYPES = ["All Types", "Leading", "Coincident", "Trailing"];
 const CATS = ["All", "Supply", "Demand", "Capital", "Macro", "Performance"];
 
 export default function IndicatorsPage() {

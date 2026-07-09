@@ -165,6 +165,7 @@ export default function IndicatorRow({ row, ask }) {
         <div>
           <p className="headline text-2xl text-ink">{r.value}</p>
           <p className="mono text-[11px] text-muted">{r.unit}</p>
+          {r.sub && <p className="mono mt-0.5 text-[10px] text-muted/70">{r.sub}</p>}
         </div>
         <div className="hidden md:block">
           <p className="mono flex items-center gap-1.5 text-sm" style={{ color: toneColor(r.tone) }}>

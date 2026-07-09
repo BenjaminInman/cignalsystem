@@ -18,7 +18,7 @@ const fmtK = (n) =>
 function mergeLiveCard(card, live) {
   const map = {
     "Multifamily Permit Activity": "Multifamily Building Permits",
-    "Lease-Up Absorption Rate": "Absorption Rate (3-Mo)",
+    "Absorption Rate (3-Mo)": "Absorption Rate (3-Mo)",
     "Net Renter Migration Index": "Net Renter Migration Index",
     "National Vacancy Rate": "National Vacancy Rate",
     "Market Rent Growth": "Market Rent Growth (All Rentals)",
@@ -28,7 +28,7 @@ function mergeLiveCard(card, live) {
   const key = map[card.name];
   const L = key && live[key];
   if (!L) return card;
-  const delta = (L.change || "").replace(/\s*(MoM|QoQ|WoW|YoY|vs prior).*$/, "").trim() || card.delta;
+  const delta = (L.change || "").replace(/\s*(MoM|QoQ|WoW|YoY|vs prior|vs normal).*$/, "").trim() || card.delta;
   const dir = (L.change || "").trim().startsWith("-") ? "down" : "up";
   return {
     ...card,
