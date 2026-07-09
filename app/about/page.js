@@ -221,7 +221,17 @@ export default function AboutPage() {
 
           {/* Canary */}
           <section className="relative overflow-hidden rounded-2xl border border-[var(--line)] bg-gradient-to-b from-bg2/70 via-bg2/30 to-bg/10 p-6 md:p-8">
-            <div className="flex flex-col gap-6 md:flex-row md:items-start md:gap-8">
+            <svg className="pointer-events-none absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 1200 360" aria-hidden="true">
+              <defs>
+                <radialGradient id="canaryGlow" cx="85%" cy="6%" r="80%">
+                  <stop offset="0%" stopColor="#F5B544" stopOpacity="0.10" />
+                  <stop offset="100%" stopColor="#F5B544" stopOpacity="0" />
+                </radialGradient>
+              </defs>
+              <rect width="1200" height="360" fill="url(#canaryGlow)" />
+              <path d="M0,250 C150,200 250,300 400,250 C550,200 650,300 800,250 C950,200 1050,300 1200,250" fill="none" stroke="#F5B544" strokeOpacity="0.08" strokeWidth="2" />
+            </svg>
+            <div className="relative flex flex-col gap-6 md:flex-row md:items-start md:gap-8">
               <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-signal">
                 <CanaryMark size={42} className="text-bg" title="Canary" />
               </span>
@@ -265,16 +275,6 @@ export default function AboutPage() {
 
           {/* Founder */}
           <section className="relative overflow-hidden rounded-2xl border border-[var(--line)] bg-gradient-to-b from-bg2/70 via-bg2/30 to-bg/10 p-6 md:p-8">
-            <svg className="pointer-events-none absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 1200 360" aria-hidden="true">
-              <defs>
-                <radialGradient id="founderGlow" cx="85%" cy="6%" r="80%">
-                  <stop offset="0%" stopColor="#F5B544" stopOpacity="0.10" />
-                  <stop offset="100%" stopColor="#F5B544" stopOpacity="0" />
-                </radialGradient>
-              </defs>
-              <rect width="1200" height="360" fill="url(#founderGlow)" />
-              <path d="M0,250 C150,200 250,300 400,250 C550,200 650,300 800,250 C950,200 1050,300 1200,250" fill="none" stroke="#F5B544" strokeOpacity="0.08" strokeWidth="2" />
-            </svg>
             <div className="relative max-w-2xl">
               <p className="kicker mb-4">The founder</p>
               <h2 className="headline text-2xl text-ink">Benjamin Inman</h2>
