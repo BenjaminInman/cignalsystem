@@ -30,21 +30,34 @@ const cutoff = (years) => {
 
 // Raw ascending history. Pull an extra year so YoY/MoM transforms are defined
 // from the very start of the requested window.
+//
+// PostgREST caps every response at 1000 rows regardless of `limit`, so a long
+// window on a daily series (10y of treasury_10y is ~2,500 rows) silently returned
+// only the OLDEST 1000 and the chart just stopped mid-window. Page through with
+// offset until a short page comes back.
+const PAGE = 1000;
+const MAX_PAGES = 6;
 async function fetchRaw(slug, years) {
   if (!SUPA || !ANON) return [];
-  const url =
+  const base =
     `${SUPA}/rest/v1/v_indicator_analytics` +
     `?slug=eq.${encodeURIComponent(slug)}&region_type=eq.national` +
     `&obs_date=gte.${cutoff(years + 1)}&select=obs_date,value` +
-    `&order=obs_date.asc&limit=3000`;
+    `&order=obs_date.asc`;
+  const all = [];
   try {
-    const r = await fetch(url, {
-      headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
-      next: { revalidate: 3600 },
-    });
-    if (!r.ok) return [];
-    const rows = await r.json();
-    return rows
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const r = await fetch(`${base}&limit=${PAGE}&offset=${page * PAGE}`, {
+        headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
+        next: { revalidate: 3600 },
+      });
+      if (!r.ok) break;
+      const rows = await r.json();
+      if (!Array.isArray(rows) || rows.length === 0) break;
+      all.push(...rows);
+      if (rows.length < PAGE) break;
+    }
+    return all
       .map((o) => ({ d: o.obs_date, v: parseFloat(o.value) }))
       .filter((o) => Number.isFinite(o.v));
   } catch {
