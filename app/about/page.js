@@ -3,6 +3,7 @@ import { Activity, Radio, LineChart, BarChart3, BookOpen, Briefcase, ArrowRight 
 import CommunityCTA from "@/components/CommunityCTA";
 import CignalScoreCTA from "@/components/CignalScoreCTA";
 import CanaryMark from "@/components/CanaryMark";
+import AskCanary from "@/components/AskCanary";
 import { getActiveContent } from "@/lib/active-vertical";
 
 const SUITE = [
@@ -254,21 +255,13 @@ export default function AboutPage() {
                   <p className="mono text-[11px] tracking-[0.16em] text-signal">WHEN YOU SEE THE BIRD</p>
                   <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm leading-relaxed text-muted">
                     <span>Wherever this mark appears</span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-signal/45 bg-signal/[0.06] px-2.5 py-1">
-                      <CanaryMark size={13} className="text-signal" />
-                      <span className="mono text-[10px] tracking-[0.12em] text-signal">ASK CANARY</span>
-                    </span>
+                    <AskCanary variant="pill" question="Where are we in the market cycle right now?" />
                     <span>
                       &mdash; on an indicator, a market, or the cycle wheel &mdash; you can ask about that exact thing
                       in one click. Canary opens with the question already posed and the live read in hand.
                     </span>
                   </p>
                 </div>
-
-                <Link href="/research" className="mono group mt-6 inline-flex items-center gap-2 text-[13px] tracking-[0.08em] text-signal hover:text-ink">
-                  Ask Canary
-                  <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
-                </Link>
               </div>
             </div>
           </section>
