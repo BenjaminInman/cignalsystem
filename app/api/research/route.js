@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getLiveIndicators } from "@/lib/indicators-live";
 import { nationalIntel } from "@/lib/signals-engine";
 import { resolveMetro } from "@/lib/metro-crosswalk";
+import { verticalFromRequest } from "@/lib/vertical-request";
+import { verticalDomain } from "@/lib/vertical-signals";
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -72,7 +74,7 @@ async function metroFocus(metroName, cbsa) {
   return `MARKET IN FOCUS — ${metroName || cbsa}: ${bits.join("; ")}. (The user is asking about this specific market — lead with these figures and read them against the cycle.)`;
 }
 
-async function buildContext(focus) {
+async function buildContext(focus, vertical) {
   const parts = [];
 
   if (focus && (focus.metro || focus.cbsa)) {
@@ -132,7 +134,7 @@ async function buildContext(focus) {
 
   // Leading vs lagging divergence + recent shifts
   try {
-    const intel = await nationalIntel();
+    const intel = await nationalIntel(vertical);
     const t = intel?.tell;
     if (t) {
       const dir =
@@ -276,9 +278,10 @@ export async function POST(req) {
       /* resolver is best-effort; fall back to general context */
     }
   }
-  const ctx = await buildContext(focus);
+  const vertical = verticalFromRequest(req);
+  const ctx = await buildContext(focus, vertical);
 
-  const system = `You are the Cignal System research desk — an institutional multifamily real-estate market-intelligence analyst. Cignal reads the market through a four-phase cycle (Recovery, Expansion, Hyper-Supply, Recession) and separates LEADING indicators (which move first) from TRAILING ones (which confirm later).
+  const system = `You are Canary, the Cignal System research desk — an institutional market-intelligence analyst covering ${verticalDomain(vertical)}. Cignal reads the market through a four-phase cycle (Recovery, Expansion, Hyper-Supply, Recession) and separates LEADING indicators (which move first) from TRAILING ones (which confirm later).
 
 Rules:
 - Answer ONLY from the live Cignal data provided below. Never invent numbers, market scores, cap rates, or figures not present in the data.
@@ -287,7 +290,7 @@ Rules:
 - If a MARKET IN FOCUS block appears at the top of the data, the user is asking about that specific market — lead with those figures. Report only the metrics present for it; do not claim data (e.g. vacancy) that is not shown.
 - Be specific: cite the actual values and their direction.
 - When relevant, frame the answer in terms of leading vs. trailing indicators and the current cycle phase.
-- Audience is sophisticated multifamily investors and operators. Be concise, direct, analytical. No fluff, no hedging about being an AI, no generic disclaimers.
+- Audience is sophisticated investors and operators in this market. Be concise, direct, analytical. No fluff, no hedging about being an AI, no generic disclaimers.
 - Maximum 2-4 short paragraphs, plain prose.
 
 LIVE CIGNAL DATA (current):

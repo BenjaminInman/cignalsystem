@@ -1,30 +1,13 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+import { wheelConfig } from "@/lib/vertical-signals";
+import { verticalFromRequest } from "@/lib/vertical-request";
+
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-// Curated hero set: 12 national indicators across the three timing layers.
-// type drives the displayed metric, the green/amber/red reading, AND the
-// "where it sits" range gauge:
-//   growth    -> YoY% of a level; up is good
-//   inflation -> YoY% price change; low/at-target is good, hot is bad
-//   rate      -> a level rate; rising is bad (rates, vacancy, unemployment)
-//   gdp       -> already an annualized growth rate; read off the level
-const CONFIG = [
-  { slug: "permits_5plus", label: "Permits", role: "leading", type: "growth" },
-  { slug: "treasury_10y", label: "Rates", role: "leading", type: "rate" },
-  { slug: "employment", label: "Jobs", role: "leading", type: "growth" },
-  { slug: "ppi", label: "PPI", role: "leading", type: "inflation" },
-  { slug: "gdp", label: "GDP", role: "coincident", type: "gdp" },
-  { slug: "real_pce", label: "Real PCE", role: "coincident", type: "growth" },
-  { slug: "rental_vacancy", label: "Vacancy", role: "coincident", type: "rate" },
-  { slug: "zori_national_mf", label: "Rent", role: "coincident", type: "growth" },
-  { slug: "unemployment", label: "Unemp.", role: "trailing", type: "rate" },
-  { slug: "wage_growth", label: "Wages", role: "trailing", type: "growth" },
-  { slug: "cpi_headline", label: "CPI", role: "trailing", type: "inflation" },
-  { slug: "pce_inflation", label: "Inflation", role: "trailing", type: "inflation" },
-];
+// The 12-indicator hero set is per-vertical; see lib/vertical-signals.js
 
 const cutoff = (() => {
   const d = new Date();
@@ -129,8 +112,9 @@ function compute(cfg, rows) {
   };
 }
 
-export async function GET() {
+export async function GET(req) {
   try {
+    const CONFIG = wheelConfig(verticalFromRequest(req));
     const hist = await Promise.all(CONFIG.map((c) => history(c.slug)));
     const indicators = CONFIG.map((c, i) => compute(c, hist[i])).filter(Boolean);
     const balance = { up: 0, down: 0, turn: 0, total: indicators.length };
