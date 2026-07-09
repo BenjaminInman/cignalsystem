@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Mail, Download } from "lucide-react";
+import { Mail, Download, Eye } from "lucide-react";
 
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—");
 
@@ -51,9 +51,17 @@ export default function AdminNewsletter({ subscribers = [], sends = [] }) {
               : "No sends recorded yet."}
           </p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+        <a href="/api/newsletter/preview?frequency=daily" target="_blank" rel="noreferrer" className="mono inline-flex items-center gap-2 rounded-full border border-[var(--line)] px-4 py-2 text-[11px] tracking-[0.12em] text-muted transition-colors hover:border-signal/40 hover:text-ink">
+          <Eye size={13} /> PREVIEW DAILY
+        </a>
+        <a href="/api/newsletter/preview?frequency=weekly" target="_blank" rel="noreferrer" className="mono inline-flex items-center gap-2 rounded-full border border-[var(--line)] px-4 py-2 text-[11px] tracking-[0.12em] text-muted transition-colors hover:border-signal/40 hover:text-ink">
+          <Eye size={13} /> PREVIEW WEEKLY
+        </a>
         <button onClick={exportCsv} disabled={!rows.length} className="mono inline-flex items-center gap-2 rounded-full border border-[var(--line)] px-4 py-2 text-[11px] tracking-[0.12em] text-muted transition-colors hover:border-signal/40 hover:text-ink disabled:opacity-40">
           <Download size={13} /> EXPORT CSV
         </button>
+        </div>
       </div>
 
       <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">

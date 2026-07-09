@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 import { sendEmail, isEmailConfigured } from "@/lib/email/resend";
-import { fetchArticles, renderDigest } from "@/lib/email/digest";
+import { fetchArticles, renderDigest, renderDigestText } from "@/lib/email/digest";
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -47,6 +47,7 @@ export async function POST(req) {
       from: FROM,
       subject,
       html: renderDigest({ frequency, articles, token: s.unsubscribe_token }),
+      text: renderDigestText({ frequency, articles, token: s.unsubscribe_token }),
     });
     if (res.ok) {
       ok++;
