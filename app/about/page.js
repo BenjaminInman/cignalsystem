@@ -131,6 +131,21 @@ export default function AboutPage() {
         that tells operators and investors not just <span className="text-ink">how</span> to act, but
         <span className="text-ink"> when</span>.
       </p>
+      <p className="mt-4 max-w-2xl leading-relaxed text-muted">
+        Most market data tells you what already happened. Cignal reads the market the way a cycle actually
+        turns — separating the <span className="text-ink">leading</span> indicators that move first from the
+        <span className="text-ink"> lagging</span> ones that only confirm what&apos;s already priced in, and
+        placing where you stand inside the four phases of the cycle: recovery, expansion, hyper-supply, and
+        recession. The whole system is built on one idea — <span className="text-signal">timing beats
+        tactics</span>. Knowing <span className="text-ink">when</span> you are in the cycle changes every
+        decision that follows: when to buy, when to hold, when to reposition, and when to sit out.
+      </p>
+      <p className="mt-4 max-w-2xl leading-relaxed text-muted">
+        The platform hands you the read. If you want to learn to apply it yourself — to your investment,
+        operations, or management business — we offer a coaching and certification track that teaches the
+        method behind the signals. It&apos;s selective, and you can <span className="text-ink">apply
+        below</span>.
+      </p>
 
       {/* Body + sidebar */}
       <div className="mt-14 grid gap-10 lg:grid-cols-[1fr_300px]">
@@ -266,20 +281,30 @@ export default function AboutPage() {
             </div>
           </section>
 
-          {/* Founder */}
-          <section className="relative overflow-hidden rounded-2xl border border-[var(--line)] bg-gradient-to-b from-bg2/70 via-bg2/30 to-bg/10 p-6 md:p-8">
+          {/* Training / Apply */}
+          <section className="relative overflow-hidden rounded-2xl border border-signal/25 bg-gradient-to-b from-signal/[0.06] via-bg2/30 to-bg/10 p-6 md:p-8">
             <div className="relative max-w-2xl">
-              <p className="kicker mb-4">The founder</p>
-              <h2 className="headline text-2xl text-ink">Benjamin Inman</h2>
+              <p className="kicker mb-4">Learn to apply the signals</p>
+              <h2 className="headline text-2xl text-ink">Training &amp; certification</h2>
               <p className="mt-4 leading-relaxed text-muted">
-                Cignal System was created by Benjamin Inman, {COPY.founderRole}. Across more than 20 years acquiring, operating, and disposing of assets — through the
-                post-GFC recovery, the pandemic boom, and the 2022–2024 correction — he watched the same
-                pattern repeat: capable operators caught on the wrong side of timing. Cignal is the system he
-                built to read the cycle before it turns, and the frameworks behind it grew out of that work.
+                The platform gives you the read. The training teaches you to <span className="text-ink">act
+                on it</span> — how to navigate the four phases of the cycle, tell a leading signal from a
+                lagging one, and translate the divergence into decisions for your investment, operations, or
+                management business. It&apos;s the difference between seeing the cycle and knowing what to do
+                about it.
               </p>
               <p className="mt-4 leading-relaxed text-muted">
-                His thesis fits on one line: <span className="text-signal">When &gt; How.</span>
+                The track is built for serious owners, operators, investors, and management firms, and moves
+                from foundations to advanced certification. Enrollment is selective — tell us about your
+                business and what you want to get out of it, and we&apos;ll follow up about fit.
               </p>
+              <a
+                href="mailto:info@cignalsystem.com?subject=Training%20application%20%E2%80%94%20Cignal%20System&body=Tell%20us%20a%20bit%20about%20you%3A%0A%0A-%20Name%3A%0A-%20Company%3A%0A-%20Your%20role%20(owner%20%2F%20operator%20%2F%20investor%20%2F%20management%20firm)%3A%0A-%20Portfolio%20size%20or%20markets%3A%0A-%20What%20you%20want%20to%20get%20out%20of%20the%20training%3A%0A"
+                className="mono group mt-6 inline-flex items-center gap-2 rounded-sm bg-signal px-5 py-3 text-[12px] tracking-[0.08em] text-bg hover:opacity-90"
+              >
+                Apply for training
+                <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
+              </a>
             </div>
           </section>
         </div>
@@ -299,7 +324,7 @@ export default function AboutPage() {
       <section className="card mt-14 flex flex-col items-start justify-between gap-5 p-8 md:flex-row md:items-center">
         <div>
           <h2 className="headline text-2xl text-ink">Read the signals the market doesn&apos;t broadcast.</h2>
-          <p className="mt-2 text-muted">Create an account to access the full intelligence suite.</p>
+          <p className="mt-2 text-muted">Create an account for the full intelligence suite — or <a href="mailto:info@cignalsystem.com?subject=Training%20application%20%E2%80%94%20Cignal%20System" className="text-signal underline-offset-2 hover:underline">apply for training</a> to learn the method behind it.</p>
         </div>
         <div className="flex shrink-0 gap-3">
           <Link href="/dashboard" className="mono flex items-center gap-2 rounded-sm bg-signal px-5 py-3 text-[12px] tracking-[0.08em] text-bg hover:opacity-90">Get Access <ArrowRight size={14} /></Link>
