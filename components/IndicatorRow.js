@@ -195,8 +195,30 @@ export default function IndicatorRow({ row, ask }) {
               </div>
             )}
           </div>
+          {hasTrend && (
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <p className="mono text-[10px] tracking-[0.18em] text-muted">HISTORICAL TREND</p>
+                {dir && (
+                  <span
+                    className="mono inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] tracking-[0.08em]"
+                    style={{ color: toneColor(dir.tone), borderColor: `${toneColor(dir.tone)}55` }}
+                  >
+                    <span className="text-[12px]">{dir.arrow}</span> {dir.label}
+                  </span>
+                )}
+              </div>
+              <div className="mt-2">
+                <IndicatorTrend data={r.trend} tone={r.tone} periods={r.periods} zeroBased={r.zeroBased !== false} />
+              </div>
+              <p className="mono mt-2 text-[10px] leading-relaxed text-muted">
+                Direction reads the recent trajectory — a red level that is climbing back still reads
+                <span style={{ color: "#5FB97C" }}> improving</span>.
+              </p>
+            </div>
+          )}
           {r.traj && (
-            <div className="mt-5 rounded-lg border border-[var(--line)] bg-bg/40 p-4 lg:col-span-2">
+            <div className="mt-8 rounded-lg border border-[var(--line)] bg-bg/40 p-4 lg:col-span-2">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="mono text-[10px] tracking-[0.18em] text-muted">GROWTH PATH \u00b7 24MO {"\u203a"} 12MO {"\u203a"} NOW</p>
                 <span className="mono inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] tracking-[0.08em]"
@@ -219,28 +241,6 @@ export default function IndicatorRow({ row, ask }) {
               <p className="mono mt-2 text-[10px] leading-relaxed text-muted/70">
                 Year-over-year growth, fit in 12-month segments. The arrow reads the most recent twelve months, not the full window \u2014 a
                 metric can improve for a year and then reverse, and a single long-run average would hide it.
-              </p>
-            </div>
-          )}
-          {hasTrend && (
-            <div>
-              <div className="flex items-center justify-between gap-2">
-                <p className="mono text-[10px] tracking-[0.18em] text-muted">HISTORICAL TREND</p>
-                {dir && (
-                  <span
-                    className="mono inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] tracking-[0.08em]"
-                    style={{ color: toneColor(dir.tone), borderColor: `${toneColor(dir.tone)}55` }}
-                  >
-                    <span className="text-[12px]">{dir.arrow}</span> {dir.label}
-                  </span>
-                )}
-              </div>
-              <div className="mt-2">
-                <IndicatorTrend data={r.trend} tone={r.tone} periods={r.periods} zeroBased={r.zeroBased !== false} />
-              </div>
-              <p className="mono mt-2 text-[10px] leading-relaxed text-muted">
-                Direction reads the recent trajectory — a red level that is climbing back still reads
-                <span style={{ color: "#5FB97C" }}> improving</span>.
               </p>
             </div>
           )}
