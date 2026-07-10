@@ -48,7 +48,7 @@ export default function IndicesPage() {
       <p className="kicker mb-3 flex items-center gap-2"><TrendingUp size={12} className="text-signal" /> Market Indices</p>
       <h1 className="headline text-4xl text-ink md:text-5xl">Housing-Economy Indices</h1>
       <p className="mt-3 max-w-2xl text-muted">
-        Public-market proxies for the forces moving the housing economy — each category shown as a live
+        Public-market proxies for the forces moving the housing economy — each category shown as a
         performance donut: green advancing, red declining, sized by the size of the move. Tap a category to
         open its holdings.
       </p>
