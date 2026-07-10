@@ -6,6 +6,8 @@
 //   * the parent-metro figure used for the submarket-vs-metro divergence read stays
 //     ALL-RENTALS, so the comparison is like-for-like. Comparing a blended ZIP to an
 //     MF-only metro would manufacture a divergence out of property mix.
+import { trajectory, trajTone } from "@/lib/trajectory";
+
 const METRO_MF = "zori_metro_mf";   // metro headline (multifamily)
 const METRO_ALL = "zori_metro";     // parent context for sub-metro grains (blended)
 
@@ -26,14 +28,31 @@ async function sb(path) {
 async function fetchSeries(slug, code, ci = false) {
   const op = ci ? "ilike" : "eq";
   const enc = encodeURIComponent(code);
-  const rows = await sb(`v_indicator_analytics?slug=eq.${slug}&region_code=${op}.${enc}&select=obs_date,value,yoy_change,region_code&order=obs_date.desc&limit=24`);
+  // 26 months so the rent-growth trajectory has a full 24-month fit.
+  const rows = await sb(`v_indicator_analytics?slug=eq.${slug}&region_code=${op}.${enc}&select=obs_date,value,yoy_change,region_code&order=obs_date.desc&limit=26`);
   if (!Array.isArray(rows) || rows.length === 0) return null;
   const latest = rows[0];
   const rent = Math.round(latest.value);
   const yoyAbs = latest.yoy_change;
   const prior = yoyAbs != null ? latest.value - yoyAbs : null;
   const yoyPct = prior && prior !== 0 ? Math.round((yoyAbs / prior) * 1000) / 10 : null;
-  return { code: latest.region_code, rent, yoyPct, asOf: latest.obs_date, trend: rows.slice().reverse().map((x) => Math.round(x.value)) };
+  const asc = rows.slice().reverse();
+  // Rent GROWTH trajectory, not rent LEVEL trajectory. A market can have a falling
+  // rent level while its growth rate recovers — that is the Austin case, and the
+  // level trend alone hides it.
+  const yoySeries = asc
+    .map((x) => {
+      if (x.yoy_change == null || x.value == null) return null;
+      const base = x.value - x.yoy_change;
+      return base ? Math.round((x.yoy_change / base) * 1000) / 10 : null;
+    })
+    .filter((v) => v != null);
+  const traj = trajectory(yoySeries, { goodUp: true });
+  return {
+    code: latest.region_code, rent, yoyPct, asOf: latest.obs_date,
+    trend: asc.map((x) => Math.round(x.value)),
+    traj: traj ? { ...traj, tone: trajTone(traj) } : null,
+  };
 }
 
 const STATES = { alabama: "AL", alaska: "AK", arizona: "AZ", arkansas: "AR", california: "CA", colorado: "CO", connecticut: "CT", delaware: "DE", florida: "FL", georgia: "GA", hawaii: "HI", idaho: "ID", illinois: "IL", indiana: "IN", iowa: "IA", kansas: "KS", kentucky: "KY", louisiana: "LA", maine: "ME", maryland: "MD", massachusetts: "MA", michigan: "MI", minnesota: "MN", mississippi: "MS", missouri: "MO", montana: "MT", nebraska: "NE", nevada: "NV", "new hampshire": "NH", "new jersey": "NJ", "new mexico": "NM", "new york": "NY", "north carolina": "NC", "north dakota": "ND", ohio: "OH", oklahoma: "OK", oregon: "OR", pennsylvania: "PA", "rhode island": "RI", "south carolina": "SC", "south dakota": "SD", tennessee: "TN", texas: "TX", utah: "UT", vermont: "VT", virginia: "VA", washington: "WA", "west virginia": "WV", wisconsin: "WI", wyoming: "WY", "district of columbia": "DC" };

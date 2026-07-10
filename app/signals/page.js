@@ -240,27 +240,47 @@ function ZBar({ z, tone }) {
   );
 }
 
+function TrajCell({ t }) {
+  if (!t) return <span className="mono text-[11px] text-muted">—</span>;
+  const arrow = t.direction === "improving" ? "\u2197" : t.direction === "deteriorating" ? "\u2198" : "\u2192";
+  const c = toneColor(t.tone);
+  const sign = t.delta > 0 ? "+" : "";
+  return (
+    <span className="mono flex items-center gap-1 text-[11px]" title={`${t.label} — ${t.note} Over ${t.months} months: ${t.then}% \u2192 ${t.now}% (${sign}${t.delta}pp, slope ${t.slopePerYear}pp/yr).`}>
+      <span style={{ color: c }}>{arrow}</span>
+      <span style={{ color: c }}>{sign}{t.delta}pp</span>
+    </span>
+  );
+}
+
 function DivergenceBoard({ rows }) {
   if (!rows) return <p className="mono mt-4 text-[12px] text-muted">Loading markets…</p>;
   if (!rows.length) return <p className="mono mt-4 text-[12px] text-muted">No market divergence data.</p>;
   const pct = (v) => `${v >= 0 ? "+" : ""}${v}%`;
   const bars = (g) => (Math.abs(g) > 2.5 ? 3 : Math.abs(g) > 1.3 ? 2 : 1);
+  const GRID = "grid grid-cols-[1.2fr_0.75fr_0.75fr_0.95fr_auto] items-center gap-2";
   return (
     <div className="mt-3">
-      <div className="mono grid grid-cols-[1.3fr_0.9fr_0.9fr_auto] gap-2 pb-2 text-[9px] tracking-[0.08em] text-muted">
-        <span>MARKET</span><span>LEADING · JOBS</span><span>LAGGING · RENT</span><span>GAP</span>
+      <div className={`mono ${GRID} pb-2 text-[9px] tracking-[0.08em] text-muted`}>
+        <span>MARKET</span><span>JOBS</span><span>RENT</span><span>RENT · 24-MO TREND</span><span>GAP</span>
       </div>
       {rows.map((r, i) => (
-        <div key={i} className="grid grid-cols-[1.3fr_0.9fr_0.9fr_auto] items-center gap-2 border-t border-[var(--line2,#161A1F)] py-2.5 text-[12px]" title={r.read}>
+        <div key={i} className={`${GRID} border-t border-[var(--line2,#161A1F)] py-2.5 text-[12px]`} title={r.read}>
           <span className="font-semibold text-ink">{r.name.replace(/, [A-Z]{2}$/, "")}</span>
           <span className="mono text-[11px]" style={{ color: toneColor(r.jobsYoY >= 0 ? "bull" : "bear") }}>{pct(r.jobsYoY)}</span>
           <span className="mono text-[11px]" style={{ color: toneColor(r.rentYoY >= 0 ? "bull" : "bear") }}>{pct(r.rentYoY)}</span>
+          <TrajCell t={r.rentTraj} />
           <span className="flex items-center gap-1.5">
             <span className="flex gap-0.5">{[0, 1, 2].map((k) => <i key={k} className="inline-block h-3 w-1.5 rounded-sm" style={{ background: k < bars(r.gap) ? toneColor(r.tone) : LINE }} />)}</span>
           </span>
         </div>
       ))}
-      <p className="mono mt-3 text-[10px] leading-relaxed text-muted">Ranked by how far a market's leading read (jobs) has pulled from its lagging read (rents). Wide gaps are where the turn shows up first.</p>
+      <p className="mono mt-3 text-[10px] leading-relaxed text-muted">
+        Ranked by how far a market&apos;s leading read (jobs) has pulled from its lagging read (rents). Wide gaps are where the turn shows up first.
+        The trend column reads each market against <span className="text-ink">its own past 24 months</span>, not against its peers: a negative rent that is climbing
+        (<span style={{ color: toneColor("bull") }}>&#8599;</span>) is a different market than a positive rent that is falling (<span style={{ color: toneColor("bear") }}>&#8600;</span>).
+      </p>
     </div>
   );
 }
+

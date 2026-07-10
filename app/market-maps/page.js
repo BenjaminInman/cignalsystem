@@ -500,6 +500,16 @@ function ZipLookup() {
                   <span style={{ color: toneColor(data.yoyPct >= 0 ? "bull" : "bear") }}>{data.yoyPct >= 0 ? "+" : ""}{data.yoyPct}% YoY</span>
                 )}
               </p>
+              {data.traj && (
+                <p className="mono mt-1.5 text-[11px] leading-relaxed tracking-[0.02em] text-muted">
+                  <span style={{ color: toneColor(data.traj.tone) }}>
+                    {data.traj.direction === "improving" ? "\u2197" : data.traj.direction === "deteriorating" ? "\u2198" : "\u2192"} {data.traj.label}
+                  </span>
+                  {" \u00b7 "}rent growth {data.traj.then >= 0 ? "+" : ""}{data.traj.then}% {"\u2192"} {data.traj.now >= 0 ? "+" : ""}{data.traj.now}%
+                  {" over "}{data.traj.months} months
+                  <span className="block text-muted/70">{data.traj.note}</span>
+                </p>
+              )}
               {data.metro && data.grain !== "metro" && data.metro.yoyPct != null && data.yoyPct != null && (() => {
                 const delta = Math.round((data.yoyPct - data.metro.yoyPct) * 10) / 10;
                 const tag = delta < -0.5 ? "softening faster than its metro" : delta > 0.5 ? "outperforming its metro" : "in line with its metro";

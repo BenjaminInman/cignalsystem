@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 import { sb, mean, stdev } from "@/lib/signals-engine";
 import { verticalFromRequest } from "@/lib/vertical-request";
 import { rentMetroSlug } from "@/lib/vertical-signals";
+import { trajectory, trajTone } from "@/lib/trajectory";
 
 // Principal CBSA per metro, paired with its Zillow ZORI metro label. Jobs +
 // vacancy key by CBSA; rent keys by the "City, ST" label — this is the bridge.
@@ -29,9 +30,11 @@ const METROS = [
   { name: "Columbus, OH", cbsa: "18140", zori: "Columbus, OH" },
 ];
 
-// Latest YoY% for a slug across a specific set of region codes (region-filtered
+// YoY% history for a slug across a specific set of region codes (region-filtered
 // so the query is indexed and fast — an unfiltered scan trips the anon timeout).
-async function latestYoY(slug, codes, months = 6) {
+// Returns { code: [{ d, v }] } ascending, plus a convenience latest map.
+// 19 metros x 26 months = ~494 rows, comfortably under PostgREST's 1000-row cap.
+async function seriesYoY(slug, codes, months = 26) {
   const since = new Date();
   since.setMonth(since.getMonth() - months);
   const inList = codes
@@ -41,17 +44,19 @@ async function latestYoY(slug, codes, months = 6) {
   const rows = await sb(
     `v_indicator_analytics?slug=eq.${slug}&region_code=in.(${inList})` +
       `&obs_date=gte.${since.toISOString().slice(0, 10)}` +
-      `&select=region_code,obs_date,value,yoy_change&order=obs_date.desc&limit=800`
+      `&select=region_code,obs_date,value,yoy_change&order=obs_date.asc&limit=1000`
   );
-  const latest = {};
-  for (const r of rows || []) if (!latest[r.region_code]) latest[r.region_code] = r;
-  const out = {};
-  for (const [code, r] of Object.entries(latest)) {
+  const hist = {};
+  for (const r of rows || []) {
     if (r.yoy_change == null || r.value == null) continue;
     const base = r.value - r.yoy_change;
-    out[code] = base ? Math.round((r.yoy_change / base) * 1000) / 10 : null;
+    if (!base) continue;
+    const v = Math.round((r.yoy_change / base) * 1000) / 10;
+    (hist[r.region_code] ||= []).push({ d: r.obs_date, v });
   }
-  return out;
+  const latest = {};
+  for (const [code, arr] of Object.entries(hist)) latest[code] = arr[arr.length - 1].v;
+  return { hist, latest };
 }
 
 const z = (v, m, s) => (s ? (v - m) / s : 0);
@@ -64,16 +69,27 @@ export async function GET(req) {
     const rentSlug = rentMetroSlug(vertical);
     const cbsas = METROS.map((m) => m.cbsa);
     const zoris = [...new Set(METROS.map((m) => m.zori))];
-    const [jobs, rents] = await Promise.all([
-      latestYoY("bls_metro_employment", cbsas),
-      latestYoY(rentSlug, zoris),
+    const [jobsS, rentsS] = await Promise.all([
+      seriesYoY("bls_metro_employment", cbsas),
+      seriesYoY(rentSlug, zoris),
     ]);
+    const jobs = jobsS.latest, rents = rentsS.latest;
 
-    let rows = METROS.map((m) => ({
-      name: m.name,
-      jobsYoY: jobs[m.cbsa] ?? null,
-      rentYoY: rents[m.zori] ?? null,
-    })).filter((r) => r.jobsYoY != null && r.rentYoY != null);
+    let rows = METROS.map((m) => {
+      // Trajectory is a TIME-SERIES read (this market vs its own past 24 months),
+      // deliberately separate from the cross-sectional z-scores below (this market
+      // vs its peers today). A -3.4% rent that has climbed from -5.2% is a very
+      // different asset than a +0.6% rent that has fallen from +1.9%.
+      const rentTraj = trajectory((rentsS.hist[m.zori] || []).map((x) => x.v), { goodUp: true });
+      const jobsTraj = trajectory((jobsS.hist[m.cbsa] || []).map((x) => x.v), { goodUp: true });
+      return {
+        name: m.name,
+        jobsYoY: jobs[m.cbsa] ?? null,
+        rentYoY: rents[m.zori] ?? null,
+        rentTraj: rentTraj ? { ...rentTraj, tone: trajTone(rentTraj) } : null,
+        jobsTraj: jobsTraj ? { ...jobsTraj, tone: trajTone(jobsTraj) } : null,
+      };
+    }).filter((r) => r.jobsYoY != null && r.rentYoY != null);
 
     // Cross-sectional standardization: how each metro's leading (jobs) and
     // lagging (rents) reads compare to the peer set.
