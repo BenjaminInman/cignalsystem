@@ -505,8 +505,19 @@ function ZipLookup() {
                   <span style={{ color: toneColor(data.traj.tone) }}>
                     {data.traj.direction === "improving" ? "\u2197" : data.traj.direction === "deteriorating" ? "\u2198" : "\u2192"} {data.traj.label}
                   </span>
-                  {" \u00b7 "}rent growth {data.traj.then >= 0 ? "+" : ""}{data.traj.then}% {"\u2192"} {data.traj.now >= 0 ? "+" : ""}{data.traj.now}%
-                  {" over "}{data.traj.months} months
+                  {data.traj.inflection && (
+                    <span className="ml-1.5 rounded bg-signal/15 px-1 py-px text-[8px] tracking-[0.08em] text-signal">TURN</span>
+                  )}
+                  <span className="mt-0.5 block">
+                    rent growth{" "}
+                    {[data.traj.segments[0].from, ...data.traj.segments.map((sg) => sg.to)].map((v, i, arr) => (
+                      <span key={i}>
+                        {i > 0 && <span className="px-0.5 text-muted/50">{"\u203a"}</span>}
+                        <span className={i === arr.length - 1 ? "text-ink" : ""}>{v >= 0 ? "+" : ""}{v}%</span>
+                      </span>
+                    ))}
+                    <span className="text-muted/70">{" \u00b7 24mo \u203a 12mo \u203a now"}</span>
+                  </span>
                   <span className="block text-muted/70">{data.traj.note}</span>
                 </p>
               )}

@@ -244,11 +244,25 @@ function TrajCell({ t }) {
   if (!t) return <span className="mono text-[11px] text-muted">—</span>;
   const arrow = t.direction === "improving" ? "\u2197" : t.direction === "deteriorating" ? "\u2198" : "\u2192";
   const c = toneColor(t.tone);
-  const sign = t.delta > 0 ? "+" : "";
+  const path = [t.segments[0].from, ...t.segments.map((sg) => sg.to)];
+  const fmt = (v) => `${v >= 0 ? "+" : ""}${v}`;
+  const tip =
+    `${t.label} — ${t.note} ` +
+    t.segments.map((sg, i) => `${i === 0 ? "prior" : "last"} 12mo: ${fmt(sg.from)}% \u2192 ${fmt(sg.to)}% (${sg.orientedSlope > 0 ? "+" : ""}${sg.orientedSlope}pp/yr)`).join("; ") + ".";
   return (
-    <span className="mono flex items-center gap-1 text-[11px]" title={`${t.label} — ${t.note} Over ${t.months} months: ${t.then}% \u2192 ${t.now}% (${sign}${t.delta}pp, slope ${t.slopePerYear}pp/yr).`}>
+    <span className="mono flex items-center gap-1.5 text-[10px]" title={tip}>
+      <span className="tracking-[0.02em] text-muted">
+        {path.map((v, i) => (
+          <span key={i}>
+            {i > 0 && <span className="px-0.5 text-muted/50">{"\u203a"}</span>}
+            <span className={i === path.length - 1 ? "text-ink" : ""}>{fmt(v)}</span>
+          </span>
+        ))}
+      </span>
       <span style={{ color: c }}>{arrow}</span>
-      <span style={{ color: c }}>{sign}{t.delta}pp</span>
+      {t.inflection && (
+        <span className="rounded bg-signal/15 px-1 py-px text-[8px] tracking-[0.08em] text-signal">TURN</span>
+      )}
     </span>
   );
 }
@@ -258,11 +272,11 @@ function DivergenceBoard({ rows }) {
   if (!rows.length) return <p className="mono mt-4 text-[12px] text-muted">No market divergence data.</p>;
   const pct = (v) => `${v >= 0 ? "+" : ""}${v}%`;
   const bars = (g) => (Math.abs(g) > 2.5 ? 3 : Math.abs(g) > 1.3 ? 2 : 1);
-  const GRID = "grid grid-cols-[1.2fr_0.75fr_0.75fr_0.95fr_auto] items-center gap-2";
+  const GRID = "grid grid-cols-[1.05fr_0.6fr_0.6fr_1.35fr_auto] items-center gap-2";
   return (
     <div className="mt-3">
       <div className={`mono ${GRID} pb-2 text-[9px] tracking-[0.08em] text-muted`}>
-        <span>MARKET</span><span>JOBS</span><span>RENT</span><span>RENT · 24-MO TREND</span><span>GAP</span>
+        <span>MARKET</span><span>JOBS</span><span>RENT</span><span>RENT PATH · 24MO {"\u203a"} 12MO {"\u203a"} NOW</span><span>GAP</span>
       </div>
       {rows.map((r, i) => (
         <div key={i} className={`${GRID} border-t border-[var(--line2,#161A1F)] py-2.5 text-[12px]`} title={r.read}>
@@ -277,8 +291,9 @@ function DivergenceBoard({ rows }) {
       ))}
       <p className="mono mt-3 text-[10px] leading-relaxed text-muted">
         Ranked by how far a market&apos;s leading read (jobs) has pulled from its lagging read (rents). Wide gaps are where the turn shows up first.
-        The trend column reads each market against <span className="text-ink">its own past 24 months</span>, not against its peers: a negative rent that is climbing
-        (<span style={{ color: toneColor("bull") }}>&#8599;</span>) is a different market than a positive rent that is falling (<span style={{ color: toneColor("bear") }}>&#8600;</span>).
+        The path column reads each market against <span className="text-ink">its own history</span>, not against its peers, in 12-month steps: rent growth two years ago,
+        one year ago, and today. The arrow reflects the <span className="text-ink">most recent twelve months</span> — a market can heal for a year and then roll over, and a
+        single long-run average would hide it. <span className="text-signal">TURN</span> marks a market whose direction reversed between the two periods.
       </p>
     </div>
   );

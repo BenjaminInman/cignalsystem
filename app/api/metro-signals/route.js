@@ -1,6 +1,8 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+import { trajectory, trajTone } from "@/lib/trajectory";
+
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -26,7 +28,7 @@ function periodLabel(dateStr, annual) {
 // Latest reading + history for a metro indicator, keyed by CBSA (Census metro
 // region_code). Returns { value, yoyPct, delta, asOf, trend, periods } — trend
 // is the underlying series oldest->newest so the row can chart it like Layer 2/3.
-async function metroSignal(slug, cbsa, { annual = false, points = 24 } = {}) {
+async function metroSignal(slug, cbsa, { annual = false, points = 26, goodUp = true } = {}) {
   const rows = await sb(
     `v_indicator_analytics?slug=eq.${slug}&region_code=eq.${cbsa}` +
       `&select=obs_date,value,yoy_change&order=obs_date.desc&limit=${points}`
@@ -40,7 +42,22 @@ async function metroSignal(slug, cbsa, { annual = false, points = 24 } = {}) {
   const series = rows.slice().reverse(); // oldest -> newest
   const trend = series.map((r) => Math.round(Number(r.value) * 10) / 10);
   const periods = series.map((r) => periodLabel(r.obs_date, annual));
-  return { value: v, yoyPct, delta, asOf: rows[0].obs_date, trend, periods };
+  // Trajectory reads the GROWTH RATE's own path, not the level's. A metro's rent or
+  // payroll level can still be falling while its rate of change recovers. Annual
+  // series are skipped: 12-month segments are meaningless on yearly observations.
+  let traj = null;
+  if (!annual) {
+    const yoySeries = series
+      .map((r) => {
+        if (r.yoy_change == null || r.value == null) return null;
+        const base = Number(r.value) - Number(r.yoy_change);
+        return base ? Math.round((Number(r.yoy_change) / base) * 1000) / 10 : null;
+      })
+      .filter((x) => x != null);
+    const t = trajectory(yoySeries, { goodUp });
+    if (t) traj = { ...t, tone: trajTone(t) };
+  }
+  return { value: v, yoyPct, delta, asOf: rows[0].obs_date, trend, periods, traj };
 }
 
 // County real GDP (BEA CAGDP9), keyed by the Zillow-style county label that the
@@ -187,12 +204,12 @@ export async function GET(req) {
     const [employment, unemployment, rentsRPP, allRPP, cpiRent, vacancy, daysOnMarket, countyGdp, metroWages, countyUnemp] =
       await Promise.all([
         metroSignal("bls_metro_employment", cbsa),
-        metroSignal("bls_metro_unemployment", cbsa),
+        metroSignal("bls_metro_unemployment", cbsa, { goodUp: false }),
         metroSignal("bea_rpp_rents", cbsa, { annual: true, points: 10 }),
         metroSignal("bea_rpp_all", cbsa, { annual: true, points: 10 }),
         metroSignal("bls_metro_cpi_rent", cbsa),
-        metroSignal("apt_vacancy", cbsa),
-        metroSignal("apt_time_on_market", cbsa),
+        metroSignal("apt_vacancy", cbsa, { goodUp: false }),
+        metroSignal("apt_time_on_market", cbsa, { goodUp: false }),
         countyGdpSignal(countyLabel),
         metroSignal("metro_wages", cbsa),
         countyUnempSignal(countyLabel),

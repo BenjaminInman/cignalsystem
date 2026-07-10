@@ -195,6 +195,33 @@ export default function IndicatorRow({ row, ask }) {
               </div>
             )}
           </div>
+          {r.traj && (
+            <div className="mt-5 rounded-lg border border-[var(--line)] bg-bg/40 p-4 lg:col-span-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="mono text-[10px] tracking-[0.18em] text-muted">GROWTH PATH \u00b7 24MO {"\u203a"} 12MO {"\u203a"} NOW</p>
+                <span className="mono inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] tracking-[0.08em]"
+                  style={{ color: toneColor(r.traj.tone), borderColor: `${toneColor(r.traj.tone)}55` }}>
+                  {r.traj.direction === "improving" ? "\u2197" : r.traj.direction === "deteriorating" ? "\u2198" : "\u2192"} {r.traj.label}
+                </span>
+                {r.traj.inflection && (
+                  <span className="mono rounded bg-signal/15 px-1.5 py-0.5 text-[9px] tracking-[0.08em] text-signal">TURN</span>
+                )}
+              </div>
+              <p className="mono mt-2 text-[13px] text-ink">
+                {[r.traj.segments[0].from, ...r.traj.segments.map((sg) => sg.to)].map((v, i, arr) => (
+                  <span key={i}>
+                    {i > 0 && <span className="px-1 text-muted/50">{"\u203a"}</span>}
+                    <span className={i === arr.length - 1 ? "text-ink" : "text-muted"}>{v >= 0 ? "+" : ""}{v}%</span>
+                  </span>
+                ))}
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-muted">{r.traj.note}</p>
+              <p className="mono mt-2 text-[10px] leading-relaxed text-muted/70">
+                Year-over-year growth, fit in 12-month segments. The arrow reads the most recent twelve months, not the full window \u2014 a
+                metric can improve for a year and then reverse, and a single long-run average would hide it.
+              </p>
+            </div>
+          )}
           {hasTrend && (
             <div>
               <div className="flex items-center justify-between gap-2">
