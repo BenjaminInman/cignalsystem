@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import AdminUsers from "@/components/AdminUsers";
 import AdminDataCoverage from "@/components/AdminDataCoverage";
 import AdminNewsletter from "@/components/AdminNewsletter";
+import AdminTraining from "@/components/AdminTraining";
 
 export const metadata = { title: "Admin · Cignal System" };
 export const dynamic = "force-dynamic";
@@ -150,9 +151,13 @@ export default async function AdminPage() {
     .select("frequency,sent_at,recipients,ok,failed")
     .order("sent_at", { ascending: false })
     .limit(5);
+  const appsP = supabase
+    .from("training_applications")
+    .select("id,created_at,name,email,company,phone,role,portfolio,goals,status")
+    .order("created_at", { ascending: false });
 
-  const [{ data: users }, { data: stats }, { data: inds }, { data: mig }, { data: subs }, { data: sends }] =
-    await Promise.all([usersP, statsP, indsP, migP, subsP, sendsP]);
+  const [{ data: users }, { data: stats }, { data: inds }, { data: mig }, { data: subs }, { data: sends }, { data: apps }] =
+    await Promise.all([usersP, statsP, indsP, migP, subsP, sendsP, appsP]);
 
   const tally = (rows, key) =>
     (rows || []).reduce((acc, r) => {
@@ -183,6 +188,7 @@ export default async function AdminPage() {
     <>
       <AdminDataCoverage coverage={coverage} />
       <AdminUsers initialUsers={users || []} />
+      <AdminTraining initialApps={apps || []} />
       <AdminNewsletter subscribers={subs || []} sends={sends || []} />
     </>
   );
