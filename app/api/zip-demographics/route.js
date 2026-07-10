@@ -15,6 +15,15 @@ async function sb(path) {
 // ZIP-level demographics from the Census ACS layer (latest vintage loaded).
 // Reads observations directly (these point-in-time snapshots are kept out of
 // the analytics materialized view), pivoted by v_zip_demographics.
+//
+// Rent basis: we surface CONTRACT rent (ACS B25058) as the headline, not gross
+// rent (B25064). Contract rent is the rent line on a property income statement;
+// gross rent folds in tenant-paid utilities, which operators account for
+// separately (RUBS, utility reimbursement, direct-billed). Gross is still
+// returned so the utility load is derivable and so the rent-burden footnote can
+// state its own basis honestly -- Census computes burden (B25071) on GROSS rent,
+// and there is no contract-rent equivalent published, so that number cannot be
+// restated on a contract basis without fabricating it.
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const zip = (searchParams.get("zip") || "").trim();
@@ -34,10 +43,16 @@ export async function GET(req) {
       zip,
       asOf: d.as_of,
       source: "Census ACS 5-Year",
-      medianRent: n(d.median_rent),
-      medianContractRent: n(d.median_contract_rent),
+      medianContractRent: n(d.median_contract_rent),   // headline: excludes utilities
+      medianGrossRent: n(d.median_rent),                // contract + tenant-paid utilities
+      utilityLoad:
+        d.median_rent != null && d.median_contract_rent != null
+          ? Number(d.median_rent) - Number(d.median_contract_rent)
+          : null,
       medianIncome: n(d.median_income),
+      incomeBasis: "median household income (ACS B19013)",
       rentBurden: n(d.rent_burden),
+      rentBurdenBasis: "gross",                         // Census B25071 is gross-rent based
       renterShare: pct(Number(d.renter_occupied), Number(d.occupied_units)),
       mfStockShare: pct(Number(d.mf_units_5plus), Number(d.housing_units)),
       medianHomeValue: n(d.median_home_value),

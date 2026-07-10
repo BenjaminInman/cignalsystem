@@ -580,26 +580,32 @@ function ZipLookup() {
             </p>
           )}
 
-          <p className="mono mt-3 text-[10px] tracking-[0.08em] text-muted">As of {data.asOf} · Zillow Observed Rent Index (all rental types, smoothed)</p>
+          <p className="mono mt-3 text-[10px] tracking-[0.08em] text-muted">
+            Zillow Observed Rent Index · {data.label} · {data.basis === "multifamily" ? "multifamily (5+ units)" : "all rental types (SFR + condo + MF)"} · market asking rent, smoothed &amp; seasonally adjusted · as of {data.asOf}
+          </p>
           {demo && (
             <div className="mt-4 border-t border-[var(--line)] pt-4">
-              <p className="mono text-[10px] tracking-[0.1em] text-muted">ZIP DEMOGRAPHICS · CENSUS ACS</p>
+              <p className="mono text-[10px] tracking-[0.1em] text-muted">ZIP DEMOGRAPHICS · CENSUS ACS · OCCUPIED STOCK</p>
               <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {[
-                  ["Median Rent", demo.medianRent != null ? `$${demo.medianRent.toLocaleString()}` : "—"],
-                  ["Renter Share", demo.renterShare != null ? `${demo.renterShare}%` : "—"],
-                  ["Median Income", demo.medianIncome != null ? `$${demo.medianIncome.toLocaleString()}` : "—"],
-                  ["Rent Burden", demo.rentBurden != null ? `${demo.rentBurden}%` : "—"],
-                  ["MF Stock (5+ units)", demo.mfStockShare != null ? `${demo.mfStockShare}%` : "—"],
-                  ["Median Home Value", demo.medianHomeValue != null ? `$${demo.medianHomeValue.toLocaleString()}` : "—"],
-                ].map(([k, v]) => (
+                  ["Median Contract Rent", demo.medianContractRent != null ? `$${demo.medianContractRent.toLocaleString()}` : "—", "excl. utilities"],
+                  ["Tenant-Paid Utilities", demo.utilityLoad != null ? `$${Math.round(demo.utilityLoad).toLocaleString()}` : "—", "gross − contract"],
+                  ["Median Household Income", demo.medianIncome != null ? `$${demo.medianIncome.toLocaleString()}` : "—", "ACS B19013"],
+                  ["Rent Burden", demo.rentBurden != null ? `${demo.rentBurden}%` : "—", "gross rent ÷ income"],
+                  ["Renter Share", demo.renterShare != null ? `${demo.renterShare}%` : "—", "of occupied units"],
+                  ["MF Stock (5+ units)", demo.mfStockShare != null ? `${demo.mfStockShare}%` : "—", "of housing units"],
+                  ["Median Home Value", demo.medianHomeValue != null ? `$${demo.medianHomeValue.toLocaleString()}` : "—", "owner-occupied"],
+                ].map(([k, v, sub]) => (
                   <div key={k} className="rounded-lg border border-[var(--line)] bg-bg2/40 p-3">
                     <p className="mono text-[9px] tracking-[0.08em] text-muted">{k.toUpperCase()}</p>
                     <p className="mt-1 text-lg font-semibold text-ink">{v}</p>
+                    <p className="mono mt-0.5 text-[9px] tracking-[0.04em] text-muted/70">{sub}</p>
                   </div>
                 ))}
               </div>
-              <p className="mono mt-3 text-[10px] tracking-[0.08em] text-muted">Census ACS 5-Year · vintage {String(demo.asOf).slice(0, 4)} · rent burden = median gross rent ÷ income</p>
+              <p className="mono mt-3 text-[10px] leading-relaxed tracking-[0.08em] text-muted">
+                Census ACS 5-Year · vintage {String(demo.asOf).slice(0, 4)} · <span className="text-ink/70">occupied stock</span>, what sitting tenants pay — not market asking rent. Contract rent is the rent line; utilities are shown separately. Rent burden is published by Census on a <span className="text-ink/70">gross</span> basis only.
+              </p>
             </div>
           )}
 

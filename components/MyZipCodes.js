@@ -253,16 +253,16 @@ function ZipDetail({ zip, rent, demo }) {
       {/* Demographics block */}
       {demo ? (
         <div>
-          <p className="mono mb-2 text-[9px] tracking-[0.12em] text-muted">{demo.source} · as of {demo.asOf}</p>
+          <p className="mono mb-2 text-[9px] tracking-[0.12em] text-muted">{demo.source} · occupied stock · as of {demo.asOf}</p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-            <Stat label="MEDIAN RENT" value={usd(demo.medianRent)} />
-            <Stat label="MEDIAN INCOME" value={usd(demo.medianIncome)} />
-            <Stat label="RENT BURDEN" value={pctPlain(demo.rentBurden)} sub="rent ÷ income" />
+            <Stat label="MEDIAN CONTRACT RENT" value={usd(demo.medianContractRent)} sub="excl. utilities" />
+            <Stat label="TENANT-PAID UTILITIES" value={demo.utilityLoad == null ? "—" : usd(Math.round(demo.utilityLoad))} sub="gross − contract" />
+            <Stat label="MEDIAN HH INCOME" value={usd(demo.medianIncome)} sub="ACS B19013" />
+            <Stat label="RENT BURDEN" value={pctPlain(demo.rentBurden)} sub="gross rent ÷ income" />
             <Stat label="RENTER SHARE" value={pctPlain(demo.renterShare)} />
             <Stat label="MF STOCK (5+ UNITS)" value={pctPlain(demo.mfStockShare)} />
             <Stat label="MEDIAN HOME VALUE" value={usd(demo.medianHomeValue)} />
             <Stat label="OCCUPIED UNITS" value={demo.occupiedUnits == null ? "—" : demo.occupiedUnits.toLocaleString("en-US")} />
-            <Stat label="HOUSING UNITS" value={demo.housingUnits == null ? "—" : demo.housingUnits.toLocaleString("en-US")} />
           </div>
         </div>
       ) : (
