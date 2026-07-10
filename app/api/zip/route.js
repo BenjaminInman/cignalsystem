@@ -79,7 +79,7 @@ export async function GET(req) {
         for (const [grain, slug, code] of ladder) {
           if (!code) continue;
           const res = await fetchSeries(slug, code);
-          if (res) return Response.json({ found: true, grain, label: grain === "metro" ? `${code} metro` : code, place, query: zip, rolledUp: true, rolledFrom: `ZIP ${zip}`, metro: grain === "metro" ? null : metro, ...res });
+          if (res) return Response.json({ found: true, grain, label: grain === "metro" ? `${code} metro` : code, place, query: zip, rolledUp: true, rolledFrom: `ZIP ${zip}`, metro: grain === "metro" ? null : metro, basis: grain === "metro" ? "multifamily" : "all rentals", ...res });
         }
       }
       return Response.json({ found: false, query: zip, kind: "zip", place });
