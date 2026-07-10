@@ -31,7 +31,21 @@ COUNTY_SLUG = "county_wages"
 METRO_SLUG = "metro_wages"
 QEND = {"1": "03-31", "2": "06-30", "3": "09-30", "4": "12-31"}
 API = "https://data.bls.gov/cew/data/api/{year}/{qtr}/industry/10.csv"
-UA = {"User-Agent": "CignalSystem/1.0 (ingest)"}
+UA = {"User-Agent": "CignalSystem/1.0 (ingest; info@cignalsystem.com)"}
+
+
+def _get_retry(url, headers=None, timeout=120, attempts=4):
+    """BLS throttles by IP with 403s; back off rather than dropping a quarter."""
+    import time as _t
+    delay = 5
+    for i in range(attempts):
+        r = requests.get(url, headers=headers, timeout=timeout)
+        if r.status_code == 200 or (r.status_code not in (403, 429) and r.status_code < 500):
+            return r
+        if i < attempts - 1:
+            _t.sleep(delay)
+            delay = min(delay * 2, 40)
+    return r
 
 
 def quarters_back(n_years=3):
@@ -54,7 +68,7 @@ def fetch_quarter(year, qtr):
     """
     url = API.format(year=year, qtr=qtr)
     try:
-        r = requests.get(url, headers=UA, timeout=120)
+        r = _get_retry(url, headers=UA, timeout=120)
         if r.status_code != 200 or not r.content:
             return {"county": [], "metro": []}
     except Exception as e:

@@ -112,7 +112,7 @@ const GOOD_UP = {
   "Renter Demand Index (ZORDI)": true, "Wage Growth (Metro)": true,
   "Unemployment Rate (County)": false,
   "Net Renter Migration Index": true, "National Foreclosure Rate": false,
-  "Renter-Age Employment (18-34)": true, "Renter Delinquency Rate": false,
+  "Renter-Age Employment (20-34)": true, "Renter Delinquency Rate": false,
   "CRE Loan Delinquency Rate": false,
   // submarket
   "Observed Rent (ZORI)": true, "Local Job Growth": true, "Real GDP (County)": true,

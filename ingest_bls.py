@@ -45,14 +45,38 @@ CPI_AREA_CBSA = {
 }
 
 
+def get_with_retry(url, headers=None, timeout=120, attempts=5, stream=False):
+    """download.bls.gov rate-limits by IP and answers 403 (not 429) when it
+    throttles. The three catalog/flat-file pulls below are large and sequential,
+    so a bare requests.get + raise_for_status turns a transient throttle into a
+    failed monthly run. Back off and retry on 403/429/5xx."""
+    import time as _t
+    delay = 5
+    last = None
+    for i in range(attempts):
+        try:
+            r = requests.get(url, headers=headers, timeout=timeout, stream=stream)
+            if r.status_code == 200:
+                return r
+            last = f"HTTP {r.status_code}"
+            if r.status_code not in (403, 429) and r.status_code < 500:
+                r.raise_for_status()
+        except requests.RequestException as e:
+            last = str(e)
+        if i < attempts - 1:
+            print(f"  {url.rsplit('/', 1)[-1]}: {last}; retrying in {delay}s")
+            _t.sleep(delay)
+            delay = min(delay * 2, 60)
+    raise RuntimeError(f"{url} failed after {attempts} attempts ({last})")
+
+
 def month_end(y, m):
     return dt.date(y, m, calendar.monthrange(y, m)[1])
 
 
 def ces_series():
     """{series_id: cbsa} for SA total-nonfarm all-employees metro series."""
-    r = requests.get(SM_CATALOG, headers={"User-Agent": UA}, timeout=120)
-    r.raise_for_status()
+    r = get_with_retry(SM_CATALOG, headers={"User-Agent": UA}, timeout=120)
     out = {}
     for line in r.text.splitlines()[1:]:
         f = line.split("\t")
@@ -66,8 +90,7 @@ def ces_series():
 
 def laus_series():
     """{series_id: cbsa} for NSA metro unemployment-rate series (measure 03)."""
-    r = requests.get(LA_AREA, headers={"User-Agent": UA}, timeout=120)
-    r.raise_for_status()
+    r = get_with_retry(LA_AREA, headers={"User-Agent": UA}, timeout=120)
     out = {}
     for line in r.text.splitlines()[1:]:
         f = line.split("\t")
@@ -94,8 +117,7 @@ def load_county_unemployment(cur, release):
     rid_by_fips = {f: i for f, i in cur.fetchall()}
 
     try:
-        r = requests.get(LA_COUNTY, headers={"User-Agent": UA}, timeout=300)
-        r.raise_for_status()
+        r = get_with_retry(LA_COUNTY, headers={"User-Agent": UA}, timeout=300)
     except Exception as e:
         print(f"  county unemployment fetch failed ({e}); skipping")
         return
