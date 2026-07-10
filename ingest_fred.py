@@ -80,7 +80,8 @@ def main():
         conn.commit(); print("Done. Committed.")
         conn.autocommit = True
         with conn.cursor() as cur:
-            cur.execute("REFRESH MATERIALIZED VIEW public.mv_indicator_analytics;")
+            cur.execute("SET statement_timeout = 0")
+            cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_indicator_analytics;")
         print("Refreshed mv_indicator_analytics.")
     except Exception:
         conn.rollback(); print("Rolled back — no partial writes."); raise

@@ -229,7 +229,8 @@ def main():
                             skip += 1
             print(f"BLS: inserted {ins}, unchanged {skip}, series {len(ids)}")
             load_county_unemployment(cur, release)
-            cur.execute("REFRESH MATERIALIZED VIEW mv_indicator_analytics;")
+            cur.execute("SET statement_timeout = 0")
+            cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_indicator_analytics;")
         conn.commit()
     finally:
         conn.close()

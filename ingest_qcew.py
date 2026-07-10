@@ -179,7 +179,8 @@ def main():
                         _write(cur, metro_id, rid, obs_date, wage, release, m_rev0, m_maxrev, mt)
                 print(f"  {year}Q{qtr}: {len(data['county'])} counties, {len(data['metro'])} metros")
 
-            cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_indicator_analytics;")
+            cur.execute("SET statement_timeout = 0")
+            cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_indicator_analytics;")
         conn.commit()
         print(f"QCEW county — inserted {ct['ins']}, revised {ct['rev']}, unchanged {ct['skip']}")
         print(f"QCEW metro  — inserted {mt['ins']}, revised {mt['rev']}, unchanged {mt['skip']}")

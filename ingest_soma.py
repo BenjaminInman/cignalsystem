@@ -147,7 +147,8 @@ def main():
                         ins += r == "insert"; rev += r == "revise"; skip += r == "skip"
             print(f"SOMA — inserted {ins}, revised {rev}, unchanged {skip} "
                   f"(across {', '.join(METRICS)})")
-            cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_indicator_analytics;")
+            cur.execute("SET statement_timeout = 0")
+            cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_indicator_analytics;")
         conn.commit()
     finally:
         conn.close()

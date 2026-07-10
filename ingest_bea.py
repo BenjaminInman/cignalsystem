@@ -116,7 +116,8 @@ def main():
                 print(f"  {slug} ({src}, {geo}): inserted {ins}, unchanged {skip}, unmatched {miss}")
                 total_ins += ins; total_skip += skip; total_miss += miss
             print(f"BEA total: inserted {total_ins}, unchanged {total_skip}, unmatched {total_miss}")
-            cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_indicator_analytics;")
+            cur.execute("SET statement_timeout = 0")
+            cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_indicator_analytics;")
         conn.commit()
     finally:
         conn.close()

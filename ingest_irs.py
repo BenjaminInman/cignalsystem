@@ -146,6 +146,7 @@ def main():
         conn.commit()
         conn.autocommit = True
         with conn.cursor() as cur:
+            cur.execute("SET statement_timeout = 0")
             cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_indicator_analytics;")
         print("Refreshed mv_indicator_analytics. Done.")
     except Exception:
