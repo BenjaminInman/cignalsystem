@@ -1,6 +1,18 @@
 export const runtime = "nodejs";
 export const revalidate = 3600;
 
+
+// Rent series: the multifamily vertical reads Zillow's multifamily-only ZORI cut.
+// Blending single-family rentals dilutes the apartment signal, and dilutes it most
+// in the oversupplied Sun Belt metros (Austin: -2.4% blended vs -3.4% MF-only).
+// This route is cached (ISR), so it does not read request headers to detect the
+// vertical; it pins to the default. Revisit when the general-real-estate vertical
+// needs the blended cut here.
+import { DEFAULT_VERTICAL } from "@/lib/vertical-slug";
+import { rentMetroSlug } from "@/lib/vertical-signals";
+
+const RENT = rentMetroSlug(DEFAULT_VERTICAL);
+
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -156,10 +168,10 @@ export async function GET() {
 
     // ---- Market forward-signal table ----
     let markets = [];
-    const mLatest = await sb(`v_indicator_analytics?slug=eq.zori_metro&region_type=eq.metro&select=obs_date&order=obs_date.desc&limit=1`);
+    const mLatest = await sb(`v_indicator_analytics?slug=eq.${RENT}&region_type=eq.metro&select=obs_date&order=obs_date.desc&limit=1`);
     if (mLatest?.length) {
       const md = mLatest[0].obs_date;
-      const mrows = (await sb(`v_indicator_analytics?slug=eq.zori_metro&obs_date=eq.${md}&select=region_code,value,yoy_change,zscore_12`)) || [];
+      const mrows = (await sb(`v_indicator_analytics?slug=eq.${RENT}&obs_date=eq.${md}&select=region_code,value,yoy_change,zscore_12`)) || [];
       const byCode = {};
       for (const r of mrows) byCode[r.region_code] = r;
       const mig = (await sb(`migration_rankings?select=market&order=report_year.desc`)) || [];

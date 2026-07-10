@@ -47,7 +47,9 @@ async function rentGrowth(zip, xw) {
   const ladder = [
     ["zori_city", xw?.city_label, "City"],
     ["zori_county", xw?.county_label, "County"],
-    ["zori_metro", xw?.metro_label, "Metro"],
+    // Metro rung = metro headline on a multifamily platform -> MF-only cut.
+    // (City/ZIP rungs stay all-rentals: Zillow publishes no sub-metro MF file.)
+    ["zori_metro_mf", xw?.metro_label, "Metro"],
   ];
   for (const [slug, code, grain] of ladder) {
     if (!code) continue;

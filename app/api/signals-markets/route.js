@@ -2,6 +2,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { sb, mean, stdev } from "@/lib/signals-engine";
+import { verticalFromRequest } from "@/lib/vertical-request";
+import { rentMetroSlug } from "@/lib/vertical-signals";
 
 // Principal CBSA per metro, paired with its Zillow ZORI metro label. Jobs +
 // vacancy key by CBSA; rent keys by the "City, ST" label — this is the bridge.
@@ -54,13 +56,17 @@ async function latestYoY(slug, codes, months = 6) {
 
 const z = (v, m, s) => (s ? (v - m) / s : 0);
 
-export async function GET() {
+export async function GET(req) {
   try {
+    const vertical = verticalFromRequest(req);
+    // Multifamily site reads the MF-only rent cut; blending SFR understates
+    // apartment softness (Austin: -2.4% blended vs -3.4% multifamily-only).
+    const rentSlug = rentMetroSlug(vertical);
     const cbsas = METROS.map((m) => m.cbsa);
     const zoris = [...new Set(METROS.map((m) => m.zori))];
     const [jobs, rents] = await Promise.all([
       latestYoY("bls_metro_employment", cbsas),
-      latestYoY("zori_metro", zoris),
+      latestYoY(rentSlug, zoris),
     ]);
 
     let rows = METROS.map((m) => ({

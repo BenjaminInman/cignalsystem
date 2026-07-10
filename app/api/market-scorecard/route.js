@@ -1,6 +1,9 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+import { verticalFromRequest } from "@/lib/vertical-request";
+import { rentMetroSlug } from "@/lib/vertical-signals";
+
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -122,13 +125,14 @@ async function permitsTrend(cbsas) {
 }
 
 export async function GET(req) {
+  const RENT = rentMetroSlug(verticalFromRequest(req));
   const { searchParams } = new URL(req.url);
   const cbsas = (searchParams.get("cbsas") || "").split(",").map((s) => s.trim()).filter(Boolean);
   const names = (searchParams.get("names") || "").split("|").map((s) => s.trim());
   try {
     const [emp, rent, vac, unemp, rpp, aimi, zhvi, permits] = await Promise.all([
       crossSection("bls_metro_employment", { yoy: true }), // leading, by CBSA
-      crossSection("zori_metro", { yoy: true }),            // Zillow rent, by NAME
+      crossSection(RENT, { yoy: true }),                    // Zillow rent (MF-only on multifamily), by NAME
       crossSection("apt_vacancy"),                          // Apartment List, by CBSA
       crossSection("bls_metro_unemployment"),               // BLS LAUS, by CBSA
       extras("bea_rpp_rents", cbsas),                       // affordability (box)

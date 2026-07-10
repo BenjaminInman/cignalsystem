@@ -1,6 +1,18 @@
 export const runtime = "nodejs";
 export const revalidate = 3600;
 
+
+// Rent series: the multifamily vertical reads Zillow's multifamily-only ZORI cut.
+// Blending single-family rentals dilutes the apartment signal, and dilutes it most
+// in the oversupplied Sun Belt metros (Austin: -2.4% blended vs -3.4% MF-only).
+// This route is cached (ISR), so it does not read request headers to detect the
+// vertical; it pins to the default. Revisit when the general-real-estate vertical
+// needs the blended cut here.
+import { DEFAULT_VERTICAL } from "@/lib/vertical-slug";
+import { rentMetroSlug } from "@/lib/vertical-signals";
+
+const RENT = rentMetroSlug(DEFAULT_VERTICAL);
+
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -51,14 +63,14 @@ export async function GET() {
 
     // Live ZORI metro signals, latest print, for just the picked metros.
     let byCode = {}, signalAsOf = null;
-    const mLatest = await sb(`v_indicator_analytics?slug=eq.zori_metro&region_type=eq.metro&select=obs_date&order=obs_date.desc&limit=1`);
+    const mLatest = await sb(`v_indicator_analytics?slug=eq.${RENT}&region_type=eq.metro&select=obs_date&order=obs_date.desc&limit=1`);
     if (mLatest?.length) {
       signalAsOf = mLatest[0].obs_date;
       const codes = [...new Set(picks.map((p) => p.region_code).filter(Boolean))];
       const inList = codes.map((c) => `"${c}"`).join(",");
       const mrows =
         (await sb(
-          `v_indicator_analytics?slug=eq.zori_metro&obs_date=eq.${signalAsOf}&region_code=in.(${inList})&select=region_code,value,yoy_change,zscore_12`
+          `v_indicator_analytics?slug=eq.${RENT}&obs_date=eq.${signalAsOf}&region_code=in.(${inList})&select=region_code,value,yoy_change,zscore_12`
         )) || [];
       for (const r of mrows) byCode[r.region_code] = r;
     }

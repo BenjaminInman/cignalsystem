@@ -83,9 +83,9 @@ function MarketMapsInner() {
 
       <div className="card mt-8 p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-semibold text-ink">{labels[0]} — Tracked Markets <span className="text-muted">· metro</span></h2>
+          <h2 className="font-semibold text-ink">{labels[0]} — Tracked Markets <span className="text-muted">· metro · multifamily</span></h2>
           <span className="mono text-[10px] tracking-[0.08em] text-muted">
-            {growth?.asOf ? <><span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-up align-middle" />LIVE · ZORI YoY · metro · as of {fmtMonth(growth.asOf)}</> : "Loading live data…"}
+            {growth?.asOf ? <><span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-up align-middle" />LIVE · ZORI YoY · metro · multifamily · as of {fmtMonth(growth.asOf)}</> : "Loading live data…"}
           </span>
         </div>
         <RentRadial markets={all} />
@@ -486,6 +486,11 @@ function ZipLookup() {
                 {data.place && /^\d{5}$/.test(String(data.query || ""))
                   ? `${data.place} · ZIP ${data.query}`
                   : data.label} · OBSERVED RENT
+                {data.basis && (
+                  <span className="rounded bg-line/60 px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-muted">
+                    {data.basis === "multifamily" ? "MULTIFAMILY" : "ALL RENTALS"}
+                  </span>
+                )}
               </p>
               <p className="mt-1.5 text-3xl font-semibold text-ink">${data.rent.toLocaleString()}<span className="ml-1 text-sm text-muted">/mo</span></p>
               <p className="mt-1 text-sm">
@@ -500,7 +505,7 @@ function ZipLookup() {
                 const tag = delta < -0.5 ? "softening faster than its metro" : delta > 0.5 ? "outperforming its metro" : "in line with its metro";
                 return (
                   <p className="mono mt-1.5 text-[11px] tracking-[0.02em] text-muted">
-                    vs <span className="text-ink">{data.metro.label}</span> metro{" "}
+                    vs <span className="text-ink">{data.metro.label}</span> metro (all rentals){" "}
                     <span style={{ color: toneColor(data.metro.yoyPct >= 0 ? "bull" : "bear") }}>
                       {data.metro.yoyPct >= 0 ? "+" : ""}{data.metro.yoyPct}%
                     </span>{" "}
