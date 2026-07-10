@@ -521,6 +521,23 @@ function ZipLookup() {
                   <span className="block text-muted/70">{data.traj.note}</span>
                 </p>
               )}
+              {data.metroMf && data.metroMf.yoyPct != null && (
+                <p className="mono mt-1.5 text-[11px] tracking-[0.02em] text-muted">
+                  <span className="rounded bg-signal/15 px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-signal">MULTIFAMILY</span>{" "}
+                  {data.metroMf.label} metro apartments{" "}
+                  <span style={{ color: toneColor(data.metroMf.yoyPct >= 0 ? "bull" : "bear") }}>
+                    {data.metroMf.yoyPct >= 0 ? "+" : ""}{data.metroMf.yoyPct}% YoY
+                  </span>
+                  {data.metroMf.traj && (
+                    <span className="text-muted/70">
+                      {" \u00b7 "}
+                      <span style={{ color: toneColor(data.metroMf.traj.tone) }}>
+                        {data.metroMf.traj.direction === "improving" ? "\u2197" : data.metroMf.traj.direction === "deteriorating" ? "\u2198" : "\u2192"} {data.metroMf.traj.label}
+                      </span>
+                    </span>
+                  )}
+                </p>
+              )}
               {data.metro && data.grain !== "metro" && data.metro.yoyPct != null && data.yoyPct != null && (() => {
                 const delta = Math.round((data.yoyPct - data.metro.yoyPct) * 10) / 10;
                 const tag = delta < -0.5 ? "softening faster than its metro" : delta > 0.5 ? "outperforming its metro" : "in line with its metro";

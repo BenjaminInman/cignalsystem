@@ -7,6 +7,8 @@
 //     ALL-RENTALS, so the comparison is like-for-like. Comparing a blended ZIP to an
 //     MF-only metro would manufacture a divergence out of property mix.
 import { trajectory, trajTone } from "@/lib/trajectory";
+import { verticalFromRequest } from "@/lib/vertical-request";
+import { rentIsMfOnly } from "@/lib/vertical-signals";
 
 const METRO_MF = "zori_metro_mf";   // metro headline (multifamily)
 const METRO_ALL = "zori_metro";     // parent context for sub-metro grains (blended)
@@ -83,22 +85,31 @@ export async function GET(req) {
       const place = xw?.city_label || null; // exact "City, ST" for this ZIP
       // Parent-metro rent, for the submarket-vs-metro divergence read.
       let metro = null;
+      let metroMf = null;
       if (xw?.metro_label) {
-        const m = await fetchSeries(METRO_ALL, xw.metro_label);
+        // `metro` (all rentals) is the like-for-like yardstick for a blended ZIP.
+        // `metroMf` is the parent metro's APARTMENT read — shown for context on the
+        // multifamily vertical, never used in the ZIP-vs-metro divergence math.
+        const [m, mf] = await Promise.all([
+          fetchSeries(METRO_ALL, xw.metro_label),
+          rentIsMfOnly(verticalFromRequest(req)) ? fetchSeries(METRO_MF, xw.metro_label) : null,
+        ]);
         if (m) metro = { label: xw.metro_label, rent: m.rent, yoyPct: m.yoyPct, asOf: m.asOf, basis: "all rentals" };
+        if (mf) metroMf = { label: xw.metro_label, rent: mf.rent, yoyPct: mf.yoyPct, asOf: mf.asOf, traj: mf.traj, basis: "multifamily" };
       }
       const z = await fetchSeries("zori_zip", zip);
-      if (z) return Response.json({ found: true, grain: "zip", label: `ZIP ${zip}`, place, query: zip, metro, basis: "all rentals", ...z });
+      if (z) return Response.json({ found: true, grain: "zip", label: `ZIP ${zip}`, place, query: zip, metro, metroMf, basis: "all rentals", ...z });
       if (xw) {
-        const ladder = [
-          ["city", "zori_city", xw.city_label],
-          ["county", "zori_county", xw.county_label],
-          ["metro", METRO_MF, xw.metro_label],
-        ];
+        // Rollup order mirrors the city path: on the multifamily vertical the metro
+        // (multifamily) rung outranks the blended city/county rungs.
+        const mfFirst = rentIsMfOnly(verticalFromRequest(req));
+        const ladder = mfFirst
+          ? [["metro", METRO_MF, xw.metro_label], ["city", "zori_city", xw.city_label], ["county", "zori_county", xw.county_label]]
+          : [["city", "zori_city", xw.city_label], ["county", "zori_county", xw.county_label], ["metro", METRO_ALL, xw.metro_label]];
         for (const [grain, slug, code] of ladder) {
           if (!code) continue;
           const res = await fetchSeries(slug, code);
-          if (res) return Response.json({ found: true, grain, label: grain === "metro" ? `${code} metro` : code, place, query: zip, rolledUp: true, rolledFrom: `ZIP ${zip}`, metro: grain === "metro" ? null : metro, basis: grain === "metro" ? "multifamily" : "all rentals", ...res });
+          if (res) return Response.json({ found: true, grain, label: grain === "metro" ? `${code} metro` : code, place, query: zip, rolledUp: true, rolledFrom: `ZIP ${zip}`, metro: grain === "metro" ? null : metro, basis: grain === "metro" && mfFirst ? "multifamily" : "all rentals", ...res });
         }
       }
       return Response.json({ found: false, query: zip, kind: "zip", place });
@@ -107,16 +118,29 @@ export async function GET(req) {
     // City, State path
     const parsed = parseCityState(q);
     if (!parsed) return Response.json({ found: false, query: q, kind: "parse", message: 'Try a format like "Austin, TX".' });
-    for (const [grain, slug] of [["city", "zori_city"], ["metro", METRO_MF], ["county", "zori_county"]]) {
+    // Many names ("Nashville, TN") exist as BOTH a Zillow city and a Zillow metro.
+    // Zillow publishes the multifamily rent cut at metro grain only, so on the
+    // multifamily vertical the metro rung is tried FIRST — otherwise a city match
+    // silently wins and the user gets an all-rentals number on an apartment
+    // platform. General real estate wants the finer city grain and the blend, so
+    // it keeps city-first.
+    const mfFirst = rentIsMfOnly(verticalFromRequest(req));
+    const ladder = mfFirst
+      ? [["metro", METRO_MF], ["city", "zori_city"], ["county", "zori_county"]]
+      : [["city", "zori_city"], ["metro", METRO_ALL], ["county", "zori_county"]];
+    for (const [grain, slug] of ladder) {
       const res = await fetchSeries(slug, parsed.code, true);
       if (res) {
         const name = res.code || parsed.code;
+        const basis = grain === "metro" && mfFirst ? "multifamily" : "all rentals";
         let metro = null;
         if (grain !== "metro") {
+          // Parent context stays all-rentals so a blended city/county compares
+          // like-for-like against a blended metro.
           const m = await fetchSeries(METRO_ALL, parsed.code, true);
           if (m) metro = { label: m.code || parsed.code, rent: m.rent, yoyPct: m.yoyPct, asOf: m.asOf, basis: "all rentals" };
         }
-        return Response.json({ found: true, grain, label: grain === "metro" ? `${name} metro` : name, place: name, query: q, metro, basis: grain === "metro" ? "multifamily" : "all rentals", ...res });
+        return Response.json({ found: true, grain, label: grain === "metro" ? `${name} metro` : name, place: name, query: q, metro, basis, ...res });
       }
     }
     return Response.json({ found: false, query: q, kind: "city" });
