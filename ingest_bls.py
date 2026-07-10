@@ -33,6 +33,16 @@ LA_COUNTY_START = 2021
 API = "https://api.bls.gov/publicAPI/v2/timeseries/data/"
 RECENT_YEARS = 2
 
+# National real average hourly earnings, all employees, total private, in
+# constant 1982-84 dollars. FRED does not carry this series, so it comes
+# straight from BLS. It is the matched real counterpart to wage_growth
+# (FRED CES0500000003) -- same universe, same seasonal adjustment -- and BLS
+# deflates it with CPI-U (the prod/nonsupervisory real series uses CPI-W and
+# would not be comparable). Written on month-start dates to line up row-for-row
+# with the nominal FRED series rather than the month-end convention the metro
+# series use. Real earnings lag nominal by one month (they wait on CPI).
+NATIONAL_SERIES = {"CES0500000013": "wage_growth_real"}
+
 # CPI-U rent of primary residence (SEHA) publishes for a small fixed metro set;
 # current S-prefixed CPI areas map 1:1 to CBSAs (legacy A-prefixed areas are
 # discontinued). series_id = CUUR{area}SEHA
@@ -162,6 +172,54 @@ def load_county_unemployment(cur, release):
     print(f"LAUS county — inserted {ins}, revised {rev}, unchanged {skip}")
 
 
+def load_national(cur, key, start, end, release):
+    """National BLS series keyed to the US region (month-start dates)."""
+    cur.execute("SELECT slug, id FROM indicators WHERE slug = ANY(%s)",
+                (list(NATIONAL_SERIES.values()),))
+    ind = {s: i for s, i in cur.fetchall()}
+    cur.execute("SELECT id FROM regions WHERE region_type='national' AND code='US'")
+    row = cur.fetchone()
+    if not row or not ind:
+        print("  national series not registered; skipping")
+        return
+    rid = row[0]
+
+    body = {"seriesid": list(NATIONAL_SERIES), "startyear": start,
+            "endyear": end, "registrationkey": key}
+    resp = requests.post(API, json=body, timeout=120).json()
+    if resp.get("status") != "REQUEST_SUCCEEDED":
+        print(f"  national: {resp.get('status')} {resp.get('message')}")
+        return
+
+    ins = rev = skip = 0
+    for s in resp["Results"]["series"]:
+        iid = ind.get(NATIONAL_SERIES.get(s["seriesID"]))
+        if not iid:
+            continue
+        for d in s["data"]:
+            p = d["period"]
+            if not p.startswith("M") or p == "M13":
+                continue
+            try:
+                val = float(d["value"].replace(",", ""))
+            except ValueError:
+                continue                      # "-" = not yet published
+            od = dt.date(int(d["year"]), int(p[1:]), 1)
+            cur.execute("SELECT value, revision FROM observations WHERE indicator_id=%s "
+                        "AND region_id=%s AND obs_date=%s ORDER BY revision DESC LIMIT 1",
+                        (iid, rid, od))
+            prev = cur.fetchone()
+            if prev is None:
+                cur.execute("INSERT INTO observations(indicator_id,region_id,obs_date,value,revision,release_date)"
+                            " VALUES(%s,%s,%s,%s,0,%s)", (iid, rid, od, val, release)); ins += 1
+            elif float(prev[0]) != val:
+                cur.execute("INSERT INTO observations(indicator_id,region_id,obs_date,value,revision,release_date)"
+                            " VALUES(%s,%s,%s,%s,%s,%s)", (iid, rid, od, val, prev[1] + 1, release)); rev += 1
+            else:
+                skip += 1
+    print(f"BLS national — inserted {ins}, revised {rev}, unchanged {skip}")
+
+
 def main():
     key = os.environ.get("BLS_API_KEY")
     db = os.environ.get("SUPABASE_DB_URL")
@@ -229,6 +287,7 @@ def main():
                             skip += 1
             print(f"BLS: inserted {ins}, unchanged {skip}, series {len(ids)}")
             load_county_unemployment(cur, release)
+            load_national(cur, key, start, end, release)
             cur.execute("SET statement_timeout = 0")
             cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_indicator_analytics;")
         conn.commit()
