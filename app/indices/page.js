@@ -18,9 +18,10 @@ const ICONS = {
 export default function IndicesPage() {
   const { INDICES = [] } = useContent();
   const [quotes, setQuotes] = useState({});
+  const [gse, setGse] = useState({});
   const [live, setLive] = useState(false);
   const [open, setOpen] = useState({});
-  const symbols = INDICES.flatMap((c) => c.members.map((m) => m.ticker));
+  const symbols = INDICES.flatMap((c) => c.members.filter((m) => !m.gse).map((m) => m.ticker));
   const symbolsKey = symbols.join(",");
 
   useEffect(() => {
@@ -36,7 +37,14 @@ export default function IndicesPage() {
       .catch(() => {});
   }, [symbolsKey]);
 
-  // Merge live quotes over fallback values.
+  useEffect(() => {
+    fetch(`/api/gse-signals`)
+      .then((r) => r.json())
+      .then((d) => d.signals && setGse(d.signals))
+      .catch(() => {});
+  }, []);
+
+  // Merge live quotes over fallback values (price members only).
   const merged = (m) => ({
     ...m,
     price: quotes[m.ticker]?.price ?? m.price,
@@ -56,8 +64,12 @@ export default function IndicesPage() {
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         {INDICES.map((cat) => {
           const Icon = ICONS[cat.category] || TrendingUp;
-          const members = cat.members.map(merged);
-          const avg = members.reduce((s, m) => s + m.chg, 0) / members.length;
+          const priceMembers = cat.members.filter((m) => !m.gse).map(merged);
+          const gseMembers = cat.members.filter((m) => m.gse);
+          const members = priceMembers;
+          const avg = members.length
+            ? members.reduce((s, m) => s + m.chg, 0) / members.length
+            : 0;
           const up = members.filter((m) => m.chg > 0).length;
           const positive = avg >= 0;
           const color = positive ? "#5FB97C" : "#E5634D";
@@ -76,7 +88,9 @@ export default function IndicesPage() {
                   </span>
                   <div>
                     <h2 className="font-semibold text-ink">{cat.category}</h2>
-                    <p className="mono text-[11px] tracking-wide text-muted">{up}/{members.length} advancing</p>
+                    <p className="mono text-[11px] tracking-wide text-muted">
+                      {up}/{members.length} advancing{gseMembers.length ? ` · +${gseMembers.length} GSE` : ""}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -116,6 +130,36 @@ export default function IndicesPage() {
                       </div>
                     );
                   })}
+                  {gseMembers.map((m) => {
+                    const sig = gse[m.gse];
+                    // Falling delinquency is good -> green when delta < 0.
+                    const good = sig?.delta != null ? sig.delta < 0 : null;
+                    const col = good == null ? "#797E85" : good ? "#5FB97C" : "#E5634D";
+                    return (
+                      <div key={m.ticker} className="grid grid-cols-[1fr_auto_auto] items-center gap-4 border-t border-[var(--line)] bg-white/[0.015] px-4 py-3">
+                        <div>
+                          <span className="mono text-sm font-medium text-ink">{m.ticker}</span>
+                          <span className="ml-2 text-[12px] text-muted">{m.name}</span>
+                          <span className="mono ml-2 rounded bg-signal/10 px-1.5 py-0.5 text-[9px] tracking-[0.08em] text-signal">
+                            {m.gseLabel}
+                          </span>
+                        </div>
+                        <span className="mono text-right text-sm text-ink">
+                          {sig ? `${sig.value.toFixed(2)}%` : "—"}
+                        </span>
+                        <span className="mono w-16 text-right text-sm" style={{ color: col }}>
+                          {sig?.delta != null ? `${sig.delta >= 0 ? "+" : ""}${sig.delta.toFixed(2)}pp` : ""}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  {gseMembers.length > 0 && (
+                    <p className="mono border-t border-[var(--line)] px-4 py-2 text-[10px] leading-relaxed text-muted/70">
+                      FNMA/FMCC shown as multifamily serious delinquency rate (monthly, public GSE
+                      filings){gse[gseMembers[0]?.gse]?.asOf ? ` · as of ${gse[gseMembers[0].gse].asOf}` : ""} —
+                      falling rate is green. GSEs trade OTC; not a stock quote.
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -126,8 +170,11 @@ export default function IndicesPage() {
       <p className="mono mt-6 flex items-center gap-2 text-[11px] tracking-[0.06em] text-muted">
         <span className={`h-1.5 w-1.5 rounded-full ${live ? "animate-flicker bg-signal" : "bg-muted"}`} />
         {live
-          ? "Live quotes · delayed, via public market data"
-          : "Showing reference values — live quotes resume when the data feed is reachable"}
+          ? "Daily close · via Databento (EOD, delayed)"
+          : "Showing reference values — daily closes resume when the feed refreshes"}
+      </p>
+      <p className="mono mt-1 text-[10px] tracking-[0.06em] text-muted/60">
+        Equity data provided by Databento. GSE delinquency from public Fannie Mae / Freddie Mac filings.
       </p>
 
       <BuffettIndicator />

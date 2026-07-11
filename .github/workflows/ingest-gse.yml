@@ -1,0 +1,26 @@
+name: Ingest GSE (Fannie/Freddie multifamily)
+
+# Monthly — parses Fannie's Monthly Summary and Freddie's Monthly Volume Summary
+# for multifamily serious delinquency rates. Public GSE filings, no API key.
+# Runs mid-month (filings for the prior month post early-to-mid month) with a
+# late-month retry.
+on:
+  schedule:
+    - cron: "0 14 15 * *"   # 15th, 14:00 UTC
+    - cron: "0 14 25 * *"   # 25th retry
+  workflow_dispatch: {}
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install deps
+        run: pip install psycopg2-binary pdfplumber
+      - name: Run ingestion
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: python ingest_gse.py
