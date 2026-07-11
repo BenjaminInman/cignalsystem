@@ -47,7 +47,7 @@ const GROUPS = [
     items: [
       {
         q: "Where does your data come from?",
-        a: "Exclusively from reputable, publicly available sources — federal agencies and established industry datasets such as the Federal Reserve (FRED), the U.S. Census Bureau, the Bureau of Labor Statistics, and public housing data. Every reading traces back to a primary source you can verify.",
+        a: "Exclusively from reputable, publicly available sources — federal agencies and established industry datasets such as the Federal Reserve (FRED), the U.S. Census Bureau, the Bureau of Labor Statistics, The Conference Board, and public housing data. Every reading traces back to a primary source you can verify. Third-party indexes remain the property of their publishers — for example, the Consumer Confidence Index® is a registered trademark of The Conference Board — and are shown here with attribution.",
       },
       {
         q: "How often is the data updated?",
