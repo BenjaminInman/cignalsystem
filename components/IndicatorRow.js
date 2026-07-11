@@ -157,7 +157,7 @@ export default function IndicatorRow({ row, ask }) {
     <div className="card overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="grid w-full grid-cols-2 items-start gap-4 px-6 py-5 text-left transition-colors hover:bg-white/[0.02] md:grid-cols-[1.4fr_1fr_1.2fr_auto]"
+        className="grid w-full grid-cols-2 items-baseline gap-4 px-6 py-5 text-left transition-colors hover:bg-white/[0.02] md:grid-cols-[1.4fr_1fr_1.2fr_auto]"
       >
         <div>
           <p className="mono text-[10px] tracking-[0.18em] text-muted">{r.cat} · {r.type}</p>
@@ -175,7 +175,7 @@ export default function IndicatorRow({ row, ask }) {
           </p>
           <p className="mono mt-0.5 text-[11px] text-muted">{r.note}</p>
         </div>
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex items-center justify-end gap-3 self-baseline">
           <StatusPill tone={r.tone} />
           <ChevronDown size={16} className={`text-muted transition-transform ${open ? "rotate-180" : ""}`} />
         </div>
