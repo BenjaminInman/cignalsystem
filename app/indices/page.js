@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { TrendingUp, Hammer, Wrench, Landmark, Handshake, Building2, Building, ChevronDown } from "lucide-react";
+import { TrendingUp, Hammer, Wrench, Landmark, Handshake, Building2, Building, ChevronDown, Split } from "lucide-react";
 import { useContent } from "@/components/VerticalProvider";
 import BuffettIndicator from "@/components/BuffettIndicator";
 import IndexDonut from "@/components/IndexDonut";
@@ -51,6 +51,29 @@ export default function IndicesPage() {
     chg: quotes[m.ticker]?.chg ?? m.chg,
   });
 
+  // Composite "Housing Equity Complex": equal-weight the daily move of every
+  // price member (GSE tiles excluded — they're a credit signal, not a price).
+  // Sub-indices are the category averages; divergence is the spread between the
+  // strongest and weakest sub-index, which is itself a signal.
+  const priceCats = INDICES.map((cat) => {
+    const ms = cat.members.filter((m) => !m.gse).map(merged);
+    const avg = ms.length ? ms.reduce((s, m) => s + m.chg, 0) / ms.length : null;
+    return { category: cat.category, avg, n: ms.length };
+  }).filter((c) => c.avg != null);
+
+  const allMembers = INDICES.flatMap((cat) =>
+    cat.members.filter((m) => !m.gse).map(merged)
+  );
+  const blended = allMembers.length
+    ? allMembers.reduce((s, m) => s + m.chg, 0) / allMembers.length
+    : 0;
+  const subVals = priceCats.map((c) => c.avg);
+  const spread = subVals.length ? Math.max(...subVals) - Math.min(...subVals) : 0;
+  const diverging = spread >= 1.0; // ≥1pp spread between sub-indices reads as divergence
+  const strongest = priceCats.reduce((a, b) => (b.avg > a.avg ? b : a), priceCats[0] || {});
+  const weakest = priceCats.reduce((a, b) => (b.avg < a.avg ? b : a), priceCats[0] || {});
+  const blendedColor = blended >= 0 ? "#5FB97C" : "#E5634D";
+
   return (
     <div className="pt-12 pb-10">
       <p className="kicker mb-3 flex items-center gap-2"><TrendingUp size={12} className="text-signal" /> Market Indices</p>
@@ -60,6 +83,54 @@ export default function IndicesPage() {
         performance donut: green advancing, red declining, sized by the size of the move. Tap a category to
         open its holdings.
       </p>
+
+      {/* Composite: the Housing Equity Complex headline read */}
+      <div className="mt-8 card p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="mono text-[10px] tracking-[0.18em] text-muted">HOUSING EQUITY COMPLEX</p>
+            <div className="mt-2 flex items-baseline gap-3">
+              <span className="headline text-4xl" style={{ color: blendedColor }}>
+                {blended >= 0 ? "+" : ""}{blended.toFixed(2)}%
+              </span>
+              <span className="mono text-[11px] text-muted">
+                blended · {allMembers.length} names {live ? "· daily close" : "· reference"}
+              </span>
+            </div>
+          </div>
+          <div className="text-right">
+            {diverging ? (
+              <>
+                <span className="mono inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] tracking-[0.08em]" style={{ color: "#E8B04B", backgroundColor: "#E8B04B1a", border: "1px solid #E8B04B40" }}>
+                  <Split size={13} /> DIVERGENCE
+                </span>
+                <p className="mono mt-2 max-w-[240px] text-[11px] leading-relaxed text-muted">
+                  {strongest.category} leading{strongest.avg != null ? ` (${strongest.avg >= 0 ? "+" : ""}${strongest.avg.toFixed(2)}%)` : ""}, {weakest.category.toLowerCase()} lagging{weakest.avg != null ? ` (${weakest.avg >= 0 ? "+" : ""}${weakest.avg.toFixed(2)}%)` : ""}
+                </p>
+              </>
+            ) : (
+              <span className="mono inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] tracking-[0.08em]" style={{ color: "#5FB97C", backgroundColor: "#5FB97C1a", border: "1px solid #5FB97C40" }}>
+                <Split size={13} /> IN AGREEMENT
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* sub-index dials */}
+        <div className="mt-5 grid gap-3 border-t border-[var(--line)] pt-5 sm:grid-cols-2 lg:grid-cols-3">
+          {priceCats.map((c) => {
+            const col = c.avg >= 0 ? "#5FB97C" : "#E5634D";
+            return (
+              <div key={c.category} className="flex items-baseline justify-between gap-3">
+                <span className="text-[13px] text-muted">{c.category}</span>
+                <span className="mono text-sm font-medium" style={{ color: col }}>
+                  {c.avg >= 0 ? "+" : ""}{c.avg.toFixed(2)}%
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         {INDICES.map((cat) => {
