@@ -285,33 +285,56 @@ function ZipDetail({ zip, rent, demo, oz }) {
         <div>
           <div className="mb-2 flex flex-wrap items-baseline gap-2">
             <p className="mono text-[9px] tracking-[0.12em] text-muted">
-              OPPORTUNITY ZONE 2.0 · ELIGIBLE TRACTS · {oz.scopeLabel?.toUpperCase()}
+              FEDERAL CAPITAL PROGRAMS · {oz.scopeLabel?.toUpperCase()}
             </p>
             <span className="mono rounded bg-signal/15 px-1.5 py-0.5 text-[8px] tracking-[0.08em] text-signal">
               NOMINATIONS OPEN
             </span>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <Stat label="ELIGIBLE TRACTS" value={String(oz.summary.eligible)} sub={`of ${oz.summary.tracts} · ${oz.summary.eligiblePct}%`} />
+            <Stat label="OZ 2.0 ELIGIBLE" value={String(oz.summary.eligible)} sub={`of ${oz.summary.tracts} tracts · ${oz.summary.eligiblePct}%`} />
             <Stat label="LIKELY DESIGNATED" value={`~${oz.summary.likelyDesignated}`} sub="governors pick ~25%" />
-            <Stat label="QUALIFY ON INCOME" value={String(oz.summary.qualifyingPath.income)} sub="MFI \u2264 70% of area" />
-            <Stat label="QUALIFY ON POVERTY" value={String(oz.summary.qualifyingPath.poverty)} sub="\u226520% pov, MFI <125%" />
+            <Stat label="LIHTC QCT" value={String(oz.summary.qct)} sub={`${oz.lihtcRule.basisBoost}% basis boost`} />
+            <Stat label="BOTH OZ + QCT" value={String(oz.summary.ozAndQct)} sub="stacked incentives" />
           </div>
           <div className="mono mt-2 max-h-36 overflow-y-auto rounded border border-[var(--line)]">
             <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 border-b border-[var(--line)] bg-bg/40 px-2.5 py-1 text-[8px] tracking-[0.08em] text-muted">
-              <span>TRACT</span><span>MFI %</span><span>POV</span><span>PATH</span>
+              <span>TRACT</span><span>MFI %</span><span>POV</span><span>PROGRAMS</span>
             </div>
             {oz.tracts.slice(0, 30).map((t) => (
               <div key={t.fips} className="grid grid-cols-[1fr_auto_auto_auto] gap-2 border-b border-[var(--line)]/50 px-2.5 py-1 text-[9px]">
                 <span className="text-ink">{t.name}</span>
                 <span className="text-muted">{t.mfiPctOfArea != null ? `${t.mfiPctOfArea}%` : "\u2014"}</span>
                 <span className="text-muted">{t.povertyRate != null ? `${t.povertyRate}%` : "\u2014"}</span>
-                <span style={{ color: t.path === "poverty" ? toneColor("bear") : undefined }} className={t.path === "poverty" ? "" : "text-muted"}>{t.path}</span>
+                <span className="flex gap-1">
+                  <span className="rounded bg-signal/15 px-1 text-[8px] text-signal">OZ</span>
+                  {t.qct && <span className="rounded bg-up/15 px-1 text-[8px] text-up">QCT</span>}
+                </span>
               </div>
             ))}
           </div>
+          {oz.capital && (
+            <div className="mt-2 border-t border-[var(--line)] pt-2">
+              <p className="mono text-[8px] tracking-[0.1em] text-muted">CREDIT ACCESS \u00b7 CFPB HMDA \u00b7 2023</p>
+              <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                <span className="mono text-[10px] text-muted">
+                  denial rate{" "}
+                  {oz.capital.suppressed ? <span className="text-muted/60">insufficient sample</span> : (
+                    <span style={{ color: toneColor(oz.capital.denialRate > 26 ? "bear" : "bull") }}>{oz.capital.denialRate}%</span>
+                  )}
+                  <span className="text-muted/60"> \u00b7 US 26.0%</span>
+                </span>
+                <span className="mono text-[10px] text-muted">{oz.capital.applications?.toLocaleString()} apps</span>
+                {oz.capital.origVolume != null && (
+                  <span className="mono text-[10px] text-muted">${(oz.capital.origVolume / 1e9).toFixed(2)}B originated</span>
+                )}
+                {oz.capital.nmdda && <span className="mono rounded bg-up/15 px-1.5 text-[8px] text-up">NON-METRO DDA</span>}
+              </div>
+            </div>
+          )}
           <p className="mono mt-1.5 text-[8px] leading-relaxed text-muted/70">
-            County-scoped. Cignal-computed from Census ACS ({oz.rule.vintage}) under the OZ 2.0 test \u2014 not Treasury&apos;s official list.
+            County-scoped. OZ: Cignal-computed from Census ACS ({oz.rule.vintage}) \u2014 not Treasury&apos;s official list.
+            QCT: HUD, {oz.lihtcRule.effective} list, {oz.lihtcRule.basisBoost}% LIHTC basis boost. HMDA rate suppressed below 50 applications.
             Governors nominate up to {oz.rule.nominationShare}% of eligible tracts; designations effective {oz.rule.effective}, OZ 1.0 sunsets {oz.rule.oz1Sunset}.
             Designation confers tax treatment, not an assured return.
           </p>

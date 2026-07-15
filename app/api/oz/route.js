@@ -30,6 +30,18 @@ const RULE = {
   vintage: "ACS 2019-2023 5-year",
 };
 
+// LIHTC designations (HUD, redesignated annually, 2026 lists effective 2026-01-01).
+// QCT and DDA are a different program from OZ: they grant a 30% basis boost to
+// affordable-housing developers, where OZ grants capital-gains treatment to
+// investors. A tract can carry both — 12,773 nationally do.
+const LIHTC_RULE = {
+  basisBoost: 30,
+  qctTest: "\u226550% of households below 60% AMGI, or poverty \u226525%",
+  ddaTest: "high land/construction/utility costs relative to AMGI",
+  effective: "2026-01-01",
+  popCap: 20,
+};
+
 async function sb(path) {
   if (!SUPA || !KEY) return null;
   const r = await fetch(`${SUPA}/rest/v1/${path}`, {
@@ -66,6 +78,26 @@ export async function GET(req) {
   const byPath = { income: 0, poverty: 0 };
   for (const r of eligible) if (r.qualifying_path) byPath[r.qualifying_path]++;
 
+  // County-grain capital context: HMDA credit flow + non-metro DDA status.
+  // Only meaningful when the scope IS a county (a metro spans many).
+  let capital = null;
+  if (scope.kind === "county") {
+    const c = await sb(`v_county_capital?county_fips=eq.${encodeURIComponent(scope.code)}&select=*&limit=1`);
+    if (c?.[0]) {
+      const x = c[0];
+      capital = {
+        denialRate: x.denial_rate,          // null when suppressed (<50 applications)
+        applications: x.applications,
+        origVolume: x.orig_volume,
+        nmdda: x.nmdda === 1,
+        suppressed: x.denial_rate == null,
+      };
+    }
+  }
+
+  const qctCount = rows.filter((r) => r.qct === 1).length;
+  const stacked = eligible.filter((r) => r.qct === 1).length;
+
   return Response.json({
     found: true,
     scope,
@@ -77,13 +109,20 @@ export async function GET(req) {
       // Only ~25% of the eligible universe will actually be designated.
       likelyDesignated: Math.floor(eligible.length * (RULE.nominationShare / 100)),
       qualifyingPath: byPath,
+      qct: qctCount,
+      // Tracts carrying BOTH programs: OZ capital-gains treatment on top of the
+      // 30% LIHTC basis boost. The most heavily subsidized ground in the country.
+      ozAndQct: stacked,
     },
+    capital,
+    lihtcRule: LIHTC_RULE,
     tracts: eligible.map((r) => ({
       fips: r.tract_fips,
       name: (r.tract_name || "").replace(/;.*$/, ""),
       mfiPctOfArea: r.mfi_pct_of_area,
       povertyRate: r.poverty_rate,
       path: r.qualifying_path,
+      qct: r.qct === 1,
     })),
     disclaimer:
       "Cignal-computed eligibility from Census ACS under the OZ 2.0 statutory test. Not the official Treasury list — Treasury sets the final dataset and vintage, and governors nominate up to 25% of eligible tracts. Designation confers tax treatment, not an assured return: research on OZ 1.0 found minimal measurable effect on housing prices and residential permitting.",
