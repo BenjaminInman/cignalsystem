@@ -13,9 +13,15 @@ name: Ingest Databento (equity EOD)
 # close until Monday morning. The Saturday run picks it up; Sunday no-ops.
 # The script clamps to Databento's available range, so extra runs are
 # idempotent — they just re-write the last available session.
+#
+# Two runs a day: a 2026-07-15 16:02 UTC test confirmed the prior session (Jul 14)
+# was published by midday, but not that it's up by 11:00 UTC. The 14:00 UTC run is
+# a safety net so the tab is fresh before the US business day is underway. If the
+# 11:00 run proves sufficient, the second can be dropped.
 on:
   schedule:
     - cron: "0 11 * * *"   # 11:00 UTC (~6-7am ET), every day
+    - cron: "0 14 * * *"   # 14:00 UTC (~9-10am ET) safety net — see note
   workflow_dispatch: {}
 
 jobs:
