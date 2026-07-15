@@ -58,12 +58,23 @@ export default function MyZipCodes() {
         fetch(`/api/zip?zip=${zip}`).then((r) => r.json()).catch(() => null),
         fetch(`/api/zip-demographics?zip=${zip}`).then((r) => r.json()).catch(() => null),
       ]);
+      // Opportunity Zone 2.0 is tract-grain. /api/zip hands back the tightest scope
+      // it could resolve (county for a ZIP), which we then look up. Chained rather
+      // than parallel because the scope is only known after the rent call returns.
+      let ozRes = null;
+      const scope = rRes?.ozScope;
+      if (scope) {
+        const o = await fetch(`/api/oz?${scope.kind === "county" ? "county" : "cbsa"}=${encodeURIComponent(scope.code)}`)
+          .then((r) => r.json()).catch(() => null);
+        if (o?.found) ozRes = { ...o, scopeLabel: scope.label };
+      }
       setDetails((d) => ({
         ...d,
         [zip]: {
           loading: false,
           rent: rRes && rRes.found ? rRes : null,
           demo: dRes && dRes.found ? dRes : null,
+          oz: ozRes,
         },
       }));
     } catch {
@@ -195,7 +206,7 @@ export default function MyZipCodes() {
                       ) : d.error ? (
                         <p className="mono text-[12px] text-down">Couldn&apos;t load data for {zip}. Try again shortly.</p>
                       ) : (
-                        <ZipDetail zip={zip} rent={d.rent} demo={d.demo} />
+                        <ZipDetail zip={zip} rent={d.rent} demo={d.demo} oz={d.oz} />
                       )}
                     </div>
                   )}
@@ -222,7 +233,7 @@ function Stat({ label, value, sub }) {
   );
 }
 
-function ZipDetail({ zip, rent, demo }) {
+function ZipDetail({ zip, rent, demo, oz }) {
   const up = rent && rent.yoyPct != null && rent.yoyPct >= 0;
   return (
     <div className="space-y-5">
@@ -267,6 +278,44 @@ function ZipDetail({ zip, rent, demo }) {
         </div>
       ) : (
         <p className="mono text-[11px] text-muted">No Census demographic snapshot loaded for this ZIP.</p>
+      )}
+
+      {/* Opportunity Zone 2.0 — tract grain, scoped to this ZIP's county */}
+      {oz && oz.summary?.eligible > 0 && (
+        <div>
+          <div className="mb-2 flex flex-wrap items-baseline gap-2">
+            <p className="mono text-[9px] tracking-[0.12em] text-muted">
+              OPPORTUNITY ZONE 2.0 · ELIGIBLE TRACTS · {oz.scopeLabel?.toUpperCase()}
+            </p>
+            <span className="mono rounded bg-signal/15 px-1.5 py-0.5 text-[8px] tracking-[0.08em] text-signal">
+              NOMINATIONS OPEN
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <Stat label="ELIGIBLE TRACTS" value={String(oz.summary.eligible)} sub={`of ${oz.summary.tracts} · ${oz.summary.eligiblePct}%`} />
+            <Stat label="LIKELY DESIGNATED" value={`~${oz.summary.likelyDesignated}`} sub="governors pick ~25%" />
+            <Stat label="QUALIFY ON INCOME" value={String(oz.summary.qualifyingPath.income)} sub="MFI \u2264 70% of area" />
+            <Stat label="QUALIFY ON POVERTY" value={String(oz.summary.qualifyingPath.poverty)} sub="\u226520% pov, MFI <125%" />
+          </div>
+          <div className="mono mt-2 max-h-36 overflow-y-auto rounded border border-[var(--line)]">
+            <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 border-b border-[var(--line)] bg-bg/40 px-2.5 py-1 text-[8px] tracking-[0.08em] text-muted">
+              <span>TRACT</span><span>MFI %</span><span>POV</span><span>PATH</span>
+            </div>
+            {oz.tracts.slice(0, 30).map((t) => (
+              <div key={t.fips} className="grid grid-cols-[1fr_auto_auto_auto] gap-2 border-b border-[var(--line)]/50 px-2.5 py-1 text-[9px]">
+                <span className="text-ink">{t.name}</span>
+                <span className="text-muted">{t.mfiPctOfArea != null ? `${t.mfiPctOfArea}%` : "\u2014"}</span>
+                <span className="text-muted">{t.povertyRate != null ? `${t.povertyRate}%` : "\u2014"}</span>
+                <span style={{ color: t.path === "poverty" ? toneColor("bear") : undefined }} className={t.path === "poverty" ? "" : "text-muted"}>{t.path}</span>
+              </div>
+            ))}
+          </div>
+          <p className="mono mt-1.5 text-[8px] leading-relaxed text-muted/70">
+            County-scoped. Cignal-computed from Census ACS ({oz.rule.vintage}) under the OZ 2.0 test \u2014 not Treasury&apos;s official list.
+            Governors nominate up to {oz.rule.nominationShare}% of eligible tracts; designations effective {oz.rule.effective}, OZ 1.0 sunsets {oz.rule.oz1Sunset}.
+            Designation confers tax treatment, not an assured return.
+          </p>
+        </div>
       )}
     </div>
   );
