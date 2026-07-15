@@ -68,7 +68,7 @@ export async function GET(req) {
 
   // Always region-filtered — an unfiltered scan of 84k tracts trips the anon timeout.
   const rows = await sb(
-    `v_oz_tracts?${filter}&select=tract_fips,tract_name,cbsa_code,county_fips,eligible,mfi_pct_of_area,poverty_rate,qualifying_path&order=mfi_pct_of_area.asc&limit=2000`
+    `v_oz_tracts?${filter}&select=tract_fips,tract_name,cbsa_code,county_fips,eligible,mfi_pct_of_area,poverty_rate,qualifying_path,qct&order=mfi_pct_of_area.asc&limit=2000`
   );
   if (!Array.isArray(rows) || rows.length === 0) {
     return Response.json({ found: false, scope, rule: RULE });
