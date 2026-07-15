@@ -98,11 +98,10 @@ def main():
             cur.executemany(
                 """INSERT INTO equity_quotes (symbol, price, prev_close, chg_pct, as_of, source, updated_at)
                    VALUES (%s, %s, %s, %s, %s, 'databento', now())
-                   ON CONFLICT (symbol) DO UPDATE SET
+                   ON CONFLICT (symbol, as_of) DO UPDATE SET
                      price = EXCLUDED.price,
                      prev_close = EXCLUDED.prev_close,
                      chg_pct = EXCLUDED.chg_pct,
-                     as_of = EXCLUDED.as_of,
                      source = 'databento',
                      updated_at = now()""",
                 rows,
