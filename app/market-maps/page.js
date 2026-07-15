@@ -387,6 +387,7 @@ function ZipLookup() {
   const [data, setData] = useState(null);
   const [demo, setDemo] = useState(null); // ZIP-level Census demographics
   const [signals, setSignals] = useState(null); // metro-level signals (jobs, RPP, rent CPI…)
+  const [oz, setOz] = useState(null); // Opportunity Zone 2.0 eligibility (tract grain)
   const [status, setStatus] = useState("idle"); // idle | loading | error
   const [msg, setMsg] = useState("");
   const [userId, setUserId] = useState(undefined); // undefined = loading; null = signed out
@@ -421,7 +422,7 @@ function ZipLookup() {
   const search = async () => {
     const v = q.trim();
     if (!v) { setStatus("error"); setMsg("Enter a ZIP code or City, State."); setData(null); return; }
-    setStatus("loading"); setMsg(""); setData(null); setDemo(null); setSignals(null);
+    setStatus("loading"); setMsg(""); setData(null); setDemo(null); setSignals(null); setOz(null);
     const isZip = /^\d{5}$/.test(v);
     try {
       const [zr, dr, sr] = await Promise.all([
@@ -438,6 +439,16 @@ function ZipLookup() {
         signalRes = await fetch(`/api/metro-signals?metro=${encodeURIComponent(zr.d.code)}`).then((r) => r.json()).catch(() => null);
       }
       if (signalRes?.found) setSignals(signalRes);
+      // OZ 2.0 is tract-grain; the lookup hands back the tightest scope it could
+      // resolve (county when known, else CBSA). Fetched separately so a slow or
+      // missing OZ read never delays the rent card.
+      const scope = zr.d?.ozScope;
+      if (scope) {
+        fetch(`/api/oz?${scope.kind === "county" ? "county" : "cbsa"}=${encodeURIComponent(scope.code)}`)
+          .then((r) => r.json())
+          .then((o) => { if (o?.found) setOz({ ...o, scopeLabel: scope.label }); })
+          .catch(() => {});
+      }
       setStatus("idle");
     } catch {
       setStatus("error"); setMsg("Lookup failed. Please try again.");
@@ -583,6 +594,50 @@ function ZipLookup() {
           <p className="mono mt-3 text-[10px] tracking-[0.08em] text-muted">
             Zillow Observed Rent Index · {data.label} · {data.basis === "multifamily" ? "multifamily (5+ units)" : "all rental types (SFR + condo + MF)"} · market asking rent, smoothed &amp; seasonally adjusted · as of {data.asOf}
           </p>
+          {oz && oz.summary?.eligible > 0 && (
+            <div className="mt-4 border-t border-[var(--line)] pt-4">
+              <div className="flex flex-wrap items-baseline gap-2">
+                <p className="mono text-[10px] tracking-[0.1em] text-muted">
+                  OPPORTUNITY ZONE 2.0 · ELIGIBLE TRACTS · {oz.scopeLabel?.toUpperCase()}
+                </p>
+                <span className="mono rounded bg-signal/15 px-1.5 py-0.5 text-[8px] tracking-[0.08em] text-signal">
+                  NOMINATIONS OPEN
+                </span>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {[
+                  ["Eligible tracts", oz.summary.eligible, `of ${oz.summary.tracts} · ${oz.summary.eligiblePct}%`],
+                  ["Likely designated", `~${oz.summary.likelyDesignated}`, "governors pick ~25%"],
+                  ["Qualify on income", oz.summary.qualifyingPath.income, "MFI \u2264 70% of area"],
+                  ["Qualify on poverty", oz.summary.qualifyingPath.poverty, "\u226520% pov, MFI <125%"],
+                ].map(([k, v, sub]) => (
+                  <div key={k}>
+                    <p className="mono text-[9px] tracking-[0.08em] text-muted">{k.toUpperCase()}</p>
+                    <p className="headline mt-0.5 text-lg text-ink">{v}</p>
+                    <p className="mono text-[9px] text-muted/70">{sub}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 max-h-44 overflow-y-auto rounded border border-[var(--line)]">
+                <div className="mono grid grid-cols-[1fr_auto_auto_auto] gap-2 border-b border-[var(--line)] bg-bg/40 px-3 py-1.5 text-[9px] tracking-[0.08em] text-muted">
+                  <span>TRACT</span><span>MFI %</span><span>POV</span><span>PATH</span>
+                </div>
+                {oz.tracts.slice(0, 40).map((t) => (
+                  <div key={t.fips} className="mono grid grid-cols-[1fr_auto_auto_auto] gap-2 border-b border-[var(--line)]/50 px-3 py-1.5 text-[10px]">
+                    <span className="text-ink">{t.name}</span>
+                    <span className="text-muted">{t.mfiPctOfArea != null ? `${t.mfiPctOfArea}%` : "\u2014"}</span>
+                    <span className="text-muted">{t.povertyRate != null ? `${t.povertyRate}%` : "\u2014"}</span>
+                    <span style={{ color: t.path === "poverty" ? "var(--down,#E5634D)" : "var(--muted,#797E85)" }}>{t.path}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="mono mt-2 text-[9px] leading-relaxed text-muted/70">
+                Cignal-computed from Census ACS ({oz.rule.vintage}) under the OZ 2.0 test \u2014 <span className="text-muted">not Treasury&apos;s official list</span>.
+                Treasury sets the final dataset; governors nominate up to {oz.rule.nominationShare}% of eligible tracts. Designations effective {oz.rule.effective}; OZ 1.0 sunsets {oz.rule.oz1Sunset}.
+                Designation confers tax treatment, not an assured return \u2014 research on OZ 1.0 found minimal measurable effect on prices and permitting.
+              </p>
+            </div>
+          )}
           {demo && (
             <div className="mt-4 border-t border-[var(--line)] pt-4">
               <p className="mono text-[10px] tracking-[0.1em] text-muted">ZIP DEMOGRAPHICS · CENSUS ACS · OCCUPIED STOCK</p>

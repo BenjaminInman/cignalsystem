@@ -27,6 +27,25 @@ async function sb(path) {
   return r.ok ? r.json() : null;
 }
 
+
+// Resolve an OZ 2.0 scope key for this lookup. Opportunity Zones are defined on
+// census TRACTS, so we return the tightest containing geography we can key on:
+// county FIPS when the crosswalk gives us a county (ZIP/city lookups), otherwise
+// the CBSA. County is preferred — a metro spans many counties and would return a
+// far broader tract list than the user asked about.
+async function ozScopeFor({ countyLabel, metroLabel, metroCode }) {
+  if (countyLabel) {
+    const c = await sb(`regions?region_type=eq.county&code=eq.${encodeURIComponent(countyLabel)}&select=fips&limit=1`);
+    if (c?.[0]?.fips) return { kind: "county", code: c[0].fips, label: countyLabel };
+  }
+  const zc = metroCode || metroLabel;
+  if (zc) {
+    const m = await sb(`cbsa_zillow_xwalk?zillow_code=eq.${encodeURIComponent(zc)}&select=cbsa&limit=1`);
+    if (m?.[0]?.cbsa) return { kind: "metro", code: m[0].cbsa, label: zc };
+  }
+  return null;
+}
+
 async function fetchSeries(slug, code, ci = false) {
   const op = ci ? "ilike" : "eq";
   const enc = encodeURIComponent(code);
@@ -98,7 +117,8 @@ export async function GET(req) {
         if (mf) metroMf = { label: xw.metro_label, rent: mf.rent, yoyPct: mf.yoyPct, asOf: mf.asOf, traj: mf.traj, basis: "multifamily" };
       }
       const z = await fetchSeries("zori_zip", zip);
-      if (z) return Response.json({ found: true, grain: "zip", label: `ZIP ${zip}`, place, query: zip, metro, metroMf, basis: "all rentals", ...z });
+      const ozScope = await ozScopeFor({ countyLabel: xw?.county_label, metroLabel: xw?.metro_label });
+      if (z) return Response.json({ found: true, grain: "zip", label: `ZIP ${zip}`, place, query: zip, metro, metroMf, ozScope, basis: "all rentals", ...z });
       if (xw) {
         // Rollup order mirrors the city path: on the multifamily vertical the metro
         // (multifamily) rung outranks the blended city/county rungs.
@@ -109,7 +129,7 @@ export async function GET(req) {
         for (const [grain, slug, code] of ladder) {
           if (!code) continue;
           const res = await fetchSeries(slug, code);
-          if (res) return Response.json({ found: true, grain, label: grain === "metro" ? `${code} metro` : code, place, query: zip, rolledUp: true, rolledFrom: `ZIP ${zip}`, metro: grain === "metro" ? null : metro, basis: grain === "metro" && mfFirst ? "multifamily" : "all rentals", ...res });
+          if (res) return Response.json({ found: true, grain, label: grain === "metro" ? `${code} metro` : code, place, query: zip, rolledUp: true, rolledFrom: `ZIP ${zip}`, metro: grain === "metro" ? null : metro, basis: grain === "metro" && mfFirst ? "multifamily" : "all rentals", ozScope: await ozScopeFor({ countyLabel: xw?.county_label, metroLabel: xw?.metro_label }), ...res });
         }
       }
       return Response.json({ found: false, query: zip, kind: "zip", place });
@@ -140,7 +160,8 @@ export async function GET(req) {
           const m = await fetchSeries(METRO_ALL, parsed.code, true);
           if (m) metro = { label: m.code || parsed.code, rent: m.rent, yoyPct: m.yoyPct, asOf: m.asOf, basis: "all rentals" };
         }
-        return Response.json({ found: true, grain, label: grain === "metro" ? `${name} metro` : name, place: name, query: q, metro, basis, ...res });
+        const ozScope = await ozScopeFor({ metroCode: parsed.code, metroLabel: name });
+        return Response.json({ found: true, grain, label: grain === "metro" ? `${name} metro` : name, place: name, query: q, metro, basis, ozScope, ...res });
       }
     }
     return Response.json({ found: false, query: q, kind: "city" });
