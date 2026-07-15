@@ -9,6 +9,7 @@ import SubmarketLookup from "@/components/SubmarketLookup";
 import IndicatorRow from "@/components/IndicatorRow";
 import AskCanary from "@/components/AskCanary";
 import { layerOf, LAYER_META, SUBMARKET_FLOOR } from "@/lib/onion";
+import { groupRows, RE_GROUPS, MACRO_GROUPS } from "@/lib/indicator-groups";
 
 const TYPES = ["All Types", "Leading", "Coincident", "Trailing"];
 const CATS = ["All", "Supply", "Demand", "Capital", "Macro", "Performance"];
@@ -70,6 +71,25 @@ export default function IndicatorsPage() {
     </div>
   );
 
+  // Quieter than SectionHead: these divide a section, they don't announce one.
+  const SubHead = ({ label, count }) => (
+    <div className="mt-7 flex items-center gap-3 first:mt-4">
+      <h3 className="mono text-[11px] tracking-[0.16em] text-muted">{label}</h3>
+      <span className="h-px flex-1 bg-[var(--line)]" />
+      <span className="mono text-[10px] text-muted">{count}</span>
+    </div>
+  );
+
+  // Like-kind indicators together, in a fixed reading order. Filters can empty a
+  // subgroup; groupRows drops those rather than leaving a bare heading.
+  const renderGrouped = (list, order) =>
+    groupRows(list, order).map(([g, rs]) => (
+      <div key={g}>
+        <SubHead label={g.toUpperCase()} count={rs.length} />
+        <div className="mt-3 space-y-4">{rs.map(renderRow)}</div>
+      </div>
+    ));
+
   return (
     <div className="pt-12 pb-10">
       <h1 className="headline text-4xl text-ink md:text-5xl">Economic Indicators</h1>
@@ -116,14 +136,14 @@ export default function IndicatorsPage() {
           {reRows.length > 0 && (
             <div className="mt-10">
               <SectionHead label="REAL ESTATE INDICATORS" count={reRows.length} />
-              <div className="mt-4 space-y-4">{reRows.map(renderRow)}</div>
+              {renderGrouped(reRows, RE_GROUPS)}
             </div>
           )}
 
           {macroRows.length > 0 && (
             <div className="mt-12">
               <SectionHead label="NON–REAL ESTATE INDICATORS" count={macroRows.length} />
-              <div className="mt-4 space-y-4">{macroRows.map(renderRow)}</div>
+              {renderGrouped(macroRows, MACRO_GROUPS)}
             </div>
           )}
 
