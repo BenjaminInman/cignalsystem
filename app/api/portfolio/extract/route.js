@@ -82,7 +82,7 @@ Record your answer by calling the record_extraction tool. Use null for anything 
   },
   "rent_roll": {
     "unit_count": number|null,
-    "physical_occupancy": number|null,
+    "physical_occupancy": number|null,   // ALWAYS a percent 0-100 (e.g. 94.5 for 94.5%). Never a 0-1 fraction: if the document shows 0.945, return 94.5.
     "avg_rent_1bed": number|null, "avg_rent_2bed": number|null,
     "avg_rent_3bed": number|null, "avg_rent_4bed": number|null,
     "unit_mix": [ { "plan": string|null, "bedrooms": number, "baths": number|null, "units": number, "occupied": number|null, "avg_rent": number|null } ]
@@ -105,6 +105,24 @@ Rules:
 
 const NUM = { type: ["number", "null"] };
 const STR = { type: ["string", "null"] };
+
+// Occupancy must be stored as a percent (0-100), never a 0-1 fraction.
+// Source documents express it both ways ("94.5%" vs "0.945"), and the model
+// mirrors whatever the document used — which silently poisons any aggregate:
+// a unit-weighted average across one property at 86 and another at 0.9015
+// reads 62.5% instead of the true 87.1%. Normalize at the boundary so only one
+// convention ever reaches the database.
+//   <= 1  -> a fraction (a real property is never 1% occupied; 1.0 = 100%)
+//   1-100 -> already a percent
+//   > 100 -> not a rate; reject rather than store nonsense
+function normOccupancy(v) {
+  if (v == null) return null;
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < 0) return null;
+  if (n <= 1) return Math.round(n * 1000) / 10; // 0.9015 -> 90.2
+  if (n <= 100) return n;
+  return null;
+}
 const TOOL_SCHEMA = {
   type: "object",
   properties: {
@@ -323,7 +341,7 @@ export async function POST(req) {
     },
     rent_roll: {
       unit_count: rr.unit_count ?? null,
-      physical_occupancy: rr.physical_occupancy ?? null,
+      physical_occupancy: normOccupancy(rr.physical_occupancy),
       avg_rent_1bed: rr.avg_rent_1bed ?? null,
       avg_rent_2bed: rr.avg_rent_2bed ?? null,
       avg_rent_3bed: rr.avg_rent_3bed ?? null,

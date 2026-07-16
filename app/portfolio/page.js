@@ -31,8 +31,22 @@ const fmtMoney = (n) =>
   n === null || n === undefined || Number.isNaN(Number(n))
     ? "—"
     : `$${Math.round(Number(n)).toLocaleString()}`;
+// Occupancy is stored as a percent (0-100). Older rows and hand entry can still
+// carry a 0-1 fraction ("0.9015" meaning 90.15%), which would otherwise be read
+// as 0.9% and silently wreck the unit-weighted average. Normalize on read too,
+// so a stray fraction can never distort the portfolio-level number.
+const occPct = (n) => {
+  const v = Number(n);
+  if (!Number.isFinite(v) || v < 0) return 0;
+  return v <= 1 ? v * 100 : v;
+};
 const fmtPct = (n) =>
   n === null || n === undefined || Number.isNaN(Number(n)) ? "—" : `${Number(n)}%`;
+// Occupancy-specific formatter: normalizes fractions before display.
+const fmtOccPct = (n) =>
+  n === null || n === undefined || Number.isNaN(Number(n))
+    ? "—"
+    : `${Math.round(occPct(n) * 10) / 10}%`;
 // Expense ratio = total expenses / total income, as a percent.
 const expRatio = (income, expenses) => {
   const i = num(income), e = num(expenses);
@@ -129,7 +143,7 @@ function PortfolioInner() {
       const s = latest[p.id];
       if (!s) continue;
       if (s.physical_occupancy != null && p.unit_count) {
-        occW += Number(s.physical_occupancy) * p.unit_count;
+        occW += occPct(s.physical_occupancy) * p.unit_count;
         occU += p.unit_count;
       }
       if (s.noi != null) annualNoi += Number(s.noi);
@@ -370,7 +384,7 @@ function PortfolioInner() {
                 </div>
                 <div className="flex items-center gap-8">
                   <div className="grid grid-cols-2 gap-x-8 gap-y-2 sm:grid-cols-4">
-                    <Col label="Occupancy" value={fmtPct(s.physical_occupancy)} color={s.physical_occupancy != null ? "#5FB97C" : undefined} />
+                    <Col label="Occupancy" value={fmtOccPct(s.physical_occupancy)} color={s.physical_occupancy != null ? "#5FB97C" : undefined} />
                     <Col label="Total Income" value={fmtMoney(s.total_income)} />
                     <Col label="Expense Ratio" value={fmtRatio(expRatio(s.total_income, s.total_expenses))} />
                     <Col label="NOI" value={fmtMoney(s.noi)} color={s.noi != null ? "#F5B544" : undefined} />
