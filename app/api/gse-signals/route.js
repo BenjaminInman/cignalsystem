@@ -14,7 +14,16 @@ const SB_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 export const runtime = "nodejs";
 export const revalidate = 3600;
 
-const SLUGS = ["fnma_mf_delinquency", "fmcc_mf_delinquency"];
+// Delinquency (monthly) and new business volume (quarterly) are separate
+// constructs -- how the book is holding up vs how much they're lending -- so
+// they're served as distinct series and never blended. Cadences differ by
+// design; each carries its own asOf.
+const SLUGS = [
+  "fnma_mf_delinquency",
+  "fmcc_mf_delinquency",
+  "fnma_mf_volume",
+  "fmcc_mf_volume",
+];
 
 async function latestTwo(slug) {
   const url =

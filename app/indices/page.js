@@ -203,32 +203,54 @@ export default function IndicesPage() {
                   })}
                   {gseMembers.map((m) => {
                     const sig = gse[m.gse];
+                    const vol = gse[m.gseVol];
                     // Falling delinquency is good -> green when delta < 0.
                     const good = sig?.delta != null ? sig.delta < 0 : null;
                     const col = good == null ? "#797E85" : good ? "#5FB97C" : "#E5634D";
+                    // Volume reads the normal way: more lending = green.
+                    const volCol = vol?.delta == null ? "#797E85" : vol.delta >= 0 ? "#5FB97C" : "#E5634D";
                     return (
-                      <div key={m.ticker} className="grid grid-cols-[1fr_auto_auto] items-center gap-4 border-t border-[var(--line)] bg-white/[0.015] px-4 py-3">
-                        <div>
-                          <span className="mono text-sm font-medium text-ink">{m.ticker}</span>
-                          <span className="ml-2 text-[12px] text-muted">{m.name}</span>
-                          <span className="mono ml-2 rounded bg-signal/10 px-1.5 py-0.5 text-[9px] tracking-[0.08em] text-signal">
-                            {m.gseLabel}
+                      <div key={m.ticker} className="border-t border-[var(--line)] bg-white/[0.015]">
+                        <div className="grid grid-cols-[1fr_auto_auto] items-center gap-4 px-4 py-3">
+                          <div>
+                            <span className="mono text-sm font-medium text-ink">{m.ticker}</span>
+                            <span className="ml-2 text-[12px] text-muted">{m.name}</span>
+                            <span className="mono ml-2 rounded bg-signal/10 px-1.5 py-0.5 text-[9px] tracking-[0.08em] text-signal">
+                              {m.gseLabel}
+                            </span>
+                          </div>
+                          <span className="mono text-right text-sm text-ink">
+                            {sig ? `${sig.value.toFixed(2)}%` : "—"}
+                          </span>
+                          <span className="mono w-16 text-right text-sm" style={{ color: col }}>
+                            {sig?.delta != null ? `${sig.delta >= 0 ? "+" : ""}${sig.delta.toFixed(2)}pp` : ""}
                           </span>
                         </div>
-                        <span className="mono text-right text-sm text-ink">
-                          {sig ? `${sig.value.toFixed(2)}%` : "—"}
-                        </span>
-                        <span className="mono w-16 text-right text-sm" style={{ color: col }}>
-                          {sig?.delta != null ? `${sig.delta >= 0 ? "+" : ""}${sig.delta.toFixed(2)}pp` : ""}
-                        </span>
+                        {vol && (
+                          <div className="grid grid-cols-[1fr_auto_auto] items-center gap-4 px-4 pb-3">
+                            <div className="pl-1">
+                              <span className="mono text-[11px] text-muted/70">new MF business volume</span>
+                              <span className="mono ml-2 rounded bg-white/5 px-1.5 py-0.5 text-[9px] tracking-[0.08em] text-muted">
+                                quarterly
+                              </span>
+                            </div>
+                            <span className="mono text-right text-[13px] text-ink/80">${vol.value.toFixed(1)}B</span>
+                            <span className="mono w-16 text-right text-[13px]" style={{ color: volCol }}>
+                              {vol.delta != null ? `${vol.delta >= 0 ? "+" : ""}${vol.delta.toFixed(1)}B` : ""}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
                   {gseMembers.length > 0 && (
                     <p className="mono border-t border-[var(--line)] px-4 py-2 text-[10px] leading-relaxed text-muted/70">
-                      FNMA/FMCC shown as multifamily serious delinquency rate (monthly, public GSE
-                      filings){gse[gseMembers[0]?.gse]?.asOf ? ` · as of ${gse[gseMembers[0].gse].asOf}` : ""} —
-                      falling rate is green. GSEs trade OTC; not a stock quote.
+                      FNMA/FMCC are shown as two separate public-filing signals, never blended:
+                      multifamily serious delinquency rate (monthly
+                      {gse[gseMembers[0]?.gse]?.asOf ? `, as of ${gse[gseMembers[0].gse].asOf}` : ""}), where a
+                      falling rate is green; and new multifamily business volume (quarterly
+                      {gse[gseMembers[0]?.gseVol]?.asOf ? `, as of ${gse[gseMembers[0].gseVol].asOf}` : ""}),
+                      where more lending is green. GSEs trade OTC; neither is a stock quote.
                     </p>
                   )}
                 </div>

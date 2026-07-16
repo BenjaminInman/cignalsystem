@@ -166,6 +166,126 @@ def parse_freddie(pdf_bytes):
     return pct, dt.date(year, mon, 1)
 
 
+# ---------------------------------------------------------------- GSE VOLUME
+#
+# Quarterly multifamily NEW BUSINESS VOLUME. This is a different construct from
+# the delinquency series above and is kept as its own indicator -- volume says
+# how much they are lending, delinquency says how the book is holding up. The
+# two are never blended.
+#
+# Fannie  : quarterly Financial Supplement PDF
+#           https://www.fanniemae.com/media/document/pdf/q{Q}{YYYY}-financial-supplement.pdf
+#           "SEGMENT RESULTS - MULTIFAMILY" page carries a single row with FIVE
+#           quarters plus two variance columns:
+#             header  Q1 2026 Q4 2025 Q3 2025 Q2 2025 Q1 2025 | Q4 2025 Q1 2025
+#             row     $17.1   $25.8   $18.7   $17.4   $11.8   | $(8.7)  $5.3
+#           The trailing two are variance-vs-prior-quarter and variance-vs-
+#           year-ago, NOT quarters. We take the first five and then *verify* the
+#           layout arithmetically: v0-v1 must equal the first variance and
+#           v0-v4 the second. If the table ever shifts, that check fails and we
+#           write nothing rather than silently storing a variance as a level.
+#
+# Freddie : quarterly Form 10-Q PDF
+#           https://www.freddiemac.com/investors/financials/pdf/10q_{Q}q{YY}.pdf
+#           Multifamily MD&A states it in prose:
+#             "Our new business activity was $12.8 billion in 1Q 2026"
+#           Only one quarter per filing, so history accrues by walking back
+#           through prior 10-Qs. Note Q4 has no 10-Q (it lands in the 10-K), so
+#           Q4 is picked up from the following year's Q1 filing where stated, or
+#           left for the next run.
+#           The press release rounds this to "$13 billion" and some trade press
+#           prints "$14 billion" on a different definition; the 10-Q is the
+#           primary source and the one we store.
+
+FNMA_VOL_MIN, FNMA_VOL_MAX = 0.0, 60.0  # $B per quarter
+
+
+def quarter_to_date(q, year):
+    """Q1 2026 -> date(2026,1,1). Matches the quarter-start convention already
+    used by the other quarterly series in the warehouse (e.g. gdp)."""
+    return dt.date(int(year), (int(q) - 1) * 3 + 1, 1)
+
+
+def fannie_supplement_url(q, year):
+    return f"https://www.fanniemae.com/media/document/pdf/q{q}{year}-financial-supplement.pdf"
+
+
+def parse_fannie_volume(pdf_bytes):
+    """Return {date: value_in_billions} for Fannie multifamily new business
+    volume, or {} if the table cannot be validated."""
+    with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+        page = None
+        for p in pdf.pages:
+            t = p.extract_text() or ""
+            if "New business volume" in t and re.search(r"(?i)multifamily", t):
+                page = t
+                break
+        if page is None:
+            return {}
+
+    hdr = None
+    row = None
+    for line in page.splitlines():
+        if re.search(r"(?i)SELECTED MULTIFAMILY INCOME STATEMENT DATA", line):
+            hdr = line
+        elif line.strip().startswith("New business volume"):
+            row = line
+    if not hdr or not row:
+        return {}
+
+    quarters = re.findall(r"Q([1-4])\s+(\d{4})", hdr)
+    # "$(8.7)" is negative; "$17.1" positive.
+    raw = re.findall(r"\$\(?(-?[\d.]+)\)?", row)
+    vals = []
+    for i, m in enumerate(re.finditer(r"\$(\()?(-?[\d.]+)\)?", row)):
+        v = float(m.group(2))
+        if m.group(1):
+            v = -v
+        vals.append(v)
+
+    if len(quarters) < 7 or len(vals) < 7:
+        print(f"  SKIP fnma_mf_volume: unexpected shape ({len(quarters)} hdr cols, {len(vals)} values)")
+        return {}
+
+    levels = vals[:5]
+    var_qoq, var_yoy = vals[5], vals[6]
+    # Layout self-check: the trailing columns must be the stated variances.
+    if abs((levels[0] - levels[1]) - var_qoq) > 0.05 or abs((levels[0] - levels[4]) - var_yoy) > 0.05:
+        print("  SKIP fnma_mf_volume: variance columns do not reconcile -- table layout changed")
+        return {}
+
+    out = {}
+    for (q, y), v in zip(quarters[:5], levels):
+        if not (FNMA_VOL_MIN <= v <= FNMA_VOL_MAX):
+            print(f"  SKIP fnma_mf_volume Q{q} {y}: {v} outside sane band")
+            continue
+        out[quarter_to_date(q, y)] = v
+    return out
+
+
+def freddie_10q_url(q, year):
+    return f"https://www.freddiemac.com/investors/financials/pdf/10q_{q}q{str(year)[2:]}.pdf"
+
+
+def parse_freddie_volume(pdf_bytes):
+    """Return {date: value_in_billions} from the Freddie 10-Q multifamily MD&A."""
+    out = {}
+    with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+        for p in pdf.pages[:60]:
+            t = p.extract_text() or ""
+            flat = re.sub(r"\s+", " ", t)
+            m = re.search(
+                r"new business activity was \$?([\d.]+) billion in ([1-4])Q (\d{4})",
+                flat, re.I,
+            )
+            if m:
+                v = float(m.group(1))
+                if FNMA_VOL_MIN <= v <= FNMA_VOL_MAX:
+                    out[quarter_to_date(m.group(2), m.group(3))] = v
+                break
+    return out
+
+
 # ---------------------------------------------------------------- DB plumbing
 
 INDICATORS = {
@@ -299,9 +419,51 @@ def main():
                     wrote = wrote or r != "unchanged"
                 break
 
-        # volume series are quarterly and parsed from the financial supplements;
-        # handled by a companion path (see ingest_gse_volume) to keep this file
-        # focused. Delinquency is the monthly-moving signal.
+        # ---- Quarterly multifamily new business volume ----
+        # A different construct from delinquency (how much they lend vs how the
+        # book holds up), so it stays its own indicator and is never blended.
+        with conn.cursor() as cur:
+            ids = ensure_indicators(cur)
+            region = national_region_id(cur)
+
+            # Fannie: one supplement carries five quarters, so a single fetch of
+            # the latest available filing backfills the whole window.
+            for back in range(0, 3):
+                qd = today.replace(day=1) - dt.timedelta(days=92 * back)
+                q = (qd.month - 1) // 3 + 1
+                try:
+                    pdf = get_with_retry(fannie_supplement_url(q, qd.year), attempts=2)
+                except Exception as e:  # noqa: BLE001
+                    print(f"  fannie supplement Q{q} {qd.year} unavailable: {str(e)[:50]}")
+                    continue
+                vols = parse_fannie_volume(pdf)
+                for d, v in sorted(vols.items()):
+                    r = insert_if_changed(cur, ids["fnma_mf_volume"], region, d, v)
+                    print(f"  fnma_mf_volume {d} = ${v}B  [{r}]")
+                    wrote = wrote or r != "unchanged"
+                if vols:
+                    break
+
+            # Freddie: the 10-Q states only its own quarter, and older filings
+            # render the figure as a chart rather than prose, so history accrues
+            # forward one quarter at a time rather than backfilling.
+            for back in range(0, 3):
+                qd = today.replace(day=1) - dt.timedelta(days=92 * back)
+                q = (qd.month - 1) // 3 + 1
+                if q == 4:
+                    continue  # Q4 lands in the 10-K, not a 10-Q
+                try:
+                    pdf = get_with_retry(freddie_10q_url(q, qd.year), attempts=2)
+                except Exception as e:  # noqa: BLE001
+                    print(f"  freddie 10-Q {q}Q{qd.year} unavailable: {str(e)[:50]}")
+                    continue
+                vols = parse_freddie_volume(pdf)
+                for d, v in sorted(vols.items()):
+                    r = insert_if_changed(cur, ids["fmcc_mf_volume"], region, d, v)
+                    print(f"  fmcc_mf_volume {d} = ${v}B  [{r}]")
+                    wrote = wrote or r != "unchanged"
+                if vols:
+                    break
 
         if wrote:
             with conn.cursor() as cur:
