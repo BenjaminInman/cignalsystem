@@ -72,10 +72,24 @@ function compute(cfg, rows) {
     const d = yoyAbs ?? 0;
     sentiment = d > 0.15 ? "r" : d < -0.15 ? "g" : "a";
   } else {
-    // GDP: normal 4-5% green; 3.5-4% and 5-6% yellow; <3.5% or >6% red.
+    // GDP — bands are centered on REAL GDP (slug `gdp` = real GDP, annualized
+    // QoQ). The earlier 4-5% green band was nominal-framed: ~2% real trend plus
+    // ~2.5% inflation. Applied to a real series it marked every normal quarter
+    // red (1.6% real read as a failure when it is ordinary growth).
+    //
+    // Re-centered on real GDP's own distribution. US potential/trend real growth
+    // is ~1.8-2.0%:
+    //   1.5-3.5%  green  — healthy, non-inflationary expansion
+    //   0.5-1.5%  amber  — below trend, decelerating
+    //   3.5-5.0%  amber  — running hot; the level that historically pulls the
+    //                      Fed forward, which is the risk to multifamily pricing
+    //   <0.5%     red    — stall / contraction risk
+    //   >5.0%     red    — overheating
+    // Nominal GDP is tracked separately as its own attributed series; the two
+    // are never blended, and the real-vs-nominal gap is the deflator.
     sentiment =
-      cur >= 4 && cur <= 5 ? "g"
-      : (cur >= 3.5 && cur < 4) || (cur > 5 && cur <= 6) ? "a"
+      cur >= 1.5 && cur <= 3.5 ? "g"
+      : (cur >= 0.5 && cur < 1.5) || (cur > 3.5 && cur <= 5) ? "a"
       : "r";
   }
 
