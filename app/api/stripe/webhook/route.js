@@ -19,16 +19,31 @@ async function sbGet(path) {
 }
 
 async function patchProfileBy(filter, patch) {
-  await fetch(`${SUPA}/rest/v1/profiles?${filter}`, {
+  const r = await fetch(`${SUPA}/rest/v1/profiles?${filter}`, {
     method: "PATCH",
     headers: {
       apikey: SERVICE,
       Authorization: `Bearer ${SERVICE}`,
       "content-type": "application/json",
-      Prefer: "return=minimal",
+      Prefer: "return=representation",
     },
     body: JSON.stringify(patch),
   });
+  // A failed write here means the member paid and their tier never changed.
+  // Previously the response was ignored, so Stripe got a 200, marked the event
+  // delivered, and never retried — the money moved and the account silently did
+  // not. Throw instead: the handler returns 500 and Stripe retries with backoff
+  // for ~3 days, which is exactly the window needed to notice and fix it.
+  if (!r.ok) {
+    const body = await r.text().catch(() => "");
+    throw new Error(`profile write failed (${r.status}) for ${filter}: ${body.slice(0, 200)}`);
+  }
+  // A PATCH that matches no rows is a 200 with an empty array — equally silent,
+  // and it means the customer/user link is broken. Treat it as a failure too.
+  const rows = await r.json().catch(() => null);
+  if (Array.isArray(rows) && rows.length === 0) {
+    throw new Error(`profile write matched no rows for ${filter}`);
+  }
 }
 
 async function tierForPrice(priceId) {
@@ -55,12 +70,29 @@ async function syncSubscription(sub) {
   // Active / trialing / past_due still grant access (past_due = grace period).
   const grants = ["active", "trialing", "past_due"].includes(status);
 
+  // A live subscription whose price isn't in the tiers table is a configuration
+  // gap, not a cancellation. The old code read `grants && tier ? tier : "free"`,
+  // so an ACTIVE payer on an unmapped price was silently set to free — the exact
+  // failure a billing system must never have. It is reachable in practice: a
+  // rotated or archived price, a promo price, or a new plan launched in Stripe
+  // before its tiers row exists.
+  //
+  // Throw instead. The handler returns 500, Stripe retries with backoff for
+  // ~3 days, the problem is visible in logs, and — critically — the member's
+  // existing tier is left untouched rather than wrongly stripped.
+  if (grants && !tier) {
+    throw new Error(
+      `no tier mapped for price ${priceId} on subscription ${sub.id} (status ${status}) — ` +
+        `refusing to downgrade a paying member; add the tiers.stripe_price_id row`
+    );
+  }
+
   const patch = {
     cancel_at_period_end: !!sub.cancel_at_period_end,
     stripe_subscription_id: sub.id,
     subscription_status: status,
     current_period_end: periodEnd,
-    tier: grants && tier ? tier : "free",
+    tier: grants ? tier : "free",
     updated_at: new Date().toISOString(),
   };
 

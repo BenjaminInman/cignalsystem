@@ -18,7 +18,7 @@ async function sbGet(path) {
 }
 
 async function patchProfile(id, patch) {
-  await fetch(`${SUPA}/rest/v1/profiles?id=eq.${id}`, {
+  const r = await fetch(`${SUPA}/rest/v1/profiles?id=eq.${id}`, {
     method: "PATCH",
     headers: {
       apikey: SERVICE,
@@ -28,6 +28,14 @@ async function patchProfile(id, patch) {
     },
     body: JSON.stringify(patch),
   });
+  // Not fatal to checkout — the webhook can still find the member via
+  // subscription_data.metadata.supabase_user_id — but a dropped customer link
+  // silently removes the fallback path, so log it rather than swallow it.
+  if (!r.ok) {
+    const body = await r.text().catch(() => "");
+    console.error(`stripe/checkout: profile patch failed (${r.status}) for ${id}: ${body.slice(0, 200)}`);
+  }
+  return r.ok;
 }
 
 export async function POST(req) {
@@ -46,8 +54,14 @@ export async function POST(req) {
   let tier = (body.tier || "pro").toString();
   if (!["pro", "cignal_plus"].includes(tier)) tier = "pro";
 
-  // Resolve the Stripe price for the requested tier.
-  const tiers = await sbGet(`tiers?slug=eq.${tier}&select=slug,name,stripe_price_id`);
+  // Resolve the Stripe price for the requested tier. `active` is the sellable
+  // flag and must be honoured here: cignal_plus currently carries a real $129
+  // price but active=false, so without this filter a client could POST
+  // {tier:"cignal_plus"} and open a live checkout for a plan that is not
+  // launched and unlocks nothing beyond pro.
+  const tiers = await sbGet(
+    `tiers?slug=eq.${tier}&active=is.true&select=slug,name,stripe_price_id,active`
+  );
   const row = tiers?.[0];
   if (!row?.stripe_price_id)
     return Response.json(
