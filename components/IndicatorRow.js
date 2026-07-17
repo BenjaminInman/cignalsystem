@@ -103,7 +103,7 @@ export function IndicatorTrend({ data, tone, periods, zeroBased = true }) {
 const GOOD_UP = {
   "Wage Growth": true, "Job Growth": true, "Gross Domestic Product": true,
   "Real Consumer Spending": true, "Consumer Sentiment (UMich)": true,
-  "Inflation": false, "Interest Rates": false, "Days On Market (For-Sale Homes)": false, "Days to Lease (Apartments)": false,
+  "CPI (All Urban)": false, "PPI (Final Demand)": false, "PCE Price Index": false, "Interest Rates": false, "Days On Market (For-Sale Homes)": false, "Days to Lease (Apartments)": false,
   "Multifamily Building Permits": false, "National Vacancy Rate": false,
   "Market Rent Growth (All Rentals)": true, "Market Rent Growth (Multifamily)": true,
   "Home Value Index": true, "Yield Curve Spread": true, "Initial Jobless Claims": false,

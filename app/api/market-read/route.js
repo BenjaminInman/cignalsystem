@@ -27,7 +27,7 @@ async function rows(slug, code, op = "eq", limit = 14) {
 // ---- NATIONAL RING (always available; no ZIP required) ----------------------
 async function nationalRing() {
   const defs = [
-    { key: "inflation", slug: "cpi_shelter", label: "Inflation", sub: "Shelter CPI", kind: "inflation" },
+    { key: "inflation", slug: "cpi_shelter", label: "Shelter CPI", sub: "CPI, shelter component", kind: "inflation" },
     { key: "rates", slug: "treasury_10y", label: "Interest Rates", sub: "10Y Treasury", kind: "rates" },
     { key: "pce", slug: "real_pce", label: "Real PCE", sub: "Consumer Spending", kind: "pce" },
   ];
