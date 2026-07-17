@@ -13,13 +13,16 @@ const PRIMARY = [
   { label: "Home", href: "/", icon: Home },
   { label: "About", href: "/about", icon: Info },
   { label: "News", href: "/news", icon: Newspaper },
-  { label: "Signals", href: "/signals", icon: Radio },
   { label: "Cignal Score", href: "/cignalscore", icon: Gauge },
 ];
 
+// Signals moved out of PRIMARY and into the Terminal suite: it is a
+// sign-up-gated tab now, not a public page, so it belongs with the other
+// gated tabs rather than beside Home/About/News.
 const SUITE = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Indicators", href: "/indicators", icon: Activity },
+  { label: "Signals", href: "/signals", icon: Radio },
   { label: "Market Maps", href: "/market-maps", icon: BarChart3 },
   { label: "Where Are We", href: "/where-are-we", icon: Compass, tier: "pro" },
   { label: "Forecasts", href: "/forecasts", icon: LineChart },
