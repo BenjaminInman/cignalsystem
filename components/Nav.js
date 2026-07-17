@@ -150,29 +150,37 @@ export default function Nav() {
           </div>
         </nav>
 
-        <div className="flex items-center gap-3">
+        {/* Action buttons collapse to icon-only below sm. With full text labels
+            this group measured 286px and pushed the header to a 490px scroll
+            width inside a 390px phone viewport, so every page scrolled
+            sideways. Labels are hidden, not the controls -- aria-label keeps
+            them named for screen readers. */}
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <Bell size={18} className="hidden text-muted sm:block" strokeWidth={1.6} />
           {user ? (
             <>
               {isAdmin && (
                 <Link
                   href="/admin"
-                  className="mono flex items-center gap-1.5 rounded-sm border border-signal/30 px-3 py-2 text-[12px] tracking-[0.08em] text-signal transition-colors hover:bg-signal/10"
+                  aria-label="Admin"
+                  className="mono flex items-center gap-1.5 rounded-sm border border-signal/30 px-2 py-2 text-[12px] tracking-[0.08em] text-signal transition-colors hover:bg-signal/10 sm:px-3"
                 >
-                  <ShieldCheck size={13} strokeWidth={1.8} /> Admin
+                  <ShieldCheck size={13} strokeWidth={1.8} /> <span className="hidden sm:inline">Admin</span>
                 </Link>
               )}
               <Link
                 href="/account"
-                className="mono flex items-center gap-1.5 rounded-sm border border-[var(--line-strong)] px-3 py-2 text-[12px] tracking-[0.08em] text-muted transition-colors hover:text-ink"
+                aria-label="Account"
+                className="mono flex items-center gap-1.5 rounded-sm border border-[var(--line-strong)] px-2 py-2 text-[12px] tracking-[0.08em] text-muted transition-colors hover:text-ink sm:px-3"
               >
-                <CreditCard size={13} strokeWidth={1.8} /> Account
+                <CreditCard size={13} strokeWidth={1.8} /> <span className="hidden sm:inline">Account</span>
               </Link>
               <button
                 onClick={signOut}
-                className="mono flex items-center gap-1.5 rounded-sm border border-[var(--line-strong)] px-3 py-2 text-[12px] tracking-[0.08em] text-muted transition-colors hover:text-ink"
+                aria-label="Sign out"
+                className="mono flex items-center gap-1.5 rounded-sm border border-[var(--line-strong)] px-2 py-2 text-[12px] tracking-[0.08em] text-muted transition-colors hover:text-ink sm:px-3"
               >
-                <LogOut size={13} strokeWidth={1.8} /> Sign Out
+                <LogOut size={13} strokeWidth={1.8} /> <span className="hidden sm:inline">Sign Out</span>
               </button>
             </>
           ) : (
