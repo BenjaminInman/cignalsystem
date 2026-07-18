@@ -21,18 +21,18 @@ const PRIMARY = [
 // gated tabs rather than beside Home/About/News.
 const SUITE = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Indicators", href: "/indicators", icon: Activity },
   { label: "Signals", href: "/signals", icon: Radio },
+  { label: "Where Are We", href: "/where-are-we", icon: Compass },
+  { label: "Indicators", href: "/indicators", icon: Activity, tier: "pro" },
   // `tier` marks what a row REQUIRES; absent = pro. Rows whose slug is in
   // FREE_PAGES open on a free account despite the pro default. Market Maps and
   // Community are the two pages the top tier alone unlocks, so they carry the
   // Cignal+ marker and its "+" chip.
   { label: "Market Maps", href: "/market-maps", icon: BarChart3, tier: "cignal_plus" },
-  { label: "Where Are We", href: "/where-are-we", icon: Compass, tier: "pro" },
   { label: "Forecasts", href: "/forecasts", icon: LineChart, tier: "pro" },
-  { label: "Indices", href: "/indices", icon: TrendingUp },
+  { label: "Indices", href: "/indices", icon: TrendingUp, tier: "pro" },
   { label: "Research", href: "/research", icon: BookOpen, tier: "pro" },
-  { label: "Portfolio", href: "/portfolio", icon: Briefcase },
+  { label: "Portfolio", href: "/portfolio", icon: Briefcase, tier: "pro" },
   { label: "Community", href: "/community", icon: Users, tier: "cignal_plus" },
 ];
 

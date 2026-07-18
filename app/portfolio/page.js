@@ -10,6 +10,7 @@ import { useContent, useVertical } from "@/components/VerticalProvider";
 import { isPageReady } from "@/lib/verticals";
 import ComingSoonInline from "@/components/ComingSoonInline";
 import PortfolioArchitect from "@/components/PortfolioArchitect";
+import PaywallBlur from "@/components/PaywallBlur";
 
 const CLASS_OPTIONS = ["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","D-"];
 const STRATEGY_OPTIONS = [
@@ -415,9 +416,21 @@ function PortfolioInner() {
         })}
       </div>
 
-      {/* cycle-conditional diversification tool */}
+      {/* Cycle-conditional diversification tool. Pro opens the Portfolio tab
+          (properties, snapshots, NOI); the Architect is the Cignal+ layer over
+          it — same split as Indicators/Onion. `hard` keeps it out of the DOM
+          for everyone below rather than blurring it: the phase model is the IP. */}
       <div className="mt-14 border-t border-[var(--line)] pt-12">
-        <PortfolioArchitect properties={properties || []} />
+        <PaywallBlur
+          page="portfolio"
+          title="Portfolio Architect"
+          hard
+          minTier="cignal_plus"
+          wrapClass=""
+          blurb="Cycle-conditional diversification — models how your portfolio should be weighted for the phase the market is actually in, not the one it was in when you bought. Unlock it with Cignal+."
+        >
+          <PortfolioArchitect properties={properties || []} />
+        </PaywallBlur>
       </div>
     </div>
   );
