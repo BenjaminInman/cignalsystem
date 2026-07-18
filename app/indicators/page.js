@@ -106,12 +106,17 @@ export default function IndicatorsPage() {
       <p className="mt-3 max-w-2xl text-muted">Comprehensive leading and trailing indicators driving multifamily performance. Select any indicator to expand the detail.</p>
       <div className="mt-5"><AskCanary variant="pill" question="How do the leading indicators compare to the lagging ones right now?" /></div>
 
+      {/* The Onion is the Cignal+ differentiator on this page: Pro opens the
+          Indicators tab itself, the top tier opens the lens over it. `hard`
+          keeps it out of the DOM entirely for everyone below — this is the
+          method, not a chart. */}
       <PaywallBlur
         page="indicators"
         title="The Onion Framework"
         hard
+        minTier="cignal_plus"
         wrapClass="mt-8"
-        blurb="The proprietary lens at the core of the Cignal method — it organizes every signal into layered rings so you can read the cycle from the outside in. Unlock it with Pro."
+        blurb="The proprietary lens at the core of the Cignal method — it organizes every signal into layered rings so you can read the cycle from the outside in. Unlock it with Cignal+."
       >
         <OnionFramework active={layer} onSelect={setLayer} counts={layerCounts} countText={countText} />
       </PaywallBlur>

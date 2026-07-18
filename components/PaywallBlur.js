@@ -1,10 +1,15 @@
 "use client";
 
-// Wrap any feature to make it Pro-only. Pro users (and admins) see the real
-// thing; everyone else sees an "Upgrade to Pro" card.
+// Wrap any feature to gate it by tier. Members at or above `minTier` (and
+// admins) see the real thing; everyone else sees an upgrade card naming the
+// tier they actually need.
 //
 //   <PaywallBlur page="indicators" title="Indicator Comparison" blurb="...">
-//     <IndicatorCompare />
+//     <IndicatorCompare />                      // defaults to Pro
+//   </PaywallBlur>
+//
+//   <PaywallBlur minTier="cignal_plus" hard ...>
+//     <OnionFramework />                        // Cignal+ only
 //   </PaywallBlur>
 //
 // Modes:
@@ -19,16 +24,21 @@
 import { useState, useEffect } from "react";
 import { Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { hasTier } from "@/lib/tiers";
+import { hasTier, TIER_LABEL } from "@/lib/tiers";
 
 export default function PaywallBlur({
   page = "indicators",
   title = "Pro feature",
   blurb,
   hard = false,
+  minTier = "pro",
   wrapClass = "mt-14",
   children,
 }) {
+  // Label the tier the member actually needs. Hard-coding "Pro" here sent
+  // Cignal+-only features to an "Upgrade to Pro" button that a Pro member had
+  // already bought — a dead end.
+  const needLabel = TIER_LABEL[minTier] || "Pro";
   const [status, setStatus] = useState("loading"); // loading | allowed | locked
 
   useEffect(() => {
@@ -46,13 +56,13 @@ export default function PaywallBlur({
         .single()
         .then(({ data }) => {
           if (!active) return;
-          setStatus(data?.is_admin || hasTier(data?.tier, "pro") ? "allowed" : "locked");
+          setStatus(data?.is_admin || hasTier(data?.tier, minTier) ? "allowed" : "locked");
         });
     });
     return () => {
       active = false;
     };
-  }, []);
+  }, [minTier]);
 
   // Pro / admin: render the real feature, untouched.
   if (status === "allowed") return children;
@@ -71,16 +81,16 @@ export default function PaywallBlur({
       <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-signal/40 bg-signal/10">
         <Lock size={16} className="text-signal" />
       </div>
-      <p className="kicker mb-1.5">Pro feature</p>
+      <p className="kicker mb-1.5">{needLabel} feature</p>
       <h3 className="headline mb-2 text-xl text-ink">{title}</h3>
       <p className="mb-5 text-sm leading-relaxed text-muted">
-        {blurb || "Unlock this with a Pro subscription."}
+        {blurb || `Unlock this with a ${needLabel} subscription.`}
       </p>
       <a
         href={`/upgrade?page=${page}`}
         className="mono inline-flex items-center gap-1.5 rounded-md bg-signal px-4 py-2 text-[12px] tracking-[0.06em] text-bg hover:brightness-110"
       >
-        <Lock size={12} /> Upgrade to Pro
+        <Lock size={12} /> Upgrade to {needLabel}
       </a>
     </div>
   );
@@ -96,7 +106,7 @@ export default function PaywallBlur({
             <Lock size={16} className="text-signal" />
           </span>
           <div className="min-w-0">
-            <p className="kicker mb-0.5">Pro feature</p>
+            <p className="kicker mb-0.5">{needLabel} feature</p>
             <h3 className="headline text-lg text-ink">{title}</h3>
             {blurb && <p className="mt-1 max-w-xl text-[13px] leading-relaxed text-muted">{blurb}</p>}
           </div>
@@ -105,7 +115,7 @@ export default function PaywallBlur({
           href={`/upgrade?page=${page}`}
           className="mono inline-flex shrink-0 items-center gap-1.5 rounded-md bg-signal px-4 py-2 text-[12px] tracking-[0.06em] text-bg hover:brightness-110"
         >
-          <Lock size={12} /> Upgrade to Pro
+          <Lock size={12} /> Upgrade to {needLabel}
         </a>
       </div>
     );

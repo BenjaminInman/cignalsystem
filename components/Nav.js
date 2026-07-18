@@ -23,13 +23,17 @@ const SUITE = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Indicators", href: "/indicators", icon: Activity },
   { label: "Signals", href: "/signals", icon: Radio },
-  { label: "Market Maps", href: "/market-maps", icon: BarChart3 },
+  // `tier` marks what a row REQUIRES; absent = pro. Rows whose slug is in
+  // FREE_PAGES open on a free account despite the pro default. Market Maps and
+  // Community are the two pages the top tier alone unlocks, so they carry the
+  // Cignal+ marker and its "+" chip.
+  { label: "Market Maps", href: "/market-maps", icon: BarChart3, tier: "cignal_plus" },
   { label: "Where Are We", href: "/where-are-we", icon: Compass, tier: "pro" },
-  { label: "Forecasts", href: "/forecasts", icon: LineChart },
+  { label: "Forecasts", href: "/forecasts", icon: LineChart, tier: "pro" },
   { label: "Indices", href: "/indices", icon: TrendingUp },
-  { label: "Research", href: "/research", icon: BookOpen },
+  { label: "Research", href: "/research", icon: BookOpen, tier: "pro" },
   { label: "Portfolio", href: "/portfolio", icon: Briefcase },
-  { label: "Community", href: "/community", icon: Users },
+  { label: "Community", href: "/community", icon: Users, tier: "cignal_plus" },
 ];
 
 export default function Nav() {
