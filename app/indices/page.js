@@ -44,26 +44,34 @@ export default function IndicesPage() {
       .catch(() => {});
   }, []);
 
-  // Merge live quotes over fallback values (price members only).
-  const merged = (m) => ({
-    ...m,
-    price: quotes[m.ticker]?.price ?? m.price,
-    chg: quotes[m.ticker]?.chg ?? m.chg,
-  });
+  // Merge live quotes over the content pack. The pack carries the ROSTER (which
+  // tickers, in which category) but its price/chg are stale samples -- they must
+  // never render as quotes. A name the feed doesn't cover is dropped from the
+  // donut and its average rather than contributing a made-up move, and shows a
+  // dash in the holdings list.
+  const merged = (m) => {
+    const q = quotes[m.ticker];
+    return q
+      ? { ...m, price: q.price, chg: q.chg, quoted: true }
+      : { ...m, price: null, chg: null, quoted: false };
+  };
 
   // Composite "Housing Equity Complex": equal-weight the daily move of every
   // price member (GSE tiles excluded — they're a credit signal, not a price).
   // Sub-indices are the category averages; divergence is the spread between the
   // strongest and weakest sub-index, which is itself a signal.
   const priceCats = INDICES.map((cat) => {
-    const ms = cat.members.filter((m) => !m.gse).map(merged);
+    // Only quoted names count toward an average -- an unquoted ticker has no
+    // move to contribute, and inventing one from a stale sample would quietly
+    // bias the composite.
+    const ms = cat.members.filter((m) => !m.gse).map(merged).filter((m) => m.quoted);
     const avg = ms.length ? ms.reduce((s, m) => s + m.chg, 0) / ms.length : null;
     return { category: cat.category, avg, n: ms.length };
   }).filter((c) => c.avg != null);
 
   const allMembers = INDICES.flatMap((cat) =>
     cat.members.filter((m) => !m.gse).map(merged)
-  );
+  ).filter((m) => m.quoted);
   const blended = allMembers.length
     ? allMembers.reduce((s, m) => s + m.chg, 0) / allMembers.length
     : 0;
@@ -137,7 +145,9 @@ export default function IndicesPage() {
           const Icon = ICONS[cat.category] || TrendingUp;
           const priceMembers = cat.members.filter((m) => !m.gse).map(merged);
           const gseMembers = cat.members.filter((m) => m.gse);
-          const members = priceMembers;
+          // The donut and its average are built from quoted names only.
+          const members = priceMembers.filter((m) => m.quoted);
+          const unquoted = priceMembers.filter((m) => !m.quoted);
           const avg = members.length
             ? members.reduce((s, m) => s + m.chg, 0) / members.length
             : 0;
@@ -201,6 +211,16 @@ export default function IndicesPage() {
                       </div>
                     );
                   })}
+                  {unquoted.map((m) => (
+                    <div key={m.ticker} className="grid grid-cols-[1fr_auto_auto] items-center gap-4 border-t border-[var(--line)] px-4 py-3">
+                      <div>
+                        <span className="mono text-sm font-medium text-ink">{m.ticker}</span>
+                        <span className="ml-2 text-[12px] text-muted">{m.name}</span>
+                      </div>
+                      <span className="mono text-right text-sm text-muted">—</span>
+                      <span className="mono w-16 text-right text-sm text-muted">—</span>
+                    </div>
+                  ))}
                   {gseMembers.map((m) => {
                     const sig = gse[m.gse];
                     const vol = gse[m.gseVol];

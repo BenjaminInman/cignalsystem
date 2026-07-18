@@ -18,23 +18,38 @@ function Item({ label, value, delta, dir, live }) {
 
 export default function Ticker() {
   const { TICKER = [] } = useContent();
-  const [items, setItems] = useState(TICKER);
+  // The content pack supplies the ROWS (which labels exist, in what order) but
+  // never the numbers. Values start blank and are only ever filled by the feed.
+  //
+  // This used to seed state with the pack's sample values, so any row the feed
+  // didn't cover — or every row, if the fetch failed — kept rendering a
+  // hard-coded number under the LIVE FEED banner. That is how ABSORPTION RATE
+  // sat at a fabricated 92.4% while the real series read 46.8%. A dash is the
+  // honest answer when there is no number; a confident wrong one is not.
+  const blank = (it) => ({ ...it, value: "—", delta: "", dir: "up", live: false });
+  const [items, setItems] = useState(() => TICKER.map(blank));
   const [time, setTime] = useState("");
 
   useEffect(() => {
-    setItems(TICKER);
+    setItems(TICKER.map(blank));
   }, [TICKER]);
 
-  // pull live values and merge over the sample set
+  // pull live values; anything the feed doesn't cover stays blank
   useEffect(() => {
     fetch("/api/ticker")
       .then((r) => r.json())
       .then((d) => {
         if (d && d.items) {
-          setItems(TICKER.map((it) => (d.items[it.label] ? { ...it, ...d.items[it.label] } : it)));
+          setItems(
+            TICKER.map((it) =>
+              d.items[it.label] ? { ...it, ...d.items[it.label] } : blank(it)
+            )
+          );
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        /* leave the dashes — a dead feed must never resurrect the samples */
+      });
   }, [TICKER]);
 
   useEffect(() => {

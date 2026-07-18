@@ -32,7 +32,17 @@ export default function IndicatorsPage() {
     return () => { on = false; };
   }, []);
 
-  const merged = INDICATORS.map((r) => (live[r.name] ? { ...r, ...live[r.name] } : r));
+  // INDICATORS supplies the editorial content — name, category, classification,
+  // the measures/impact copy. It must never supply the NUMBER. Any row the feed
+  // doesn't cover shows a dash instead of the pack's sample value, which would
+  // otherwise render as live and silently freeze at whatever was last typed in.
+  // (Seven consumer-credit rows did exactly that: their statics matched reality
+  // the day they were written and would have drifted at the next print.)
+  const merged = INDICATORS.map((r) =>
+    live[r.name]
+      ? { ...r, ...live[r.name] }
+      : { ...r, value: "—", change: "", trend: null, live: false }
+  );
 
   // Stable per-layer totals for the onion (unaffected by type/cat filters).
   // Submarket has no national-catalog rows; its count reflects the local-signal
