@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Lock, Check, LineChart, BookOpen, Briefcase, Users, ShieldAlert, Scale, Sparkles } from "lucide-react";
+import { Lock, Check, LineChart, BookOpen, Briefcase, Users, Sparkles, Activity, TrendingUp, Layers, BarChart3 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PAGE_LABELS } from "@/lib/access";
 import UpgradeCTA from "@/components/UpgradeCTA";
@@ -7,16 +7,23 @@ import UpgradeCTA from "@/components/UpgradeCTA";
 export const metadata = { title: "Upgrade · Cignal System" };
 export const dynamic = "force-dynamic";
 
+// These lists must match tier_access exactly. They previously promised Pro
+// buyers Community and Market Maps (both Cignal+), and promised Cignal+ buyers
+// FEMA risk overlays that do not exist yet — misrepresentation at the point of
+// sale, on the one page whose whole job is to be trusted.
 const PRO_FEATURES = [
+  { icon: Activity, name: "Indicators", desc: "Every leading and trailing signal driving multifamily, with the full detail behind each." },
   { icon: LineChart, name: "Forecasts", desc: "5-year forward projections and scenario models." },
   { icon: BookOpen, name: "Research", desc: "In-depth briefings that turn data into a thesis." },
   { icon: Briefcase, name: "Portfolio", desc: "Your assets, scored against live market position." },
-  { icon: Users, name: "Community", desc: "The members-only operator community." },
+  { icon: TrendingUp, name: "Indices", desc: "The housing-economy equity complex, read as a confirmation signal." },
 ];
 
 const PLUS_FEATURES = [
-  { icon: ShieldAlert, name: "Disaster & Insurance Risk", desc: "FEMA hazard exposure mapped across your markets — the force behind rising insurance costs and opex." },
-  { icon: Scale, name: "Housing-Policy Research", desc: "Fed and regulatory analysis focused on what actually moves the cycle." },
+  { icon: Layers, name: "The Onion Framework", desc: "The proprietary lens at the core of the Cignal method — every signal organized into layered rings so you read the cycle from the outside in." },
+  { icon: Briefcase, name: "Portfolio Architect", desc: "Cycle-conditional diversification — how your book should be weighted for the phase the market is actually in, not the one it was in when you bought." },
+  { icon: BarChart3, name: "Market Maps", desc: "Place-based intelligence down to the submarket, ranked and scored." },
+  { icon: Users, name: "Community", desc: "The members-only operator community." },
 ];
 
 function formatPrice(cents) {
@@ -32,7 +39,7 @@ export default async function UpgradePage({ searchParams }) {
   const supabase = createClient();
   const { data: tierRows } = await supabase
     .from("tiers")
-    .select("slug, name, price_monthly_cents")
+    .select("slug, name, price_monthly_cents, active")
     .in("slug", ["pro", "cignal_plus"]);
   const pro = tierRows?.find((t) => t.slug === "pro");
   const plus = tierRows?.find((t) => t.slug === "cignal_plus");
@@ -79,7 +86,7 @@ export default async function UpgradePage({ searchParams }) {
           ))}
         </div>
         <p className="mono mt-4 flex items-center gap-2 text-[12px] text-muted">
-          <Check size={13} className="text-up" /> Everything in Free stays included — dashboard, indicators, market maps, indices.
+          <Check size={13} className="text-up" /> Everything in Free stays included — dashboard, signals, and Where Are We.
         </p>
       </div>
 
@@ -90,11 +97,11 @@ export default async function UpgradePage({ searchParams }) {
               <Sparkles size={13} /> {plus?.name || "Cignal+"} — the top tier
             </p>
             <span className="mono rounded-full border border-signal/40 px-2.5 py-1 text-[11px] tracking-[0.08em] text-signal">
-              Coming soon{plusPrice ? ` · ${plusPrice}` : ""}
+              {plus?.active ? (plusPrice || "Available now") : `Coming soon${plusPrice ? ` · ${plusPrice}` : ""}`}
             </span>
           </div>
           <p className="mt-3 max-w-xl text-[13px] leading-relaxed text-muted">
-            Everything in Pro, plus a premium layer of place-based intelligence on Market Maps. Unlocks when you migrate up from Pro.
+            Everything in Pro, plus the two tools the Cignal method actually runs on — the Onion Framework and the Portfolio Architect — along with Market Maps and the operator Community.
           </p>
           <div className="mt-5 grid gap-px overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--line)] sm:grid-cols-2">
             {PLUS_FEATURES.map((f) => (
