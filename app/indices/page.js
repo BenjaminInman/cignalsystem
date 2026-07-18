@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { TrendingUp, Hammer, Wrench, Landmark, Handshake, Building2, Building, ChevronDown, Split } from "lucide-react";
 import { useContent } from "@/components/VerticalProvider";
+import PaywallBlur from "@/components/PaywallBlur";
 import BuffettIndicator from "@/components/BuffettIndicator";
 import IndexDonut from "@/components/IndexDonut";
 
@@ -92,8 +93,31 @@ export default function IndicesPage() {
         open its holdings.
       </p>
 
-      {/* Composite: the Housing Equity Complex headline read */}
-      <div className="mt-8 card p-6">
+      {/* The Housing Equity Complex is the Cignal+ lens on this page, the same
+          split as Indicators/Onion and Portfolio/Architect: Pro gets the
+          instrument, the top tier gets the read. It is what turns 36 scattered
+          quotes into "the complex is diverging, for-sale side confirming,
+          rental side lagging" — the synthesis is the product.
+
+          Soft blur, NOT `hard`. The Onion and Architect are held out of the DOM
+          because they are the method itself. Here the inputs are already on the
+          page: every member's daily move is in the donuts below, so hiding the
+          composite protects nothing a Pro member couldn't average by hand. What
+          the gate sells is the synthesis, and a blurred teaser sells it better
+          than an empty box.
+
+          The Buffett Indicator further down stays open to Pro deliberately —
+          market cap ÷ GDP is a public metric off Fed Z.1 and BEA, not Cignal
+          IP. Gating something a member can Google in five seconds cheapens the
+          gates that are actually earned. */}
+      <PaywallBlur
+        page="indices"
+        title="Housing Equity Complex"
+        minTier="cignal_plus"
+        wrapClass="mt-8"
+        blurb="The blended read across all 36 housing-economy names, split into sub-indices, with the divergence flag that fires when they stop agreeing. Unlock it with Cignal+."
+      >
+      <div className="card p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="mono text-[10px] tracking-[0.18em] text-muted">HOUSING EQUITY COMPLEX</p>
@@ -139,6 +163,7 @@ export default function IndicesPage() {
           })}
         </div>
       </div>
+      </PaywallBlur>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         {INDICES.map((cat) => {
