@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
-import { ArrowUp, Lock } from "lucide-react";
+import { ArrowUp, ArrowUpRight, Lock } from "lucide-react";
 import { useVertical } from "@/components/VerticalProvider";
 import { isPageReady } from "@/lib/verticals";
 import ComingSoonInline from "@/components/ComingSoonInline";
@@ -130,7 +131,24 @@ function ResearchInner() {
       </div>
 
       {thread.length === 0 && (
-        <div className="mx-auto mt-14 max-w-3xl text-left">
+        <div className="mx-auto mt-12 max-w-3xl">
+          <Link href="/research/anatomy" className="group card block p-5 transition-colors hover:border-signal/40">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="mono text-[10px] tracking-[0.18em] text-signal">ANATOMY</p>
+                <p className="mt-1.5 font-medium text-ink">How a headline number is built</p>
+                <p className="mt-1 text-[13px] leading-relaxed text-muted">
+                  CPI, GDP, AIMI, the yield spread — pulled apart to show what&apos;s inside, and which parts lead the cycle while others lag.
+                </p>
+              </div>
+              <ArrowUpRight size={20} className="shrink-0 text-muted transition-colors group-hover:text-signal" />
+            </div>
+          </Link>
+        </div>
+      )}
+
+      {thread.length === 0 && (
+        <div className="mx-auto mt-8 max-w-3xl text-left">
           <div className="mb-4 flex items-center gap-3">
             <span className="h-px w-8 bg-signal/60" />
             <h3 className="mono text-[12px] tracking-[0.2em] text-signal">HOW TO USE CANARY</h3>

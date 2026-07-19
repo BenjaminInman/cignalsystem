@@ -8,6 +8,12 @@
   --line: rgba(255, 255, 255, 0.06);
   --line-strong: rgba(255, 255, 255, 0.12);
   --signal-dim: rgba(245, 181, 68, 0.10);
+  --signal: #F5B544;
+  --ink: #ECEDEF;
+  --muted: #797E85;
+  --up: #5FB97C;
+  --down: #E5634D;
+  --coin: #C9A84C;
 }
 
 * { box-sizing: border-box; }
