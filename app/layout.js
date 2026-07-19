@@ -2,6 +2,7 @@ import "./globals.css";
 import Ticker from "@/components/Ticker";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
+import SocialRail from "@/components/SocialRail";
 import ComingSoon from "@/components/ComingSoon";
 import { VerticalProvider } from "@/components/VerticalProvider";
 import CommunityNotifier from "@/components/CommunityNotifier";
@@ -28,6 +29,7 @@ export default function RootLayout({ children }) {
               <Nav />
               <main className="mx-auto max-w-[1400px] px-5 pb-4">{children}</main>
               <Footer />
+              <SocialRail />
               <CommunityNotifier />
             </VerticalProvider>
           ) : (

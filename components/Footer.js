@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Facebook, Youtube, Instagram } from "lucide-react";
-import { SOCIAL } from "@/lib/brand";
+import { socialLinks } from "@/lib/brand";
+import { ICONS } from "@/components/SocialIcons";
 import { getActiveContent } from "@/lib/active-vertical";
 
 const COLS = [
@@ -28,21 +28,21 @@ export default function Footer() {
               {COPY.footerTagline || "Military Grade Economic Intelligence for Multifamily Real Estate Owners, Operators, Investors, Management Firms, Lenders and Equity Groups."}
             </p>
             <div className="mt-5 flex items-center gap-2">
-              {SOCIAL.facebook && (<a href={SOCIAL.facebook} target="_blank" rel="noreferrer" aria-label="Facebook" className="flex h-9 w-9 items-center justify-center rounded-md border border-[var(--line)] text-muted transition-colors hover:border-signal/40 hover:text-signal">
-                <Facebook size={16} strokeWidth={1.8} />
-              </a>)}
-              {SOCIAL.x && (<a href={SOCIAL.x} target="_blank" rel="noreferrer" aria-label="X" className="flex h-9 w-9 items-center justify-center rounded-md border border-[var(--line)] text-muted transition-colors hover:border-signal/40 hover:text-signal">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
-              </a>)}
-              {SOCIAL.youtube && (<a href={SOCIAL.youtube} target="_blank" rel="noreferrer" aria-label="YouTube" className="flex h-9 w-9 items-center justify-center rounded-md border border-[var(--line)] text-muted transition-colors hover:border-signal/40 hover:text-signal">
-                <Youtube size={17} strokeWidth={1.8} />
-              </a>)}
-              {SOCIAL.instagram && (<a href={SOCIAL.instagram} target="_blank" rel="noreferrer" aria-label="Instagram" className="flex h-9 w-9 items-center justify-center rounded-md border border-[var(--line)] text-muted transition-colors hover:border-signal/40 hover:text-signal">
-                <Instagram size={16} strokeWidth={1.8} />
-              </a>)}
-              {SOCIAL.tiktok && (<a href={SOCIAL.tiktok} target="_blank" rel="noreferrer" aria-label="TikTok" className="flex h-9 w-9 items-center justify-center rounded-md border border-[var(--line)] text-muted transition-colors hover:border-signal/40 hover:text-signal">
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 1 1-2.59-2.6c.27 0 .53.04.78.12V9.66a5.7 5.7 0 0 0-.78-.05 5.7 5.7 0 1 0 5.69 5.7V8.99a7.34 7.34 0 0 0 4.3 1.38V7.27a4.3 4.3 0 0 1-3.25-1.45z" /></svg>
-              </a>)}
+              {socialLinks().map(({ key, label, href }) => {
+                const Icon = ICONS[key];
+                return (
+                  <a
+                    key={key}
+                    href={href}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={label}
+                    className="flex h-9 w-9 items-center justify-center rounded-md border border-[var(--line)] text-muted transition-colors hover:border-signal/40 hover:text-signal"
+                  >
+                    {Icon && <Icon className="h-4 w-4" />}
+                  </a>
+                );
+              })}
             </div>
           </div>
           {COLS.map((col) => (
