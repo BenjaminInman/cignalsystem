@@ -298,10 +298,31 @@ function AnatomyInner() {
         <span className="flex items-center gap-2"><ClassDot cls="lagging" /> Lagging part</span>
       </div>
 
-      {/* cards */}
-      <div className="mt-8 space-y-4">
-        {view.map((c) => <Card key={c.slug || c.name} card={c} />)}
-      </div>
+      {/* cards, in groups */}
+      {(() => {
+        const GROUPS = [
+          { label: "Prices & Inflation", note: "the same pressure, measured different ways", slugs: ["cpi", "ppi", "pce_price", "inflation"] },
+          { label: "Growth, Jobs & Income", note: "what the economy is actually producing and earning", slugs: ["gdp", "real_pce", "payrolls", "wage_growth_real"] },
+          { label: "Rates & Credit", note: "the market's live read on risk", slugs: ["yield_spread", "baa_spread"] },
+          { label: "Housing & Households", note: "where the cycle meets the renter", slugs: ["debt_service_ratio", "rent_burden", "aimi"] },
+        ];
+        const bySlug = Object.fromEntries(view.map((c) => [c.slug, c]));
+        return GROUPS.map((g) => {
+          const cards = g.slugs.map((s) => bySlug[s]).filter(Boolean);
+          if (!cards.length) return null;
+          return (
+            <div key={g.label} className="mt-9">
+              <div className="mb-1 flex items-baseline gap-3">
+                <h2 className="headline text-xl text-ink">{g.label}</h2>
+              </div>
+              <p className="mono mb-4 text-[10.5px] tracking-[0.06em] text-muted">{g.note}</p>
+              <div className="space-y-4">
+                {cards.map((c) => <Card key={c.slug || c.name} card={c} />)}
+              </div>
+            </div>
+          );
+        });
+      })()}
 
       {/* roadmap — recognized composites being pulled apart next */}
       <div className="mt-10">
