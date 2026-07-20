@@ -33,13 +33,13 @@ function ClassChip({ cls }) {
 
 function TypeBadge({ type }) {
   const isBasket = type === "weighted_sum";
+  const isFamily = type === "family";
+  const color = isBasket ? "var(--signal)" : isFamily ? "#c98f6a" : "#8b93cf";
+  const border = isBasket ? "rgba(245,181,68,.35)" : isFamily ? "rgba(201,143,106,.4)" : "rgba(139,147,207,.4)";
   return (
     <span
       className="mono rounded px-2 py-1 text-[8.5px] tracking-[0.1em]"
-      style={{
-        color: isBasket ? "var(--signal)" : "#8b93cf",
-        border: `1px solid ${isBasket ? "rgba(245,181,68,.35)" : "rgba(139,147,207,.4)"}`,
-      }}
+      style={{ color, border: `1px solid ${border}` }}
     >
       {TYPE_LABEL[type]?.toUpperCase()}
     </span>
@@ -209,20 +209,30 @@ function AnatomyInner() {
         {view.map((c) => <Card key={c.slug || c.name} card={c} />)}
       </div>
 
-      {/* compact catalog */}
+      {/* roadmap — recognized composites being pulled apart next */}
       <div className="mt-10">
-        <div className="mb-3 flex items-center gap-3">
+        <div className="mb-1 flex items-center gap-3">
           <span className="h-px w-8 bg-signal/60" />
-          <h3 className="mono text-[11px] tracking-[0.18em] text-muted">MORE COMPOSITES</h3>
+          <h3 className="mono text-[11px] tracking-[0.18em] text-muted">COMING TO ANATOMY</h3>
         </div>
+        <p className="mono mb-3 pl-11 text-[10.5px] leading-relaxed text-muted">
+          More numbers built from other numbers — recognized composites we&apos;ll pull apart next.
+        </p>
         <div className="card divide-y divide-[var(--line)]">
           {ANATOMY_MORE.map((m) => (
-            <div key={m.name} className="grid grid-cols-[1.4fr_1.6fr_auto] items-center gap-4 px-5 py-3.5">
+            <div key={m.name} className="grid grid-cols-[1fr_auto] items-start gap-4 px-5 py-4 sm:grid-cols-[1.3fr_1.7fr_auto]">
               <div>
-                <p className="text-[13.5px] font-medium text-ink">{m.name}</p>
-                {m.parts && <p className="mono text-[9px] uppercase tracking-[0.08em] text-up">◉ {m.parts}</p>}
+                <div className="flex items-center gap-2">
+                  <p className="text-[13.5px] font-medium text-ink">{m.name}</p>
+                  <span className="mono rounded-sm bg-bg px-1.5 py-0.5 text-[8px] tracking-[0.12em] text-muted/70">SOON</span>
+                </div>
+                {m.parts && <p className="mono mt-1 text-[9px] uppercase tracking-[0.08em] text-up">◉ {m.parts}</p>}
+                {m.note && <p className="mt-1 text-[11px] leading-relaxed text-muted sm:hidden">{m.note}</p>}
               </div>
-              <p className="mono hidden text-[10.5px] text-muted sm:block">{m.formula}</p>
+              <div className="hidden sm:block">
+                <p className="mono text-[10.5px] leading-relaxed text-muted">{m.formula}</p>
+                {m.note && <p className="mt-1 text-[11px] leading-relaxed text-muted/80">{m.note}</p>}
+              </div>
               <div className="flex items-center justify-end gap-2">
                 <TypeBadge type={m.type} />
                 <ClassChip cls={m.cls} />
