@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
-import { ArrowUp, ArrowUpRight, Lock } from "lucide-react";
+import { ArrowUp, ArrowUpRight, Lock, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { useVertical } from "@/components/VerticalProvider";
 import { isPageReady } from "@/lib/verticals";
 import ComingSoonInline from "@/components/ComingSoonInline";
@@ -71,6 +71,13 @@ function ResearchInner() {
       answerRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [thread.length]);
+
+  const [radar, setRadar] = useState(null);
+  useEffect(() => {
+    let on = true;
+    fetch("/api/release-radar").then((r) => r.json()).then((d) => { if (on) setRadar(d?.items || []); }).catch(() => { if (on) setRadar([]); });
+    return () => { on = false; };
+  }, []);
 
   return (
     <div className="pt-12 pb-12">
@@ -210,28 +217,98 @@ function ResearchInner() {
         </div>
       )}
 
-      {/* Anatomy — full-width band spanning both columns, the hand-off to a
-          separate section. Always present, so it doesn't vanish once you ask. */}
+      {/* ── Research library: Anatomy, Field Guide, Release Radar ── */}
+
+      {/* Anatomy */}
       <Link href="/research/anatomy" className="group mt-10 block overflow-hidden rounded-2xl border border-signal/30 bg-gradient-to-r from-signal/[0.10] via-signal/[0.04] to-transparent p-6 transition-colors hover:border-signal/55 md:p-7">
         <div className="flex items-center justify-between gap-5">
           <div className="flex items-start gap-4">
-            <span className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-signal/40 bg-signal/[0.08]">
+            <span className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-signal/40 bg-signal/[0.08]">
               <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#F5B544" strokeWidth="1.6">
                 <path d="M12 3 L15 9 L9 9 Z" /><path d="M21 12 L15 15 L15 9 Z" />
                 <path d="M12 21 L9 15 L15 15 Z" /><path d="M3 12 L9 9 L9 15 Z" />
               </svg>
             </span>
             <div>
-              <p className="mono text-[10px] tracking-[0.22em] text-signal">ANATOMY</p>
-              <p className="mt-1.5 text-lg font-semibold text-ink">How a headline number is built</p>
-              <p className="mt-1 max-w-2xl text-[13.5px] leading-relaxed text-muted">
-                CPI, GDP, AIMI, the yield spread &mdash; pulled apart to show what&apos;s inside, and which parts lead the cycle while others lag.
+              <h2 className="headline text-2xl text-ink md:text-3xl">Anatomy</h2>
+              <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted md:max-w-2xl">
+                How a headline number is built. CPI, GDP, AIMI, the yield spread &mdash; pulled apart to show what&apos;s inside, and which parts lead the cycle while others lag.
               </p>
             </div>
           </div>
           <ArrowUpRight size={22} className="shrink-0 text-signal/70 transition-colors group-hover:text-signal" />
         </div>
       </Link>
+
+      {/* Field Guide */}
+      <Link href="/research/field-guide" className="group mt-4 block overflow-hidden rounded-2xl border border-signal/30 bg-gradient-to-r from-signal/[0.10] via-signal/[0.04] to-transparent p-6 transition-colors hover:border-signal/55 md:p-7">
+        <div className="flex items-center justify-between gap-5">
+          <div className="flex items-start gap-4">
+            <span className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-signal/40 bg-signal/[0.08]">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#F5B544" strokeWidth="1.6">
+                <path d="M4 5 h11 a2 2 0 0 1 2 2 v12 M4 5 v12 a2 2 0 0 0 2 2 h11" /><path d="M8 9 h6 M8 12 h6" />
+              </svg>
+            </span>
+            <div>
+              <h2 className="headline text-2xl text-ink md:text-3xl">Field Guide</h2>
+              <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted md:max-w-2xl">
+                How to think about the numbers. The four-phase cycle, leading vs lagging, correlation vs causation &mdash; the framework the whole platform runs on.
+              </p>
+            </div>
+          </div>
+          <ArrowUpRight size={22} className="shrink-0 text-signal/70 transition-colors group-hover:text-signal" />
+        </div>
+      </Link>
+
+      {/* Release Radar — inline */}
+      <div className="mt-4 overflow-hidden rounded-2xl border border-signal/30 bg-gradient-to-r from-signal/[0.10] via-signal/[0.04] to-transparent p-6 md:p-7">
+        <div className="flex items-start gap-4">
+          <span className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-signal/40 bg-signal/[0.08]">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#F5B544" strokeWidth="1.6">
+              <circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4" /><path d="M12 3 v3 M12 18 v3 M3 12 h3 M18 12 h3" />
+            </svg>
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="headline text-2xl text-ink md:text-3xl">Release Radar</h2>
+            <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted md:max-w-2xl">
+              The cycle-moving data, freshest first &mdash; latest read, direction, and when the next print is due.
+            </p>
+
+            <div className="mt-5 grid gap-2 sm:grid-cols-2">
+              {radar === null ? (
+                <p className="mono text-[11px] text-muted">Loading releases…</p>
+              ) : radar.length === 0 ? (
+                <p className="mono text-[11px] text-muted">Radar unavailable.</p>
+              ) : (
+                radar.map((r) => {
+                  const DirIcon = r.dir === "up" ? TrendingUp : r.dir === "down" ? TrendingDown : Minus;
+                  const dirColor = r.dir === "up" ? "var(--up)" : r.dir === "down" ? "var(--down)" : "var(--muted)";
+                  return (
+                    <div key={r.slug} className="flex items-center justify-between gap-3 rounded-lg border border-[var(--line)] bg-bg/60 px-3.5 py-2.5">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-[13px] font-medium text-ink">{r.label}</p>
+                          <span className="mono text-[8px] uppercase tracking-[0.1em] text-muted/70">{r.cat}</span>
+                        </div>
+                        <p className="mono mt-0.5 text-[9.5px] text-muted">
+                          {r.period}{r.note ? ` · ${r.note}` : ""}{r.released ? ` · released ${r.released}` : ""}{r.next ? ` · next ${r.next}` : ""}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1.5" style={{ color: dirColor }}>
+                        <DirIcon size={13} />
+                        <span className="mono text-[13px] font-semibold text-ink">{r.value}</span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+            <p className="mono mt-3 text-[9px] leading-relaxed text-muted/70">
+              &ldquo;Next&rdquo; dates are estimated from each series&apos; release cadence. Values are first-print reads; some revise.
+            </p>
+          </div>
+        </div>
+      </div>
 
       <p className="mono mt-10 flex items-center justify-center gap-1.5 text-[11px] tracking-[0.06em] text-muted">
         <Lock size={11} /> Cignal Pro — Canary is grounded in Cignal&apos;s live market intelligence.
