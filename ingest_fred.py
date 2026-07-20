@@ -36,12 +36,39 @@ def fetch_fred(series_id, key):
     return rows
 
 
+def fetch_release_dates(series_id, key):
+    """Map obs_date -> the date the value was FIRST published (ALFRED vintages).
+
+    Bounded to a recent realtime window so daily series stay small and don't 400.
+    The cron only inserts new/changed observations, which are recent, so recent
+    vintages are all we need. Anything whose first release predates the window is
+    treated as unknown (caller falls back to today()). Best-effort: on any error
+    we return {} and the caller uses today()."""
+    floor = (dt.date.today() - dt.timedelta(days=450)).isoformat()
+    try:
+        r = requests.get(FRED_URL, params={
+            "series_id": series_id, "api_key": key, "file_type": "json",
+            "output_type": 4, "realtime_start": floor, "realtime_end": "9999-12-31",
+        }, timeout=60)
+        r.raise_for_status()
+        first = {}
+        for o in r.json().get("observations", []):
+            d, rs = o.get("date"), o.get("realtime_start")
+            if not d or not rs or rs <= floor:   # rs == floor => released before our window
+                continue
+            if d not in first or rs < first[d]:
+                first[d] = rs
+        return first
+    except Exception:
+        return {}
+
+
 def main():
     key = os.environ.get("FRED_API_KEY")
     db  = os.environ.get("SUPABASE_DB_URL")
     if not key or not db:
         sys.exit("ERROR: FRED_API_KEY and SUPABASE_DB_URL must both be set")
-    release = dt.date.today()
+    release = dt.date.today()   # fallback only, when ALFRED has no vintage for an obs
     conn = psycopg2.connect(db); conn.autocommit = False
     try:
         with conn.cursor() as cur:
@@ -57,17 +84,19 @@ def main():
                 rows = fetch_fred(sid, key)
                 if not rows:
                     print(f"  [{slug}] {sid}: no observations"); continue
+                reldates = fetch_release_dates(sid, key)   # obs_date -> true first release
                 cur.execute("DROP TABLE IF EXISTS _fred_stage;")
-                cur.execute("CREATE TEMP TABLE _fred_stage (obs_date date, value numeric);")
+                cur.execute("CREATE TEMP TABLE _fred_stage (obs_date date, value numeric, release_date date);")
                 buf = io.StringIO()
                 for d, v in rows:
-                    buf.write(f"{d},{v}\n")
+                    buf.write(f"{d},{v},{reldates.get(d, '')}\n")   # empty -> NULL -> today() fallback
                 buf.seek(0)
-                cur.copy_expert("COPY _fred_stage (obs_date, value) FROM STDIN WITH CSV", buf)
+                cur.copy_expert("COPY _fred_stage (obs_date, value, release_date) FROM STDIN WITH CSV", buf)
                 cur.execute("""
                     INSERT INTO observations (indicator_id, region_id, obs_date, value, revision, release_date)
                     SELECT %(ind)s, %(nat)s, s.obs_date, s.value,
-                           COALESCE(latest.revision + 1, 0), %(rel)s
+                           COALESCE(latest.revision + 1, 0),
+                           COALESCE(s.release_date, %(rel)s)
                     FROM _fred_stage s
                     LEFT JOIN LATERAL (
                         SELECT o.value, o.revision FROM observations o
