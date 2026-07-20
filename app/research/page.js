@@ -74,9 +74,12 @@ function ResearchInner() {
 
   return (
     <div className="pt-12 pb-12">
-      {/* two-column hero — intro left, the ask right */}
-      <div className="grid items-center gap-8 md:grid-cols-2 md:gap-12">
-        {/* left: identity + intro */}
+      {/* top zone — Canary lives here as one unit: intro + ask on the left,
+          how-to on the right. Anatomy is a separate destination, so it sits
+          below both rather than splitting the Canary story. */}
+      <div className="grid items-start gap-8 md:grid-cols-2 md:gap-12">
+
+        {/* LEFT: identity, intro, and the ask */}
         <div>
           <p className="kicker mb-3 flex items-center gap-2"><CanaryMark size={13} className="text-signal" /> Intelligence Desk</p>
           <div className="flex items-center gap-4">
@@ -91,75 +94,47 @@ function ResearchInner() {
             the major markets are moving. It reads Cignal&apos;s live intelligence and tells you plainly when a
             question is outside its view.
           </p>
-        </div>
 
-        {/* right: the ask box, enlarged */}
-        <div>
-          <p className="mono mb-3 text-[11px] tracking-[0.2em] text-signal">ASK CANARY</p>
-          <div className={`rounded-2xl border p-2 transition-colors ${loading ? "border-signal/60 bg-signal/[0.08]" : "pulse-gold border-signal/40 bg-signal/[0.05]"}`}>
-            <div className="flex items-center gap-3 rounded-xl bg-bg2 px-5 py-4">
-              <CanaryMark size={22} className={`shrink-0 text-signal ${loading ? "canary-bob" : ""}`} />
-              <input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && ask(input)}
-                disabled={loading}
-                placeholder="Ask a question…"
-                className="flex-1 bg-transparent text-base text-ink placeholder:text-muted/60 outline-none disabled:opacity-90"
-              />
-              <button onClick={() => ask(input)} disabled={loading} className="mono flex shrink-0 items-center gap-1.5 rounded-md bg-signal px-5 py-3 text-[12px] tracking-[0.08em] text-bg transition-opacity hover:opacity-90 disabled:opacity-50">
-                {loading ? "…" : <>ASK <ArrowUp size={14} /></>}
-              </button>
+          {/* the ask box, directly under the intro */}
+          <div className="mt-7">
+            <p className="mono mb-3 text-[11px] tracking-[0.2em] text-signal">ASK CANARY</p>
+            <div className={`rounded-2xl border p-2 transition-colors ${loading ? "border-signal/60 bg-signal/[0.08]" : "pulse-gold border-signal/40 bg-signal/[0.05]"}`}>
+              <div className="flex items-center gap-3 rounded-xl bg-bg2 px-5 py-4">
+                <CanaryMark size={22} className={`shrink-0 text-signal ${loading ? "canary-bob" : ""}`} />
+                <input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && ask(input)}
+                  disabled={loading}
+                  placeholder="Ask a question…"
+                  className="flex-1 bg-transparent text-base text-ink placeholder:text-muted/60 outline-none disabled:opacity-90"
+                />
+                <button onClick={() => ask(input)} disabled={loading} className="mono flex shrink-0 items-center gap-1.5 rounded-md bg-signal px-5 py-3 text-[12px] tracking-[0.08em] text-bg transition-opacity hover:opacity-90 disabled:opacity-50">
+                  {loading ? "…" : <>ASK <ArrowUp size={14} /></>}
+                </button>
+              </div>
+              {loading && (
+                <div className="flex items-center gap-2.5 px-5 py-3">
+                  <CanaryMark size={16} className="canary-bob text-signal" />
+                  <span className="mono text-[12px] tracking-[0.04em] text-signal">Canary is reading the live signals — your answer forms below &darr;</span>
+                </div>
+              )}
             </div>
-            {/* working state, ON the box, so it's unmistakable Canary caught the question */}
-            {loading && (
-              <div className="flex items-center gap-2.5 px-5 py-3">
-                <CanaryMark size={16} className="canary-bob text-signal" />
-                <span className="mono text-[12px] tracking-[0.04em] text-signal">Canary is reading the live signals — your answer forms below &darr;</span>
+
+            {thread.length === 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {SUGGESTIONS.map((s) => (
+                  <button key={s} onClick={() => ask(s)} disabled={loading} className="rounded-full border border-[var(--line)] bg-bg px-4 py-2 text-left text-[13px] text-muted transition-colors hover:border-signal/40 hover:text-ink disabled:opacity-50">
+                    {s}
+                  </button>
+                ))}
               </div>
             )}
           </div>
-
-          {/* suggestions live under the box, giving the right column height to match the left */}
-          {thread.length === 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {SUGGESTIONS.map((s) => (
-                <button key={s} onClick={() => ask(s)} disabled={loading} className="rounded-full border border-[var(--line)] bg-bg px-4 py-2 text-left text-[13px] text-muted transition-colors hover:border-signal/40 hover:text-ink disabled:opacity-50">
-                  {s}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
-      </div>
 
-      {/* Anatomy — a pronounced feature band, not a quiet card */}
-      {thread.length === 0 && (
-        <Link href="/research/anatomy" className="group mt-12 block overflow-hidden rounded-2xl border border-signal/30 bg-gradient-to-r from-signal/[0.10] via-signal/[0.04] to-transparent p-6 transition-colors hover:border-signal/55 md:p-7">
-          <div className="flex items-center justify-between gap-5">
-            <div className="flex items-start gap-4">
-              {/* segmented aperture mark */}
-              <span className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-signal/40 bg-signal/[0.08]">
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#F5B544" strokeWidth="1.6">
-                  <path d="M12 3 L15 9 L9 9 Z" /><path d="M21 12 L15 15 L15 9 Z" />
-                  <path d="M12 21 L9 15 L15 15 Z" /><path d="M3 12 L9 9 L9 15 Z" />
-                </svg>
-              </span>
-              <div>
-                <p className="mono text-[10px] tracking-[0.22em] text-signal">ANATOMY</p>
-                <p className="mt-1.5 text-lg font-semibold text-ink">How a headline number is built</p>
-                <p className="mt-1 max-w-xl text-[13.5px] leading-relaxed text-muted">
-                  CPI, GDP, AIMI, the yield spread &mdash; pulled apart to show what&apos;s inside, and which parts lead the cycle while others lag.
-                </p>
-              </div>
-            </div>
-            <ArrowUpRight size={22} className="shrink-0 text-signal/70 transition-colors group-hover:text-signal" />
-          </div>
-        </Link>
-      )}
-
-      {thread.length === 0 && (
-        <div className="mt-12 text-left">
+        {/* RIGHT: how to use Canary — part of the Canary story, kept beside it */}
+        <div>
           <div className="mb-4 flex items-center gap-3">
             <span className="h-px w-8 bg-signal/60" />
             <h3 className="mono text-[12px] tracking-[0.2em] text-signal">HOW TO USE CANARY</h3>
@@ -171,7 +146,7 @@ function ResearchInner() {
             plainly rather than guess.
           </p>
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          <div className="mt-5 space-y-4">
             <div className="card p-5">
               <p className="mono mb-3 text-[10px] tracking-[0.16em] text-up">WORKS WELL</p>
               <ul className="list-disc space-y-2 pl-5 text-[13px] leading-relaxed text-muted marker:text-up/60">
@@ -195,10 +170,33 @@ function ResearchInner() {
           </div>
 
           <p className="mono mt-5 text-[11px] leading-relaxed text-muted">
-            Tip: be specific and frame it around the cycle or a named indicator. Tap an example above to see the shape of a question that lands.
+            Tip: be specific and frame it around the cycle or a named indicator. Tap an example to see the shape of a question that lands.
           </p>
         </div>
-      )}
+      </div>
+
+      {/* Anatomy — full-width band spanning both columns, the hand-off to a
+          separate section. Always present, so it doesn't vanish once you ask. */}
+      <Link href="/research/anatomy" className="group mt-10 block overflow-hidden rounded-2xl border border-signal/30 bg-gradient-to-r from-signal/[0.10] via-signal/[0.04] to-transparent p-6 transition-colors hover:border-signal/55 md:p-7">
+        <div className="flex items-center justify-between gap-5">
+          <div className="flex items-start gap-4">
+            <span className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-signal/40 bg-signal/[0.08]">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#F5B544" strokeWidth="1.6">
+                <path d="M12 3 L15 9 L9 9 Z" /><path d="M21 12 L15 15 L15 9 Z" />
+                <path d="M12 21 L9 15 L15 15 Z" /><path d="M3 12 L9 9 L9 15 Z" />
+              </svg>
+            </span>
+            <div>
+              <p className="mono text-[10px] tracking-[0.22em] text-signal">ANATOMY</p>
+              <p className="mt-1.5 text-lg font-semibold text-ink">How a headline number is built</p>
+              <p className="mt-1 max-w-2xl text-[13.5px] leading-relaxed text-muted">
+                CPI, GDP, AIMI, the yield spread &mdash; pulled apart to show what&apos;s inside, and which parts lead the cycle while others lag.
+              </p>
+            </div>
+          </div>
+          <ArrowUpRight size={22} className="shrink-0 text-signal/70 transition-colors group-hover:text-signal" />
+        </div>
+      </Link>
 
       {/* thread */}
       {thread.length > 0 && (
