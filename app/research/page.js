@@ -130,6 +130,8 @@ function ResearchInner() {
                 ))}
               </div>
             )}
+
+            {/* answers appear directly under the box and push everything below down */}
           </div>
         </div>
 
@@ -175,6 +177,39 @@ function ResearchInner() {
         </div>
       </div>
 
+      {/* answers — full-width, directly below the hero, pushing Anatomy down as
+          they grow so there's room for the full response */}
+      {thread.length > 0 && (
+        <div className="mt-8 space-y-4">
+          <div ref={answerRef} className="scroll-mt-24" />
+          {thread.map((item) => (
+            <div key={item.id} className="card p-5 md:p-6">
+              <p className="font-medium text-ink">{item.q}</p>
+              <div className="mt-3 border-t border-[var(--line)] pt-3">
+                <span className="mono text-[10px] tracking-[0.16em] text-signal">CANARY</span>
+                {item.pending ? (
+                  <div className="mt-2 flex items-center gap-2">
+                    <CanaryMark size={15} className="canary-bob text-signal" />
+                    <span className="mono text-[12px] text-signal">Canary is reading the live signals…</span>
+                  </div>
+                ) : item.error ? (
+                  <div className="mt-1">
+                    <p className="text-sm leading-relaxed text-muted">{item.error}</p>
+                    {item.upgrade && (
+                      <a href="/upgrade?page=research" className="mono mt-2 inline-block rounded-md bg-signal/15 px-3 py-1.5 text-[12px] tracking-[0.06em] text-signal hover:bg-signal/25">
+                        UPGRADE TO PRO
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-1 whitespace-pre-wrap text-[15px] leading-relaxed text-muted">{item.a}</p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Anatomy — full-width band spanning both columns, the hand-off to a
           separate section. Always present, so it doesn't vanish once you ask. */}
       <Link href="/research/anatomy" className="group mt-10 block overflow-hidden rounded-2xl border border-signal/30 bg-gradient-to-r from-signal/[0.10] via-signal/[0.04] to-transparent p-6 transition-colors hover:border-signal/55 md:p-7">
@@ -197,38 +232,6 @@ function ResearchInner() {
           <ArrowUpRight size={22} className="shrink-0 text-signal/70 transition-colors group-hover:text-signal" />
         </div>
       </Link>
-
-      {/* thread */}
-      {thread.length > 0 && (
-        <div className="mt-10 space-y-4">
-          <div ref={answerRef} className="scroll-mt-24" />
-          {thread.map((item) => (
-            <div key={item.id} className="card p-5">
-              <p className="font-medium text-ink">{item.q}</p>
-              <div className="mt-3 border-t border-[var(--line)] pt-3">
-                <span className="mono text-[10px] tracking-[0.16em] text-signal">CANARY</span>
-                {item.pending ? (
-                  <div className="mt-2 flex items-center gap-2">
-                    <CanaryMark size={15} className="canary-bob text-signal" />
-                    <span className="mono text-[12px] text-signal">Canary is reading the live signals…</span>
-                  </div>
-                ) : item.error ? (
-                  <div className="mt-1">
-                    <p className="text-sm leading-relaxed text-muted">{item.error}</p>
-                    {item.upgrade && (
-                      <a href="/upgrade?page=research" className="mono mt-2 inline-block rounded-md bg-signal/15 px-3 py-1.5 text-[12px] tracking-[0.06em] text-signal hover:bg-signal/25">
-                        UPGRADE TO PRO
-                      </a>
-                    )}
-                  </div>
-                ) : (
-                  <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-muted">{item.a}</p>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
 
       <p className="mono mt-10 flex items-center justify-center gap-1.5 text-[11px] tracking-[0.06em] text-muted">
         <Lock size={11} /> Cignal Pro — Canary is grounded in Cignal&apos;s live market intelligence.
