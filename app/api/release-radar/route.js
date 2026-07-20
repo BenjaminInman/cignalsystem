@@ -33,20 +33,25 @@ function nextEstimate(releaseDate, freq) {
   return `~${fmtDate(t)}`;
 }
 
-async function fetchSeries(slug) {
-  if (!SB_URL || !SB_KEY) return null;
+async function sbGet(path) {
+  const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
+    headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` },
+    next: { revalidate: 1800 },
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+// Filtering observations by an embedded indicators.slug forces a full scan on a
+// 500k-row table and times out. Instead resolve the ids first, then query
+// observations by (indicator_id, region_id) which hits the index.
+async function fetchSeries(indicatorId, regionId) {
+  if (!SB_URL || !SB_KEY || !indicatorId || !regionId) return null;
   try {
-    const url =
-      `${SB_URL}/rest/v1/observations` +
-      `?select=obs_date,value,release_date,indicators!inner(slug),regions!inner(region_type)` +
-      `&indicators.slug=eq.${slug}&regions.region_type=eq.national&revision=eq.0` +
-      `&order=obs_date.desc&limit=14`;
-    const res = await fetch(url, {
-      headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` },
-      next: { revalidate: 1800 },
-    });
-    if (!res.ok) return null;
-    const rows = await res.json();
+    const rows = await sbGet(
+      `observations?indicator_id=eq.${indicatorId}&region_id=eq.${regionId}` +
+        `&revision=eq.0&select=obs_date,value,release_date&order=obs_date.desc&limit=14`
+    );
     return rows?.length ? rows : null;
   } catch {
     return null;
@@ -98,13 +103,21 @@ function buildItem(cfg, rows) {
 
 export async function GET() {
   try {
+    if (!SB_URL || !SB_KEY) return Response.json({ items: [] });
+    const slugs = RADAR.map((r) => r.slug).join(",");
+    const [inds, regs] = await Promise.all([
+      sbGet(`indicators?slug=in.(${slugs})&select=id,slug`),
+      sbGet(`regions?region_type=eq.national&code=eq.US&select=id&limit=1`),
+    ]);
+    const idBySlug = Object.fromEntries((inds || []).map((r) => [r.slug, r.id]));
+    const regionId = regs?.[0]?.id;
+
     const results = await Promise.all(
       RADAR.map(async (cfg) => {
-        const rows = await fetchSeries(cfg.slug);
+        const rows = await fetchSeries(idBySlug[cfg.slug], regionId);
         return rows ? buildItem(cfg, rows) : null;
       })
     );
-    // freshest releases first
     const items = results.filter(Boolean).sort((a, b) => {
       if (!a.releasedRaw) return 1;
       if (!b.releasedRaw) return -1;
