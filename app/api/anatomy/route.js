@@ -130,6 +130,7 @@ async function build(entry) {
     type: entry.type,
     parentClass: entry.parentClass,
     formula: entry.formula,
+    note: entry.note || null,
     teach: entry.teach,
     weightsAsOf: entry.weightsAsOf || null,
     weightSource: entry.weightSource || null,

@@ -194,6 +194,11 @@ function Card({ card }) {
         </p>
       )}
 
+      {/* revision / provenance note */}
+      {card.note && (
+        <p className="mono mt-3 text-[10px] leading-relaxed text-muted/90">{card.note}</p>
+      )}
+
       {/* the divide insight */}
       <div className="mt-4 rounded-lg border-l-2 border-signal bg-bg2 px-3.5 py-3">
         <p className="text-[12.5px] leading-relaxed text-muted">{card.teach}</p>
