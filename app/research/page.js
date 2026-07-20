@@ -29,7 +29,7 @@ function ResearchInner() {
   const ask = async (q, focus) => {
     const text = (q || "").trim();
     if (!text || loading) return;
-    setInput("");
+    setInput(text); // keep the question visible in the box while Canary works
     setLoading(true);
     const id = Date.now();
     setThread((t) => [{ id, q: text, pending: true }, ...t]);
@@ -51,6 +51,7 @@ function ResearchInner() {
       setThread((t) => t.map((it) => (it.id === id ? { id, q: text, error: "Network error. Please try again." } : it)));
     } finally {
       setLoading(false);
+      setInput("");
     }
   };
 
@@ -73,82 +74,92 @@ function ResearchInner() {
 
   return (
     <div className="pt-12 pb-12">
-      <p className="kicker mb-3 flex items-center gap-2"><CanaryMark size={13} className="text-signal" /> Intelligence Desk</p>
-      <div className="flex items-center gap-4">
-        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-signal">
-          <CanaryMark size={30} className="text-bg" title="Canary" />
-        </span>
-        <h1 className="headline text-4xl text-ink md:text-5xl">Canary</h1>
-      </div>
-      <p className="mt-4 max-w-2xl text-muted">
-        Canary is the original leading indicator &mdash; the signal that sounds before the trouble shows.
-        Ask it where the multifamily cycle is turning, how the leading data compares to the lagging, and how
-        the major markets are moving. It reads Cignal&apos;s live intelligence and tells you plainly when a
-        question is outside its view.
-      </p>
+      {/* two-column hero — intro left, the ask right */}
+      <div className="grid items-center gap-8 md:grid-cols-2 md:gap-12">
+        {/* left: identity + intro */}
+        <div>
+          <p className="kicker mb-3 flex items-center gap-2"><CanaryMark size={13} className="text-signal" /> Intelligence Desk</p>
+          <div className="flex items-center gap-4">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-signal">
+              <CanaryMark size={30} className="text-bg" title="Canary" />
+            </span>
+            <h1 className="headline text-4xl text-ink md:text-5xl">Canary</h1>
+          </div>
+          <p className="mt-5 text-muted">
+            Canary is the original leading indicator &mdash; the signal that sounds before the trouble shows.
+            Ask it where the multifamily cycle is turning, how the leading data compares to the lagging, and how
+            the major markets are moving. It reads Cignal&apos;s live intelligence and tells you plainly when a
+            question is outside its view.
+          </p>
+        </div>
 
-      {/* Prominent ask */}
-      <div className="mt-12 flex flex-col items-center text-center">
-        <h2 className="headline text-2xl text-ink md:text-3xl">Ask Canary</h2>
-        <p className="mt-2 max-w-xl text-muted">Pose a question about the cycle, the leading and lagging indicators, or how a major market is moving.</p>
-
-        <div className="mt-6 w-full max-w-2xl">
-          <div className="pulse-gold rounded-2xl border border-signal/40 bg-signal/[0.05] p-2">
-            <div className="flex items-center gap-3 rounded-xl bg-bg2 px-4 py-3.5">
-              <CanaryMark size={20} className="shrink-0 text-signal" />
+        {/* right: the ask box, enlarged */}
+        <div>
+          <p className="mono mb-3 text-[11px] tracking-[0.2em] text-signal">ASK CANARY</p>
+          <div className={`rounded-2xl border p-2 transition-colors ${loading ? "border-signal/60 bg-signal/[0.08]" : "pulse-gold border-signal/40 bg-signal/[0.05]"}`}>
+            <div className="flex items-center gap-3 rounded-xl bg-bg2 px-5 py-4">
+              <CanaryMark size={22} className={`shrink-0 text-signal ${loading ? "canary-bob" : ""}`} />
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && ask(input)}
                 disabled={loading}
                 placeholder="Ask a question…"
-                className="flex-1 bg-transparent text-base text-ink placeholder:text-muted/60 outline-none disabled:opacity-60"
+                className="flex-1 bg-transparent text-base text-ink placeholder:text-muted/60 outline-none disabled:opacity-90"
               />
-              <button onClick={() => ask(input)} disabled={loading} className="mono flex shrink-0 items-center gap-1.5 rounded-md bg-signal px-4 py-2.5 text-[12px] tracking-[0.08em] text-bg transition-opacity hover:opacity-90 disabled:opacity-50">
+              <button onClick={() => ask(input)} disabled={loading} className="mono flex shrink-0 items-center gap-1.5 rounded-md bg-signal px-5 py-3 text-[12px] tracking-[0.08em] text-bg transition-opacity hover:opacity-90 disabled:opacity-50">
                 {loading ? "…" : <>ASK <ArrowUp size={14} /></>}
               </button>
             </div>
+            {/* working state, ON the box, so it's unmistakable Canary caught the question */}
+            {loading && (
+              <div className="flex items-center gap-2.5 px-5 py-3">
+                <CanaryMark size={16} className="canary-bob text-signal" />
+                <span className="mono text-[12px] tracking-[0.04em] text-signal">Canary is reading the live signals — your answer forms below &darr;</span>
+              </div>
+            )}
           </div>
 
-          {loading && (
-            <div className="mt-5 flex items-center justify-center gap-2.5">
-              <CanaryMark size={18} className="canary-bob text-signal" />
-              <span className="mono text-[12px] tracking-[0.04em] text-signal">Canary is reading the live signals — your answer forms below &darr;</span>
-            </div>
-          )}
-
-          {/* suggestions — step aside once a question is in flight */}
+          {/* suggestions live under the box, giving the right column height to match the left */}
           {thread.length === 0 && (
-          <div className="mt-4 flex flex-wrap justify-center gap-2">
-            {SUGGESTIONS.map((s) => (
-              <button key={s} onClick={() => ask(s)} disabled={loading} className="rounded-full border border-[var(--line)] bg-bg px-4 py-2 text-[13px] text-muted transition-colors hover:border-signal/40 hover:text-ink disabled:opacity-50">
-                {s}
-              </button>
-            ))}
-          </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {SUGGESTIONS.map((s) => (
+                <button key={s} onClick={() => ask(s)} disabled={loading} className="rounded-full border border-[var(--line)] bg-bg px-4 py-2 text-left text-[13px] text-muted transition-colors hover:border-signal/40 hover:text-ink disabled:opacity-50">
+                  {s}
+                </button>
+              ))}
+            </div>
           )}
         </div>
       </div>
 
+      {/* Anatomy — a pronounced feature band, not a quiet card */}
       {thread.length === 0 && (
-        <div className="mx-auto mt-12 max-w-3xl">
-          <Link href="/research/anatomy" className="group card block p-5 transition-colors hover:border-signal/40">
-            <div className="flex items-center justify-between gap-4">
+        <Link href="/research/anatomy" className="group mt-12 block overflow-hidden rounded-2xl border border-signal/30 bg-gradient-to-r from-signal/[0.10] via-signal/[0.04] to-transparent p-6 transition-colors hover:border-signal/55 md:p-7">
+          <div className="flex items-center justify-between gap-5">
+            <div className="flex items-start gap-4">
+              {/* segmented aperture mark */}
+              <span className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-signal/40 bg-signal/[0.08]">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#F5B544" strokeWidth="1.6">
+                  <path d="M12 3 L15 9 L9 9 Z" /><path d="M21 12 L15 15 L15 9 Z" />
+                  <path d="M12 21 L9 15 L15 15 Z" /><path d="M3 12 L9 9 L9 15 Z" />
+                </svg>
+              </span>
               <div>
-                <p className="mono text-[10px] tracking-[0.18em] text-signal">ANATOMY</p>
-                <p className="mt-1.5 font-medium text-ink">How a headline number is built</p>
-                <p className="mt-1 text-[13px] leading-relaxed text-muted">
-                  CPI, GDP, AIMI, the yield spread — pulled apart to show what&apos;s inside, and which parts lead the cycle while others lag.
+                <p className="mono text-[10px] tracking-[0.22em] text-signal">ANATOMY</p>
+                <p className="mt-1.5 text-lg font-semibold text-ink">How a headline number is built</p>
+                <p className="mt-1 max-w-xl text-[13.5px] leading-relaxed text-muted">
+                  CPI, GDP, AIMI, the yield spread &mdash; pulled apart to show what&apos;s inside, and which parts lead the cycle while others lag.
                 </p>
               </div>
-              <ArrowUpRight size={20} className="shrink-0 text-muted transition-colors group-hover:text-signal" />
             </div>
-          </Link>
-        </div>
+            <ArrowUpRight size={22} className="shrink-0 text-signal/70 transition-colors group-hover:text-signal" />
+          </div>
+        </Link>
       )}
 
       {thread.length === 0 && (
-        <div className="mx-auto mt-8 max-w-3xl text-left">
+        <div className="mt-12 text-left">
           <div className="mb-4 flex items-center gap-3">
             <span className="h-px w-8 bg-signal/60" />
             <h3 className="mono text-[12px] tracking-[0.2em] text-signal">HOW TO USE CANARY</h3>
@@ -191,7 +202,7 @@ function ResearchInner() {
 
       {/* thread */}
       {thread.length > 0 && (
-        <div className="mx-auto mt-10 max-w-3xl space-y-4">
+        <div className="mt-10 space-y-4">
           <div ref={answerRef} className="scroll-mt-24" />
           {thread.map((item) => (
             <div key={item.id} className="card p-5">
