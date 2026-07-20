@@ -48,8 +48,8 @@ const r1 = (n) => (n == null ? null : Math.round(n * 10) / 10);
 const r2 = (n) => (n == null ? null : Math.round(n * 100) / 100);
 
 async function build(entry) {
-  const head = await latest(entry.headline.slug);
-  const headPct = yoyPct(head, entry.headline.kind);
+  const head = entry.headline?.slug ? await latest(entry.headline.slug) : null;
+  const headPct = yoyPct(head, entry.headline?.kind);
 
   // Resolve every component's live value up front.
   const raw = await Promise.all(
@@ -76,6 +76,8 @@ async function build(entry) {
     const contribution =
       entry.type === "weighted_sum" && c.weight != null && pctv != null
         ? (c.weight / 100) * pctv
+        : entry.type === "contribution" && level != null
+        ? level // the series value IS the pp contribution
         : null;
 
     return {
@@ -91,6 +93,22 @@ async function build(entry) {
       asOf: row?.asOf || null,
     };
   });
+
+  // Headline: baskets use their own series; contribution cards sum the parts so
+  // whole and parts come from one vintage; family cards have no single number.
+  let headline = null;
+  if (entry.type === "contribution") {
+    const summed = components.reduce((a, c) => a + (c.contribution ?? 0), 0);
+    const asOf = components.find((c) => c.asOf)?.asOf || null;
+    headline = { value: r1(summed), yoyPct: null, level: r1(summed), asOf, label: entry.headline?.label || null };
+  } else if (head != null) {
+    headline = {
+      value: r2(head.value),
+      yoyPct: r1(headPct),
+      level: entry.headline?.kind === "rate" ? r2(head.value) : null,
+      asOf: head.asOf,
+    };
+  }
 
   // Residual: headline minus the sum of tracked contributions (baskets only).
   let residual = null;
@@ -115,15 +133,7 @@ async function build(entry) {
     teach: entry.teach,
     weightsAsOf: entry.weightsAsOf || null,
     weightSource: entry.weightSource || null,
-    headline:
-      head != null
-        ? {
-            value: r2(head.value),
-            yoyPct: r1(headPct),
-            level: entry.headline.kind === "rate" ? r2(head.value) : null,
-            asOf: head.asOf,
-          }
-        : null,
+    headline,
     components,
     residual,
   };

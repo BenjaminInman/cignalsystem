@@ -51,9 +51,9 @@ const fmtLevel = (n) => (n == null ? "—" : `${n.toFixed(2)}%`);
 
 function Card({ card }) {
   const isBasket = card.type === "weighted_sum";
-  // proportion strip cells (baskets only)
+  const isFamily = card.type === "family";
+  const isContribution = card.type === "contribution";
   const stripColor = (cls) => (cls === "coincident" ? COIN : cls === "leading" ? "var(--up)" : "var(--down)");
-  // contribution bars are scaled to the widest contribution in the card
   const maxContrib = Math.max(0.01, ...card.components.map((c) => Math.abs(c.contribution || 0)));
 
   return (
@@ -72,7 +72,7 @@ function Card({ card }) {
           {card.headline && (
             <div className="mono text-right text-[13px]">
               <span className="text-ink">{card.headline.yoyPct != null ? fmtPct(card.headline.yoyPct) : fmtLevel(card.headline.level)}</span>
-              <span className="text-muted"> headline</span>
+              <span className="text-muted"> {card.headline.label || "headline"}</span>
             </div>
           )}
         </div>
@@ -94,7 +94,61 @@ function Card({ card }) {
         </div>
       )}
 
-      {/* component rows */}
+      {/* FAMILY — the same thing measured different ways, shown as gauge tiles */}
+      {isFamily && (
+        <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+          {card.components.map((c) => (
+            <div key={c.label} className="rounded-lg border border-[var(--line)] bg-bg p-3">
+              <div className="flex items-center gap-1.5">
+                <ClassDot cls={c.cls} size={7} />
+                <p className="mono text-[9px] uppercase tracking-[0.06em] text-muted">{c.label}</p>
+              </div>
+              <p className="mt-1.5 text-xl font-semibold" style={{ color: c.yoyPct != null ? "var(--ink)" : "var(--muted)" }}>
+                {c.yoyPct != null ? fmtPct(c.yoyPct) : "—"}
+              </p>
+              <p className="mono mt-0.5 text-[9px] leading-tight text-muted/80">{c.role}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* CONTRIBUTION — parts sum to the headline; net exports can go negative */}
+      {isContribution && (
+        <div className="mt-4 space-y-2.5">
+          {card.components.map((c) => {
+            const w = Math.min(48, (Math.abs(c.level || 0) / maxContrib) * 46);
+            const neg = (c.level || 0) < 0;
+            return (
+              <div key={c.label} className="grid grid-cols-[14px_1.5fr_1.6fr_66px] items-center gap-3">
+                <ClassDot cls={c.cls} size={9} />
+                <div className="min-w-0">
+                  <p className="truncate text-[13px] font-medium text-ink">{c.label}</p>
+                  <p className="mono text-[9px] uppercase tracking-[0.08em] text-muted">{CLS_LABEL[c.cls]}{c.role ? ` · ${c.role}` : ""}</p>
+                </div>
+                {/* diverging bar around a center line */}
+                <div className="relative hidden h-4 rounded bg-bg sm:block">
+                  <span className="absolute inset-y-0 left-1/2 w-px bg-[var(--line-strong)]" />
+                  <div className="absolute inset-y-0 rounded" style={{ [neg ? "right" : "left"]: "50%", width: `${w}%`, background: stripColor(c.cls), opacity: 0.6 }} />
+                </div>
+                <div className="mono text-right text-[12px] text-ink">
+                  {c.level != null ? `${c.level >= 0 ? "+" : ""}${c.level.toFixed(2)} pp` : "—"}
+                </div>
+              </div>
+            );
+          })}
+          <div className="grid grid-cols-[14px_1.5fr_1.6fr_66px] items-center gap-3 border-t border-[var(--line)] pt-2.5">
+            <span />
+            <p className="text-[13px] font-semibold text-signal">Real GDP growth</p>
+            <p className="mono hidden text-[10px] text-muted sm:block">sum of contributions · annualized</p>
+            <div className="mono text-right text-[12px] font-semibold text-signal">
+              {card.headline?.level != null ? `${card.headline.level >= 0 ? "+" : ""}${card.headline.level.toFixed(1)}%` : "—"}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GENERIC component rows — difference / ratio / product / deflated / basket */}
+      {!isFamily && !isContribution && (
       <div className="mt-4 space-y-2.5">
         {card.components.map((c) => (
           <div key={c.label} className="grid grid-cols-[14px_1fr_auto] items-center gap-3 md:grid-cols-[14px_1.7fr_84px_72px_1fr]">
@@ -129,6 +183,7 @@ function Card({ card }) {
           </div>
         ))}
       </div>
+      )}
 
       {/* residual — honest gap, never fudged */}
       {card.residual && (
