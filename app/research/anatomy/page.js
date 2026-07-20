@@ -199,7 +199,7 @@ function Card({ card }) {
             </div>
             {/* live YoY or level */}
             <div className="mono text-right text-[11.5px]" style={{ color: c.yoyPct != null || c.level != null ? "var(--ink)" : "var(--muted)" }}>
-              {c.level != null ? fmtLevel(c.level) : c.yoyPct != null ? fmtPct(c.yoyPct) : (c.tracked ? "—" : "pending")}
+              {c.level != null ? fmtLevel(c.level) : c.yoyPct != null ? (c.balance ? `~${fmtPct(c.yoyPct)}` : fmtPct(c.yoyPct)) : (c.tracked ? "—" : "pending")}
             </div>
             {/* contribution bar (baskets) */}
             {isBasket ? (
@@ -223,8 +223,14 @@ function Card({ card }) {
       {card.residual && (
         <p className="mono mt-3 text-[10px] leading-relaxed text-muted">
           {card.residual.untrackedWeight > 0
-            ? `${card.residual.untrackedWeight}% of the basket (energy, food, core goods) is shown by weight only — live YoY pending sub-series wiring.`
+            ? `${card.residual.untrackedWeight}% of the basket shown by weight only — live YoY pending sub-series wiring.`
             : `Residual ${card.residual.pp >= 0 ? "+" : ""}${card.residual.pp} pp from rounding across components.`}
+        </p>
+      )}
+      {/* balance-component footnote */}
+      {card.components?.some((c) => c.balance) && !card.residual && (
+        <p className="mono mt-3 text-[10px] leading-relaxed text-muted">
+          Core services ex-shelter shown as the balance (headline minus the other four) — it reconciles to the {card.headline?.yoyPct != null ? fmtPct(card.headline.yoyPct) : "headline"} exactly.
         </p>
       )}
 

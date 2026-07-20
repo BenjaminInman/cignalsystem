@@ -88,13 +88,27 @@ async function build(entry) {
       relation: c.relation || null,
       fmt: c.fmt || null,
       mult: c.mult || null,
-      tracked: !!row || value != null,
+      balance: c.balance || false,
+      tracked: !!row || value != null || c.balance || false,
       level: level != null ? (c.fmt ? Math.round(level) : r2(level)) : null,
       yoyPct: r1(pctv),
       contribution: r1(contribution),
       asOf: row?.asOf || null,
     };
   });
+
+  // Balance component (e.g. CPI core-services-ex-shelter): its contribution is
+  // the headline minus everything we pulled — reconciles by construction, no
+  // invented number. Implied YoY is backed out from weight.
+  if (entry.type === "weighted_sum") {
+    const bal = components.find((c) => c.balance);
+    if (bal && headPct != null) {
+      const others = components.filter((c) => !c.balance).reduce((a, c) => a + (c.contribution ?? 0), 0);
+      const cshare = headPct - others;
+      bal.contribution = r1(cshare);
+      bal.yoyPct = bal.weight ? r1((cshare / (bal.weight / 100))) : null;
+    }
+  }
 
   // Headline: baskets use their own series; contribution cards sum the parts so
   // whole and parts come from one vintage; ratio cards divide the legs; family
@@ -120,7 +134,7 @@ async function build(entry) {
     };
   }
 
-  // Residual: headline minus the sum of tracked contributions (baskets only).
+  // Residual: only when tracked parts (incl. balance) don't reconcile to headline.
   let residual = null;
   if (entry.type === "weighted_sum" && headPct != null) {
     const summed = components.reduce((a, c) => a + (c.contribution ?? 0), 0);
@@ -129,7 +143,7 @@ async function build(entry) {
       0
     );
     const gap = headPct - summed;
-    if (Math.abs(gap) > 0.05 || trackedWeight < 99) {
+    if (Math.abs(gap) > 0.15 || trackedWeight < 98) {
       residual = { pp: r1(gap), untrackedWeight: r1(100 - trackedWeight) };
     }
   }
