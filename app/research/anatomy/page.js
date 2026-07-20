@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -48,6 +49,12 @@ function TypeBadge({ type }) {
 
 const fmtPct = (n) => (n == null ? "—" : `${n >= 0 ? "+" : ""}${n.toFixed(1)}%`);
 const fmtLevel = (n) => (n == null ? "—" : `${n.toFixed(2)}%`);
+const fmtVal = (n, fmt) => {
+  if (n == null) return "—";
+  if (fmt === "usd_mo") return `$${Math.round(n).toLocaleString()}/mo`;
+  if (fmt === "usd") return `$${Math.round(n).toLocaleString()}`;
+  return `${n}`;
+};
 
 function Card({ card }) {
   const isBasket = card.type === "weighted_sum";
@@ -138,17 +145,44 @@ function Card({ card }) {
           })}
           <div className="grid grid-cols-[14px_1.5fr_1.6fr_66px] items-center gap-3 border-t border-[var(--line)] pt-2.5">
             <span />
-            <p className="text-[13px] font-semibold text-signal">Real GDP growth</p>
-            <p className="mono hidden text-[10px] text-muted sm:block">sum of contributions · annualized</p>
+            <p className="text-[13px] font-semibold text-signal">{card.sumLabel || "Total"}</p>
+            <p className="mono hidden text-[10px] text-muted sm:block">{card.sumNote || "sum of parts"}</p>
             <div className="mono text-right text-[12px] font-semibold text-signal">
-              {card.headline?.level != null ? `${card.headline.level >= 0 ? "+" : ""}${card.headline.level.toFixed(1)}%` : "—"}
+              {card.headline?.level != null ? `${card.sumSigned && card.headline.level >= 0 ? "+" : ""}${card.headline.level.toFixed(1)}%` : "—"}
             </div>
           </div>
         </div>
       )}
 
-      {/* GENERIC component rows — difference / ratio / product / deflated / basket */}
-      {!isFamily && !isContribution && (
+      {/* RATIO — numerator ÷ denominator = the headline ratio */}
+      {card.type === "ratio" && (
+        <div className="mt-4">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-3">
+            {card.components.map((c, i) => (
+              <React.Fragment key={c.label}>
+                {i > 0 && <div className="flex items-center justify-center text-2xl text-muted">÷</div>}
+                <div className="rounded-lg border border-[var(--line)] bg-bg p-3.5">
+                  <div className="flex items-center gap-1.5">
+                    <ClassDot cls={c.cls} size={7} />
+                    <p className="mono text-[9px] uppercase tracking-[0.06em] text-muted">{c.label}</p>
+                  </div>
+                  <p className="mt-1.5 text-lg font-semibold text-ink">{fmtVal(c.level, c.fmt)}</p>
+                  <p className="mono mt-0.5 text-[9px] text-muted/80">{c.role}</p>
+                </div>
+              </React.Fragment>
+            ))}
+          </div>
+          {card.headline?.level != null && (
+            <div className="mt-3 flex items-center justify-between rounded-lg border-l-2 border-signal bg-bg2 px-4 py-3">
+              <span className="mono text-[10px] uppercase tracking-[0.1em] text-muted">= Rent as a share of income</span>
+              <span className="text-xl font-semibold text-signal">{card.headline.level.toFixed(1)}%</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* GENERIC component rows — difference / product / deflated / basket */}
+      {!isFamily && !isContribution && card.type !== "ratio" && (
       <div className="mt-4 space-y-2.5">
         {card.components.map((c) => (
           <div key={c.label} className="grid grid-cols-[14px_1fr_auto] items-center gap-3 md:grid-cols-[14px_1.7fr_84px_72px_1fr]">

@@ -65,7 +65,7 @@ async function build(entry) {
   const components = raw.map(({ c, row }) => {
     let value = row ? row.value : null;
     let pctv = yoyPct(row, c.kind);
-    let level = c.kind === "rate" && row ? row.value : null;
+    let level = (c.kind === "rate" || c.kind === "level") && row ? row.value : null;
 
     // Derived short leg for the yield spread: 3M = 10Y − spread.
     if (!row && c.derive === "long_minus_spread" && longRow && head) {
@@ -86,8 +86,10 @@ async function build(entry) {
       cls: c.cls,
       weight: c.weight ?? null,
       relation: c.relation || null,
+      fmt: c.fmt || null,
+      mult: c.mult || null,
       tracked: !!row || value != null,
-      level: level != null ? r2(level) : null, // for rate legs
+      level: level != null ? (c.fmt ? Math.round(level) : r2(level)) : null,
       yoyPct: r1(pctv),
       contribution: r1(contribution),
       asOf: row?.asOf || null,
@@ -95,12 +97,20 @@ async function build(entry) {
   });
 
   // Headline: baskets use their own series; contribution cards sum the parts so
-  // whole and parts come from one vintage; family cards have no single number.
+  // whole and parts come from one vintage; ratio cards divide the legs; family
+  // cards have no single number.
   let headline = null;
   if (entry.type === "contribution") {
     const summed = components.reduce((a, c) => a + (c.contribution ?? 0), 0);
     const asOf = components.find((c) => c.asOf)?.asOf || null;
     headline = { value: r1(summed), yoyPct: null, level: r1(summed), asOf, label: entry.headline?.label || null };
+  } else if (entry.type === "ratio") {
+    const num = components.find((c) => c.relation === "numerator");
+    const den = components.find((c) => c.relation === "denominator");
+    if (num?.level != null && den?.level) {
+      const ratio = ((num.level * (num.mult || 1)) / den.level) * 100;
+      headline = { value: r1(ratio), yoyPct: null, level: r1(ratio), asOf: num.asOf || den.asOf, label: entry.headline?.label || null };
+    }
   } else if (head != null) {
     headline = {
       value: r2(head.value),
@@ -131,6 +141,9 @@ async function build(entry) {
     parentClass: entry.parentClass,
     formula: entry.formula,
     note: entry.note || null,
+    sumLabel: entry.sumLabel || null,
+    sumNote: entry.sumNote || null,
+    sumSigned: entry.sumSigned || false,
     teach: entry.teach,
     weightsAsOf: entry.weightsAsOf || null,
     weightSource: entry.weightSource || null,
