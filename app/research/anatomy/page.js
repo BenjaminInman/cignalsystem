@@ -8,7 +8,7 @@ import { useVertical } from "@/components/VerticalProvider";
 import { isPageReady } from "@/lib/verticals";
 import ComingSoonInline from "@/components/ComingSoonInline";
 import CanaryMark from "@/components/CanaryMark";
-import { ANATOMY, ANATOMY_MORE, TYPE_LABEL } from "@/lib/anatomy";
+import { ANATOMY, TYPE_LABEL } from "@/lib/anatomy";
 
 const CLS_COLOR = { leading: "var(--up)", coincident: "var(--coin)", lagging: "var(--down)" };
 const CLS_LABEL = { leading: "Leading", coincident: "Coincident", lagging: "Lagging" };
@@ -329,39 +329,6 @@ function AnatomyInner() {
           );
         });
       })()}
-
-      {/* roadmap — recognized composites being pulled apart next */}
-      <div className="mt-10">
-        <div className="mb-1 flex items-center gap-3">
-          <span className="h-px w-8 bg-signal/60" />
-          <h3 className="mono text-[11px] tracking-[0.18em] text-muted">COMING TO ANATOMY</h3>
-        </div>
-        <p className="mono mb-3 pl-11 text-[10.5px] leading-relaxed text-muted">
-          More numbers built from other numbers — recognized composites we&apos;ll pull apart next.
-        </p>
-        <div className="card divide-y divide-[var(--line)]">
-          {ANATOMY_MORE.map((m) => (
-            <div key={m.name} className="grid grid-cols-[1fr_auto] items-start gap-4 px-5 py-4 sm:grid-cols-[1.3fr_1.7fr_auto]">
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-[13.5px] font-medium text-ink">{m.name}</p>
-                  <span className="mono rounded-sm bg-bg px-1.5 py-0.5 text-[8px] tracking-[0.12em] text-muted/70">SOON</span>
-                </div>
-                {m.parts && <p className="mono mt-1 text-[9px] uppercase tracking-[0.08em] text-up">◉ {m.parts}</p>}
-                {m.note && <p className="mt-1 text-[11px] leading-relaxed text-muted sm:hidden">{m.note}</p>}
-              </div>
-              <div className="hidden sm:block">
-                <p className="mono text-[10.5px] leading-relaxed text-muted">{m.formula}</p>
-                {m.note && <p className="mt-1 text-[11px] leading-relaxed text-muted/80">{m.note}</p>}
-              </div>
-              <div className="flex items-center justify-end gap-2">
-                <TypeBadge type={m.type} />
-                <ClassChip cls={m.cls} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
 
       <p className="mono mt-8 text-[10px] leading-relaxed text-muted">
         Live values pulled from Cignal, US national. CPI weights are BLS relative importance (Dec 2025). Component
