@@ -72,7 +72,7 @@ IMPERATIVE_RE = re.compile(r"(?:^|[.!?]\s+)(" + "|".join(IMPERATIVE_VERBS) + r")
 # Hedging about how to READ a figure is not prescription. Allowed anywhere:
 # "should be read/interpreted/treated/weighed/understood as ...".
 HEDGE_RE = re.compile(
-    r"\bshould(?:\s+not)?\s+be\s+(read|interpreted|treated|understood|weighed|taken|assumed|mistaken)\b",
+    r"\bshould(?:\s+not)?\s+be\s+(read|interpreted|treated|understood|weighed|taken|assumed|mistaken|viewed|seen|construed|regarded|confused)\b",
     re.I)
 
 
@@ -387,7 +387,8 @@ def gate(draft, facts):
 
     if len(facts) < MIN_FACTS:
         failures.append(f"only {len(facts)} facts (need {MIN_FACTS})")
-    numeric = sum(1 for f in facts if f["value_numeric"] is not None)
+    numeric = sum(1 for f in facts
+                  if f["value_numeric"] is not None or claim_numbers(f["fact_text"]))
     if numeric < MIN_NUMERIC_FACTS:
         failures.append(f"only {numeric} numeric facts (need {MIN_NUMERIC_FACTS})")
     mean_conf = sum(f["confidence"] or 0 for f in facts) / max(len(facts), 1)
