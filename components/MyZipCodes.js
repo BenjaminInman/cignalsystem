@@ -300,7 +300,7 @@ function ZipDetail({ zip, rent, demo, oz, inds, metroLabel }) {
           )}
           <div className="mono rounded border border-[var(--line)]">
             <div className="grid grid-cols-[1.5fr_auto_auto_auto] gap-2 border-b border-[var(--line)] bg-bg/40 px-2.5 py-1 text-[8px] tracking-[0.08em] text-muted">
-              <span>INDUSTRY</span><span>JOBS</span><span>YoY</span><span>PATH</span>
+              <span>INDUSTRY</span><span>JOBS</span><span>YoY</span><span>12MO AVG</span>
             </div>
             {inds.industries.map((r) => (
               <div key={r.slug} className="grid grid-cols-[1.5fr_auto_auto_auto] items-center gap-2 border-b border-[var(--line)]/50 px-2.5 py-1 text-[9px]">
@@ -310,7 +310,7 @@ function ZipDetail({ zip, rent, demo, oz, inds, metroLabel }) {
                 {r.traj ? (
                   <span className="flex items-center gap-1" title={`${r.traj.label} \u2014 ${r.traj.note}`}>
                     <span className="text-muted/70">
-                      {[r.traj.segments[0].from, ...r.traj.segments.map((sg) => sg.to)].map((v) => `${v >= 0 ? "+" : ""}${v}`).join(" \u203a ")}
+                      {r.traj.segments.map((sg) => `${sg.mean >= 0 ? "+" : ""}${sg.mean}`).join(" \u203a ")}
                     </span>
                     <span style={{ color: toneColor(r.traj.tone) }}>
                       {r.traj.direction === "improving" ? "\u2197" : r.traj.direction === "deteriorating" ? "\u2198" : "\u2192"}

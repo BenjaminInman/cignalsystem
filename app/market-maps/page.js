@@ -621,7 +621,7 @@ function ZipLookup() {
               )}
               <div className="mt-2 rounded border border-[var(--line)]">
                 <div className="mono grid grid-cols-[1.5fr_auto_auto_auto] gap-2 border-b border-[var(--line)] bg-bg/40 px-3 py-1.5 text-[9px] tracking-[0.08em] text-muted">
-                  <span>INDUSTRY</span><span>JOBS</span><span>YoY</span><span>24MO PATH</span>
+                  <span>INDUSTRY</span><span>JOBS</span><span>YoY</span><span>GROWTH PATH (12MO AVG)</span>
                 </div>
                 {inds.industries.map((r) => (
                   <div key={r.slug} className="mono grid grid-cols-[1.5fr_auto_auto_auto] items-center gap-2 border-b border-[var(--line)]/50 px-3 py-1.5 text-[10px]">
@@ -639,9 +639,7 @@ function ZipLookup() {
                         title={`${r.traj.label} \u2014 ${r.traj.note}`}
                       >
                         <span className="text-muted/70">
-                          {[r.traj.segments[0].from, ...r.traj.segments.map((sg) => sg.to)]
-                            .map((v) => `${v >= 0 ? "+" : ""}${v}`)
-                            .join(" \u203a ")}
+                          {r.traj.segments.map((sg) => `${sg.mean >= 0 ? "+" : ""}${sg.mean}`).join(" \u203a ")}
                         </span>
                         <span style={{ color: toneColor(r.traj.tone) }}>
                           {r.traj.direction === "improving" ? "\u2197" : r.traj.direction === "deteriorating" ? "\u2198" : "\u2192"}
@@ -658,8 +656,8 @@ function ZipLookup() {
               </div>
               <p className="mono mt-2 text-[9px] leading-relaxed text-muted/70">
                 Eleven mutually exclusive supersectors that sum to total nonfarm \u2014 aggregates (Total Private, Goods Producing) and
-                sub-components are excluded so nothing double-counts. Share is of metro employment; the path reads each industry&apos;s own
-                growth rate over 24 months in 12-month steps. Not seasonally adjusted, so every read is year-over-year.
+                sub-components are excluded so nothing double-counts. Share is of metro employment; the path is each industry&apos;s AVERAGE
+                year-over-year growth in the prior 12 months versus the most recent 12 \u2014 averages, not endpoints, so a single noisy month cannot flip the read. Not seasonally adjusted, so every read is year-over-year.
                 {data.grain !== "metro" && " Industry data is metro-grain: no public source publishes establishment-based industry employment at ZIP or city level."}
               </p>
             </div>
