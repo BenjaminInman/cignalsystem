@@ -120,6 +120,7 @@ export default function IndicesPage() {
     ? allMembers.reduce((s, m) => s + m.chg, 0) / allMembers.length
     : 0;
   const blendedYoy = periodAvg(allMembers, "yoy");
+  const blendedYtd = periodAvg(allMembers, "ytd");
   const blendedQtd = periodAvg(allMembers, "qtd");
   // Divergence is measured on the QUARTER, not the day. A one-session spread
   // between sub-indices is noise -- sectors scatter every day on nothing. A
@@ -196,6 +197,17 @@ export default function IndicesPage() {
             <div className="mt-2.5 flex items-baseline gap-3">
               <span
                 className="mono text-xl font-medium"
+                style={{ color: blendedYtd == null ? "#797E85" : blendedYtd >= 0 ? "#5FB97C" : "#E5634D" }}
+              >
+                {blendedYtd == null ? "—" : `${blendedYtd >= 0 ? "+" : ""}${blendedYtd.toFixed(2)}%`}
+              </span>
+              <span className="mono text-[11px] text-muted">
+                this year{trendMeta ? ` · since ${fmtAnchor(trendMeta.y)}` : ""}
+              </span>
+            </div>
+            <div className="mt-1.5 flex items-baseline gap-3">
+              <span
+                className="mono text-[15px] font-medium"
                 style={{ color: blendedQtd == null ? "#797E85" : blendedQtd >= 0 ? "#5FB97C" : "#E5634D" }}
               >
                 {blendedQtd == null ? "—" : `${blendedQtd >= 0 ? "+" : ""}${blendedQtd.toFixed(2)}%`}
@@ -270,6 +282,7 @@ export default function IndicesPage() {
           const up = members.filter((m) => m.chg > 0).length;
           const qtd = periodAvg(members, "qtd");
           const yoy = periodAvg(members, "yoy");
+          const ytd = periodAvg(members, "ytd");
           const positive = avg >= 0;
           const color = positive ? "#5FB97C" : "#E5634D";
           const isOpen = !!open[cat.category];
@@ -311,21 +324,27 @@ export default function IndicesPage() {
                 </div>
               </button>
 
-              {/* Trend readings sit ABOVE the donut, ordered strongest to
-                  weakest: the header carries the annual, then the quarter, then
-                  today. The donut below is a daily visualisation, so the daily
-                  figure sits with it. The three horizons routinely disagree --
-                  Home Builders can print -9% for the quarter while the year is
-                  still positive -- and that disagreement is the actual read. */}
-              <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-[var(--line)] bg-[var(--line)]">
+              {/* Four horizons, ordered longest to shortest: year over year in
+                  the header, then this year, this quarter, today. The donut
+                  below is a daily visualisation, so the daily figure sits with
+                  it.
+
+                  YoY and YTD are NOT redundant -- they disagreed on direction
+                  for three of the six indices when this was built, by as much
+                  as 22.7pp. The pair is a turn detector: up YoY but down YTD
+                  means the peak is behind you and inside the last twelve
+                  months; down YoY but up YTD means the trough is. Either alone
+                  hides that. */}
+              <div className="mt-4 grid grid-cols-3 gap-px overflow-hidden rounded-md border border-[var(--line)] bg-[var(--line)]">
                 {[
+                  { label: "THIS YEAR", v: ytd, sub: trendMeta ? `since ${fmtAnchor(trendMeta.y)}` : "year to date" },
                   { label: "THIS QUARTER", v: qtd, sub: trendMeta ? `since ${fmtAnchor(trendMeta.q)}` : "quarter to date" },
                   { label: "TODAY", v: members.length ? avg : null, sub: live ? "daily close" : "reference" },
                 ].map((cell) => (
-                  <div key={cell.label} className="bg-bg2 px-4 py-3">
-                    <p className="mono text-[10px] tracking-[0.12em] text-muted">{cell.label}</p>
+                  <div key={cell.label} className="bg-bg2 px-3 py-3">
+                    <p className="mono text-[9px] tracking-[0.1em] text-muted">{cell.label}</p>
                     <p
-                      className="mono mt-1 text-lg font-medium"
+                      className="mono mt-1 text-base font-medium"
                       style={{ color: cell.v == null ? "#797E85" : cell.v >= 0 ? "#5FB97C" : "#E5634D" }}
                     >
                       {cell.v == null ? "—" : `${cell.v >= 0 ? "+" : ""}${cell.v.toFixed(2)}%`}
