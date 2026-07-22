@@ -606,7 +606,7 @@ function ZipLookup() {
           {inds && inds.industries?.length > 0 && (
             <div className="mt-4 border-t border-[var(--line)] pt-4">
               <div className="flex flex-wrap items-baseline gap-2">
-                <p className="mono text-[10px] tracking-[0.1em] text-muted">
+                <p className="mono text-[12px] tracking-[0.1em] text-muted">
                   INDUSTRY GROWTH · {data.metroLabel || "METRO"} · BLS CES
                 </p>
                 <span className="mono text-[9px] text-muted/70">
@@ -666,7 +666,7 @@ function ZipLookup() {
           {oz && oz.summary?.eligible > 0 && (
             <div className="mt-4 border-t border-[var(--line)] pt-4">
               <div className="flex flex-wrap items-baseline gap-2">
-                <p className="mono text-[10px] tracking-[0.1em] text-muted">
+                <p className="mono text-[12px] tracking-[0.1em] text-muted">
                   OPPORTUNITY ZONES · {oz.scopeLabel?.toUpperCase()}
                 </p>
                 <span className="mono rounded bg-signal/15 px-1.5 py-0.5 text-[8px] tracking-[0.08em] text-signal">
@@ -705,7 +705,7 @@ function ZipLookup() {
               </div>
               {oz.capital && (
                 <div className="mt-3 border-t border-[var(--line)] pt-3">
-                  <p className="mono text-[9px] tracking-[0.1em] text-muted">CREDIT ACCESS · CFPB HMDA · 2023</p>
+                  <p className="mono text-[10px] tracking-[0.1em] text-muted">CREDIT ACCESS · CFPB HMDA · 2023</p>
                   <div className="mt-2 flex flex-wrap items-baseline gap-x-5 gap-y-1">
                     <span className="mono text-[11px] text-muted">
                       mortgage denial rate{" "}
@@ -742,7 +742,7 @@ function ZipLookup() {
           )}
           {demo && (
             <div className="mt-4 border-t border-[var(--line)] pt-4">
-              <p className="mono text-[10px] tracking-[0.1em] text-muted">ZIP DEMOGRAPHICS · CENSUS ACS · OCCUPIED STOCK</p>
+              <p className="mono text-[12px] tracking-[0.1em] text-muted">ZIP DEMOGRAPHICS · CENSUS ACS · OCCUPIED STOCK</p>
               <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {[
                   ["Median Contract Rent", demo.medianContractRent != null ? `$${demo.medianContractRent.toLocaleString()}` : "—", "excl. utilities"],
@@ -768,7 +768,7 @@ function ZipLookup() {
 
           {signals && (
             <div className="mt-4 border-t border-[var(--line)] pt-4">
-              <p className="mono text-[10px] tracking-[0.1em] text-muted">
+              <p className="mono text-[12px] tracking-[0.1em] text-muted">
                 METRO SIGNALS{signals.metroName ? ` · ${signals.metroName.replace(/ \(Metropolitan.*\)$/, "")}` : ""}
               </p>
               <div className="mt-3 space-y-3">

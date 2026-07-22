@@ -290,7 +290,7 @@ function ZipDetail({ zip, rent, demo, oz, inds, metroLabel }) {
 
       {inds && inds.industries?.length > 0 && (
         <div>
-          <p className="mono mb-2 text-[9px] tracking-[0.12em] text-muted">
+          <p className="mono mb-2 text-[11px] tracking-[0.12em] text-muted">
             INDUSTRY GROWTH \u00b7 {(metroLabel || "METRO").toUpperCase()} \u00b7 BLS CES
           </p>
           {inds.topByAdds?.length > 0 && (
@@ -332,7 +332,7 @@ function ZipDetail({ zip, rent, demo, oz, inds, metroLabel }) {
       {oz && oz.summary?.eligible > 0 && (
         <div>
           <div className="mb-2 flex flex-wrap items-baseline gap-2">
-            <p className="mono text-[9px] tracking-[0.12em] text-muted">
+            <p className="mono text-[11px] tracking-[0.12em] text-muted">
               OPPORTUNITY ZONES · {oz.scopeLabel?.toUpperCase()}
             </p>
             <span className="mono rounded bg-signal/15 px-1.5 py-0.5 text-[8px] tracking-[0.08em] text-signal">
@@ -363,7 +363,7 @@ function ZipDetail({ zip, rent, demo, oz, inds, metroLabel }) {
           </div>
           {oz.capital && (
             <div className="mt-2 border-t border-[var(--line)] pt-2">
-              <p className="mono text-[8px] tracking-[0.1em] text-muted">CREDIT ACCESS \u00b7 CFPB HMDA \u00b7 2023</p>
+              <p className="mono text-[9px] tracking-[0.1em] text-muted">CREDIT ACCESS \u00b7 CFPB HMDA \u00b7 2023</p>
               <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
                 <span className="mono text-[10px] text-muted">
                   denial rate{" "}
