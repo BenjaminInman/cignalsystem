@@ -18,11 +18,14 @@ const ICONS = {
 
 // "2026-06-30" -> "Jun 30" — the anchor is shown so a reader can see exactly
 // what the comparison is against rather than trusting an unlabelled number.
-function fmtAnchor(iso) {
+function fmtAnchor(iso, withYear = false) {
   if (!iso) return "";
   const [y, m, d] = iso.split("-").map(Number);
   const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  return `${MON[m - 1]} ${d}`;
+  // The year-over-year anchor carries its year: "vs Jul 21" alone is ambiguous
+  // when the comparison point is twelve months back. The quarter anchor is
+  // recent enough that the month and day are unambiguous on their own.
+  return withYear ? `${MON[m - 1]} ${d}, ${y}` : `${MON[m - 1]} ${d}`;
 }
 
 export default function IndicesPage() {
@@ -187,7 +190,7 @@ export default function IndicesPage() {
                 {blendedYoy == null ? "—" : `${blendedYoy >= 0 ? "+" : ""}${blendedYoy.toFixed(2)}%`}
               </span>
               <span className="mono text-[11px] text-muted">
-                year over year{trendMeta?.yoy ? ` · vs ${fmtAnchor(trendMeta.yoy)}` : ""} · {allMembers.length} names
+                year over year{trendMeta?.yoy ? ` · vs ${fmtAnchor(trendMeta.yoy, true)}` : ""} · {allMembers.length} names
               </span>
             </div>
             <div className="mt-2.5 flex items-baseline gap-3">
