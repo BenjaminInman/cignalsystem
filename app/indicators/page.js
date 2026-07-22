@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Search, X } from "lucide-react";
 import { useContent } from "@/components/VerticalProvider";
 import IndicatorCompare from "@/components/IndicatorCompare";
 import PaywallBlur from "@/components/PaywallBlur";
@@ -18,6 +19,7 @@ export default function IndicatorsPage() {
   const { INDICATORS = [] } = useContent();
   const [type, setType] = useState("All Types");
   const [cat, setCat] = useState("All");
+  const [query, setQuery] = useState("");
   const [layer, setLayer] = useState(null);
   const [submarketCount, setSubmarketCount] = useState(SUBMARKET_FLOOR);
   const [submarketExact, setSubmarketExact] = useState(false);
@@ -55,11 +57,21 @@ export default function IndicatorsPage() {
   layerCounts.submarket = submarketCount;
   const countText = submarketExact ? {} : { submarket: `${SUBMARKET_FLOOR}+` };
 
+  // Free-text search across name, note and unit. With ~68 indicators the type
+  // and category chips are no longer enough to FIND a specific series -- the
+  // list is comprehensive by design, so it needs a way in. Matching the note
+  // and unit as well means "jobs", "treasury" or "census" all land somewhere
+  // useful, not just exact titles.
+  const q = query.trim().toLowerCase();
   const rows = merged.filter(
     (r) =>
       (type === "All Types" || r.type === type.toUpperCase()) &&
       (cat === "All" || r.cat === cat.toUpperCase()) &&
-      (!layer || layerOf(r.name) === layer)
+      (!layer || layerOf(r.name) === layer) &&
+      (!q ||
+        r.name.toLowerCase().includes(q) ||
+        (r.note || "").toLowerCase().includes(q) ||
+        (r.unit || "").toLowerCase().includes(q))
   );
 
   const reRows = rows.filter((r) => r.group !== "macro");
@@ -123,6 +135,26 @@ export default function IndicatorsPage() {
 
       {layer !== "submarket" && (
         <div className="mt-8 flex flex-wrap items-center gap-3">
+          <div className="relative">
+            <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search indicators…"
+              aria-label="Search indicators"
+              className="mono w-56 rounded-md border border-[var(--line)] bg-transparent py-1.5 pl-8 pr-7 text-[12px] tracking-[0.04em] text-ink placeholder:text-muted focus:border-signal/40 focus:outline-none"
+            />
+            {query && (
+              <button
+                onClick={() => setQuery("")}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-ink"
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
           <div className="inline-flex rounded-md border border-[var(--line)] p-1">
             {TYPES.map((t) => (
               <button key={t} onClick={() => setType(t)} className={`mono rounded px-3 py-1.5 text-[12px] tracking-[0.04em] ${type === t ? "bg-signal/15 text-signal" : "text-muted hover:text-ink"}`}>{t}</button>
