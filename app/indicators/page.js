@@ -173,7 +173,14 @@ export default function IndicatorsPage() {
       ) : layer ? (
         <div className="mt-10">
           <SectionHead label={`LAYER ${LAYER_META[layer].num} · ${LAYER_META[layer].label.toUpperCase()}`} count={rows.length} />
-          <div className="mt-4 space-y-4">{rows.map(renderRow)}</div>
+          {/* Layer views were a flat list in raw array order -- no subgroup
+              headers, no ordering, so like-kind indicators scattered exactly as
+              they did on the full list before ORDER_IN_GROUP. A layer is just a
+              different slice of the same catalogue, so it gets the same
+              treatment. RE and macro group orders are concatenated because a
+              layer can straddle both (Layer 2 carries lending costs alongside
+              rents; Layer 3 carries rates alongside inflation). */}
+          {renderGrouped(rows, [...RE_GROUPS, ...MACRO_GROUPS])}
           {rows.length === 0 && (
             <p className="mono mt-4 rounded-lg border border-[var(--line)] p-8 text-center text-sm text-muted">No indicators match this filter.</p>
           )}

@@ -28,6 +28,31 @@ function periodLabel(dateStr, annual) {
 // Latest reading + history for a metro indicator, keyed by CBSA (Census metro
 // region_code). Returns { value, yoyPct, delta, asOf, trend, periods } — trend
 // is the underlying series oldest->newest so the row can chart it like Layer 2/3.
+// National CPI year-over-year AS OF a given date, used to deflate local nominal
+// wage growth into a real figure.
+//
+// Local CPI is not an option: BLS publishes metro CPI for a couple of dozen
+// areas and this warehouse carries it for 2 of 407 metros. National CPI is the
+// standard deflator when local prices are unavailable, and it is labelled as
+// such on the row so the method is visible rather than implied.
+//
+// The date match matters. QCEW wages are quarterly and lag ~6 months, so the
+// latest wage reading is often two quarters behind the latest CPI print.
+// Deflating a Q4-2025 wage change by a June-2026 CPI reading would subtract
+// inflation the wage period never experienced. This takes the CPI observation
+// on or before the wage date instead.
+async function nationalCpiYoyAsOf(isoDate) {
+  const rows = await sb(
+    `v_indicator_analytics?slug=eq.cpi_headline&region_type=eq.national` +
+      `&obs_date=lte.${isoDate}&select=obs_date,value,yoy_change&order=obs_date.desc&limit=1`
+  );
+  if (!Array.isArray(rows) || !rows.length) return null;
+  const v = Number(rows[0].value);
+  const y = rows[0].yoy_change == null ? null : Number(rows[0].yoy_change);
+  if (y == null || !v || v - y === 0) return null;
+  return { pct: Math.round((y / (v - y)) * 1000) / 10, asOf: rows[0].obs_date };
+}
+
 async function metroSignal(slug, cbsa, { annual = false, points = 26, goodUp = true } = {}) {
   const rows = await sb(
     `v_indicator_analytics?slug=eq.${slug}&region_code=eq.${cbsa}` +
@@ -217,7 +242,25 @@ export async function GET(req) {
 
     const zordi = await zordiSignal(zillowCode);
 
-    const signals = { employment, unemployment, rentsRPP, allRPP, cpiRent, vacancy, daysOnMarket, countyGdp, metroWages, countyUnemp, zordi };
+    // Real wage growth: local nominal wage growth less national CPI over the
+    // SAME period. Attached to the wage signal rather than served as its own
+    // series, so the two can never drift apart or be read against mismatched
+    // dates.
+    let realWages = null;
+    if (metroWages && metroWages.yoyPct != null && metroWages.asOf) {
+      const cpi = await nationalCpiYoyAsOf(metroWages.asOf);
+      if (cpi) {
+        realWages = {
+          pct: Math.round((metroWages.yoyPct - cpi.pct) * 10) / 10,
+          nominalPct: metroWages.yoyPct,
+          cpiPct: cpi.pct,
+          cpiAsOf: cpi.asOf,
+          asOf: metroWages.asOf,
+        };
+      }
+    }
+
+    const signals = { employment, unemployment, rentsRPP, allRPP, cpiRent, vacancy, daysOnMarket, countyGdp, metroWages, realWages, countyUnemp, zordi };
     const any = Object.values(signals).some(Boolean);
     return Response.json({ found: any || !!migration, cbsa, metroName, countyName: countyLabel, signals, migration });
   } catch {
