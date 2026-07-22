@@ -468,12 +468,12 @@ def save_draft(conn, draft, facts, arts, ok, failures, coverage):
             insert into drafts
               (site, vertical, slug, headline, dek, body, fact_ids, article_ids,
                corroboration, gate_pass, gate_failures, coverage, status, model)
-            values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'draft',%s)
+            values (%s,%s,%s,%s,%s,%s,%s::uuid[],%s::uuid[],%s,%s,%s,%s,'draft',%s)
             on conflict (site, slug) do nothing
             returning id
             """,
             (SITE, VERTICAL, slug, draft.get("headline"), draft.get("dek"),
-             json.dumps(draft), [f["id"] for f in facts], sorted(arts),
+             json.dumps(draft), [str(f["id"]) for f in facts], [str(a) for a in sorted(arts)],
              max((f["corroboration"] for f in facts), default=1),
              ok, json.dumps(failures), round(coverage, 3), ANTHROPIC_MODEL),
         )
