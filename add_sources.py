@@ -50,22 +50,32 @@ def main():
             cur.execute("select count(*) c from news_sources where is_active")
             print("active sources before:", cur.fetchone()["c"])
 
-            cur.execute("select feed_url from news_sources")
-            have = {r["feed_url"] for r in cur.fetchall()}
+            # dedupe on BOTH: name carries a unique constraint, and an existing
+            # source may already be registered under a different feed_url
+            cur.execute("select name, feed_url from news_sources")
+            rows = cur.fetchall()
+            have_url = {r["feed_url"] for r in rows}
+            have_name = {(r["name"] or "").strip().lower() for r in rows}
 
         added = 0
         with conn.cursor() as cur:
             for name, site_url, url, why in CANDIDATES:
-                if url in have:
+                if url in have_url or name.strip().lower() in have_name:
                     print(f"  exists   {name}")
                     continue
-                cur.execute(
-                    "insert into news_sources (name, url, feed_url, tier, vertical, is_active) "
-                    "values (%s,%s,%s,%s,'multifamily',true)",
-                    (name, site_url, url, default_tier),
-                )
-                added += 1
-                print(f"  ADDED    {name}  — {why}")
+                cur.execute("savepoint sp")
+                try:
+                    cur.execute(
+                        "insert into news_sources (name, url, feed_url, tier, vertical, is_active) "
+                        "values (%s,%s,%s,%s,'multifamily',true)",
+                        (name, site_url, url, default_tier),
+                    )
+                    cur.execute("release savepoint sp")
+                    added += 1
+                    print(f"  ADDED    {name}  — {why}")
+                except Exception as e:
+                    cur.execute("rollback to savepoint sp")
+                    print(f"  SKIPPED  {name}: {type(e).__name__} {str(e).splitlines()[0][:70]}")
         conn.commit()
 
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
