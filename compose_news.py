@@ -46,6 +46,7 @@ OPERATOR_CATEGORIES = ("rents", "occupancy", "supply", "demand")
 # the gate working. Tune against what it rejects, not toward a publish target.
 MIN_FACTS = 4
 MIN_NUMERIC_FACTS = 2
+MIN_METRIC_FACTS = 1   # at least one fact tied to a tracked indicator
 MIN_CONFIDENCE = 3.0          # news_facts.confidence is 1-5
 MIN_BODY_PARAS = 2
 MIN_TICKER = 4
@@ -67,6 +68,12 @@ IMPERATIVE_VERBS = ("reallocate shift focus push cut defend prioritize move star
                     "increase track build use avoid keep hold tighten raise lower renegotiate "
                     "reprice budget invest allocate trim expand delay accelerate review audit").split()
 IMPERATIVE_RE = re.compile(r"(?:^|[.!?]\s+)(" + "|".join(IMPERATIVE_VERBS) + r")\b", re.I)
+
+# Hedging about how to READ a figure is not prescription. Allowed anywhere:
+# "should be read/interpreted/treated/weighed/understood as ...".
+HEDGE_RE = re.compile(
+    r"\bshould(?:\s+not)?\s+be\s+(read|interpreted|treated|understood|weighed|taken|assumed|mistaken)\b",
+    re.I)
 
 
 def log(msg):
@@ -418,8 +425,13 @@ def gate(draft, facts):
     for k, seg in (draft.get("signal") or {}).items():
         t = (seg or {}).get("text", "") if isinstance(seg, dict) else ""
         for pat in PRESCRIPTIVE:
-            if re.search(pat, t, re.I):
-                failures.append(f"signal.{k}: prescriptive language {pat} — belongs to the training product")
+            m = re.search(pat, t, re.I)
+            if not m:
+                continue
+            # allow the epistemic use: "should be read as", "should not be taken as"
+            if pat == r"\bshould\b" and HEDGE_RE.search(t):
+                continue
+            failures.append(f"signal.{k}: prescriptive language {pat} — belongs to the training product")
         m = IMPERATIVE_RE.search(t)
         if m:
             failures.append(f'signal.{k}: bare imperative "{m.group(1)}" — instruction, not observation')
@@ -510,6 +522,11 @@ def main():
             art_ids = [m["article_id"] for m in c]
             facts = reconcile([f for aid in art_ids for f in by_article[aid]])
             if len(facts) < MIN_FACTS:
+                continue
+            # Single-property development news clears the fact count but is not
+            # operator signal. Require a link to a tracked series.
+            if sum(1 for f in facts if f["metric_slug"]) < MIN_METRIC_FACTS:
+                log(f"  skipped: {len(facts)} facts but none tied to a tracked indicator")
                 continue
             log(f"  composing from {len(facts)} facts across {len(art_ids)} article(s)")
 
