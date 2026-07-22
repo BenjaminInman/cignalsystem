@@ -56,7 +56,7 @@ export default function IndicesPage() {
       .then((r) => r.json())
       .then((d) => {
         if (d?.periods) setTrends(d.periods);
-        if (d?.quarterAnchor) setTrendMeta({ q: d.quarterAnchor, y: d.yearAnchor });
+        if (d?.quarterAnchor) setTrendMeta({ q: d.quarterAnchor, y: d.yearAnchor, yoy: d.yoyAnchor });
       })
       .catch(() => {});
   }, []);
@@ -116,8 +116,8 @@ export default function IndicesPage() {
   const blended = allMembers.length
     ? allMembers.reduce((s, m) => s + m.chg, 0) / allMembers.length
     : 0;
+  const blendedYoy = periodAvg(allMembers, "yoy");
   const blendedQtd = periodAvg(allMembers, "qtd");
-  const blendedYtd = periodAvg(allMembers, "ytd");
   // Divergence is measured on the QUARTER, not the day. A one-session spread
   // between sub-indices is noise -- sectors scatter every day on nothing. A
   // spread that persists across a quarter is a regime signal, which is what the
@@ -182,12 +182,12 @@ export default function IndicesPage() {
             <div className="mt-2 flex items-baseline gap-3">
               <span
                 className="headline text-4xl"
-                style={{ color: blendedYtd == null ? "#797E85" : blendedYtd >= 0 ? "#5FB97C" : "#E5634D" }}
+                style={{ color: blendedYoy == null ? "#797E85" : blendedYoy >= 0 ? "#5FB97C" : "#E5634D" }}
               >
-                {blendedYtd == null ? "—" : `${blendedYtd >= 0 ? "+" : ""}${blendedYtd.toFixed(2)}%`}
+                {blendedYoy == null ? "—" : `${blendedYoy >= 0 ? "+" : ""}${blendedYoy.toFixed(2)}%`}
               </span>
               <span className="mono text-[11px] text-muted">
-                since 2025 close · {allMembers.length} names
+                year over year{trendMeta?.yoy ? ` · vs ${fmtAnchor(trendMeta.yoy)}` : ""} · {allMembers.length} names
               </span>
             </div>
             <div className="mt-2.5 flex items-baseline gap-3">
@@ -266,7 +266,7 @@ export default function IndicesPage() {
             : 0;
           const up = members.filter((m) => m.chg > 0).length;
           const qtd = periodAvg(members, "qtd");
-          const ytd = periodAvg(members, "ytd");
+          const yoy = periodAvg(members, "yoy");
           const positive = avg >= 0;
           const color = positive ? "#5FB97C" : "#E5634D";
           const isOpen = !!open[cat.category];
@@ -297,11 +297,11 @@ export default function IndicesPage() {
                       daily sits furthest down as context. Leading with the daily
                       put the noisiest number in the most prominent slot. */}
                   <div className="text-right">
-                    <div className="headline text-2xl" style={{ color: ytd == null ? "#797E85" : ytd >= 0 ? "#5FB97C" : "#E5634D" }}>
-                      {ytd == null ? "—" : `${ytd >= 0 ? "+" : ""}${ytd.toFixed(2)}%`}
+                    <div className="headline text-2xl" style={{ color: yoy == null ? "#797E85" : yoy >= 0 ? "#5FB97C" : "#E5634D" }}>
+                      {yoy == null ? "—" : `${yoy >= 0 ? "+" : ""}${yoy.toFixed(2)}%`}
                     </div>
                     <p className="mono text-[10px] tracking-[0.12em] text-muted">
-                      SINCE 2025 CLOSE
+                      YEAR OVER YEAR
                     </p>
                   </div>
                   <ChevronDown size={18} className="text-muted transition-transform" style={{ transform: isOpen ? "rotate(180deg)" : undefined }} />

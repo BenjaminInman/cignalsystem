@@ -6,8 +6,16 @@
 // daily tape and with each other -- Home Builders can read -9% for the quarter
 // while the year is still +4%, which is the whole point of showing both.
 //
+//   yoy  change vs the same day one year ago  (the headline)
 //   qtd  change since the close of the last COMPLETED quarter
-//   ytd  change since the close of 2025
+//   ytd  change since the close of 2025 (retained, not currently displayed)
+//
+// The headline is YoY, not calendar YTD. YTD degenerates every January: on
+// 2 Jan 2026 it measured a single trading day (-0.05%) while the trailing year
+// read -6.33%, and on 16 Jan it read +7.51% against a real twelve-month trend of
+// -3.41% -- opposite directions, in the largest type on the page. YoY is always
+// exactly twelve months, so it never degenerates and stays comparable to
+// itself. It also matches the thesis: cycles do not reset on January 1.
 //
 // Anchors are resolved from the data rather than hard-coded, using the latest
 // session on or before each boundary, so quarter-end holidays and weekends
@@ -49,6 +57,7 @@ export async function GET() {
     const periods = {};
     for (const r of data.rows) {
       periods[r.symbol] = {
+        yoy: r.yoy == null ? null : Number(r.yoy),
         qtd: r.qtd == null ? null : Number(r.qtd),
         ytd: r.ytd == null ? null : Number(r.ytd),
       };
@@ -56,6 +65,7 @@ export async function GET() {
     return Response.json({
       periods,
       asOf: data.as_of,
+      yoyAnchor: data.yoy_anchor,
       quarterAnchor: data.quarter_anchor,
       yearAnchor: data.year_anchor,
     });
