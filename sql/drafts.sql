@@ -11,8 +11,8 @@ create table if not exists drafts (
   headline      text,
   dek           text,
   body          jsonb not null,              -- full composer output
-  fact_ids      bigint[] not null default '{}',   -- news_facts.id
-  article_ids   bigint[] not null default '{}',   -- news_articles.id
+  fact_ids      uuid[] not null default '{}',   -- news_facts.id
+  article_ids   uuid[] not null default '{}',   -- news_articles.id
   corroboration int default 1,
   gate_pass     boolean default false,
   gate_failures jsonb default '[]'::jsonb,

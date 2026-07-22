@@ -44,7 +44,7 @@ OPERATOR_CATEGORIES = ("rents", "occupancy", "supply", "demand")
 
 # Gate thresholds. Deliberately strict to start — a high early rejection rate is
 # the gate working. Tune against what it rejects, not toward a publish target.
-MIN_FACTS = 4
+MIN_FACTS = 6
 MIN_NUMERIC_FACTS = 2
 MIN_CONFIDENCE = 3.0          # news_facts.confidence is 1-5
 MIN_BODY_PARAS = 2
@@ -90,8 +90,8 @@ create table if not exists drafts (
   headline      text,
   dek           text,
   body          jsonb not null,
-  fact_ids      bigint[] not null default '{}',
-  article_ids   bigint[] not null default '{}',
+  fact_ids      uuid[] not null default '{}',
+  article_ids   uuid[] not null default '{}',
   corroboration int default 1,
   gate_pass     boolean default false,
   gate_failures jsonb default '[]'::jsonb,
@@ -107,6 +107,20 @@ create index if not exists idx_drafts_status on drafts (site, status, created_at
 alter table drafts enable row level security;
 """
 
+# The first run created these as bigint[]. Repair in place rather than dropping
+# the table, and guard on the current type so this is a no-op afterwards.
+REPAIR = """
+do $$
+begin
+  if exists (select 1 from information_schema.columns
+             where table_name='drafts' and column_name='fact_ids'
+               and udt_name <> '_uuid') then
+    alter table drafts alter column fact_ids  type uuid[] using fact_ids::text[]::uuid[];
+    alter table drafts alter column article_ids type uuid[] using article_ids::text[]::uuid[];
+  end if;
+end $$;
+"""
+
 POLICY = """
 drop policy if exists "read published drafts" on drafts;
 create policy "read published drafts" on drafts for select using (status = 'published');
@@ -116,6 +130,7 @@ create policy "read published drafts" on drafts for select using (status = 'publ
 def ensure_schema(conn):
     with conn.cursor() as cur:
         cur.execute(DDL)
+        cur.execute(REPAIR)
         cur.execute(POLICY)
     conn.commit()
     log("schema ready (drafts)")
@@ -280,7 +295,9 @@ def fact_line(f):
 
 def compose(facts):
     user = ("FACTS:\n" + "\n".join(fact_line(f) for f in facts) +
-            "\n\nCompose the article. If these facts cannot support one, set publishable=false.")
+            "\n\nCompose the article from these facts. Set publishable=false only if the "
+            "facts are genuinely contradictory or entirely off-topic for an operator "
+            "audience — not merely because you would prefer more of them.")
     payload = {
         "model": ANTHROPIC_MODEL, "max_tokens": 3000, "system": COMPOSE_SYSTEM,
         "tools": [compose_tool()],
@@ -476,8 +493,9 @@ def main():
                     for aid, fs in by_article.items()]
 
         clusters = cluster(articles)
-        log(f"clusters: {len(clusters)}  "
-            f"(largest {max((len({m['source_name'] for m in c}) for c in clusters), default=0)} sources)")
+        sizes = sorted((sum(len(by_article[m["article_id"]]) for m in c) for c in clusters), reverse=True)
+        log(f"clusters: {len(clusters)} | facts per cluster (top 8): {sizes[:8]} | "
+            f"clusters at/over floor({MIN_FACTS}): {sum(1 for n in sizes if n >= MIN_FACTS)}")
 
         written = 0
         for c in clusters:
@@ -487,6 +505,7 @@ def main():
             facts = reconcile([f for aid in art_ids for f in by_article[aid]])
             if len(facts) < MIN_FACTS:
                 continue
+            log(f"  composing from {len(facts)} facts across {len(art_ids)} article(s)")
 
             draft = compose(facts)
             if not draft:
