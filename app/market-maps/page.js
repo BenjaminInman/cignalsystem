@@ -667,7 +667,7 @@ function ZipLookup() {
             <div className="mt-4 border-t border-[var(--line)] pt-4">
               <div className="flex flex-wrap items-baseline gap-2">
                 <p className="mono text-[10px] tracking-[0.1em] text-muted">
-                  FEDERAL CAPITAL PROGRAMS · {oz.scopeLabel?.toUpperCase()}
+                  OPPORTUNITY ZONES · {oz.scopeLabel?.toUpperCase()}
                 </p>
                 <span className="mono rounded bg-signal/15 px-1.5 py-0.5 text-[8px] tracking-[0.08em] text-signal">
                   NOMINATIONS OPEN
@@ -677,8 +677,8 @@ function ZipLookup() {
                 {[
                   ["OZ 2.0 eligible", oz.summary.eligible, `of ${oz.summary.tracts} tracts · ${oz.summary.eligiblePct}%`],
                   ["Likely designated", `~${oz.summary.likelyDesignated}`, "governors pick ~25%"],
-                  ["LIHTC QCT", oz.summary.qct, `${oz.lihtcRule.basisBoost}% basis boost`],
-                  ["Both OZ + QCT", oz.summary.ozAndQct, "stacked incentives"],
+                  ["Also LIHTC QCT", oz.summary.ozAndQct, `stacked · ${oz.lihtcRule.basisBoost}% basis boost`],
+                  ["QCT county-wide", oz.summary.qct, "separate program"],
                 ].map(([k, v, sub]) => (
                   <div key={k}>
                     <p className="mono text-[9px] tracking-[0.08em] text-muted">{k.toUpperCase()}</p>
@@ -734,7 +734,9 @@ function ZipLookup() {
                 OZ: Cignal-computed from Census ACS ({oz.rule.vintage}) under the OZ 2.0 test \u2014 <span className="text-muted">not Treasury&apos;s official list</span>.
                 Treasury sets the final dataset; governors nominate up to {oz.rule.nominationShare}% of eligible tracts. Designations effective {oz.rule.effective}; OZ 1.0 sunsets {oz.rule.oz1Sunset}.
                 Designation confers tax treatment, not an assured return \u2014 research on OZ 1.0 found minimal measurable effect on prices and permitting.
-                QCT/DDA: HUD, redesignated annually, {oz.lihtcRule.effective} lists \u2014 {oz.lihtcRule.basisBoost}% LIHTC basis boost. HMDA denial rate is suppressed below 50 applications.
+                Listed tracts are OZ-eligible. LIHTC Qualified Census Tracts are a <span className="text-muted">separate federal program</span> \u2014 HUD-designated, redesignated annually
+                ({oz.lihtcRule.effective} lists), granting a {oz.lihtcRule.basisBoost}% basis boost to affordable-housing developers rather than capital-gains treatment to investors. Shown here because a tract can carry both.
+                HMDA denial rate is suppressed below 50 applications.
               </p>
             </div>
           )}

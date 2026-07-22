@@ -333,7 +333,7 @@ function ZipDetail({ zip, rent, demo, oz, inds, metroLabel }) {
         <div>
           <div className="mb-2 flex flex-wrap items-baseline gap-2">
             <p className="mono text-[9px] tracking-[0.12em] text-muted">
-              FEDERAL CAPITAL PROGRAMS · {oz.scopeLabel?.toUpperCase()}
+              OPPORTUNITY ZONES · {oz.scopeLabel?.toUpperCase()}
             </p>
             <span className="mono rounded bg-signal/15 px-1.5 py-0.5 text-[8px] tracking-[0.08em] text-signal">
               NOMINATIONS OPEN
@@ -342,8 +342,8 @@ function ZipDetail({ zip, rent, demo, oz, inds, metroLabel }) {
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <Stat label="OZ 2.0 ELIGIBLE" value={String(oz.summary.eligible)} sub={`of ${oz.summary.tracts} tracts · ${oz.summary.eligiblePct}%`} />
             <Stat label="LIKELY DESIGNATED" value={`~${oz.summary.likelyDesignated}`} sub="governors pick ~25%" />
-            <Stat label="LIHTC QCT" value={String(oz.summary.qct)} sub={`${oz.lihtcRule.basisBoost}% basis boost`} />
-            <Stat label="BOTH OZ + QCT" value={String(oz.summary.ozAndQct)} sub="stacked incentives" />
+            <Stat label="ALSO LIHTC QCT" value={String(oz.summary.ozAndQct)} sub={`stacked · ${oz.lihtcRule.basisBoost}% boost`} />
+            <Stat label="QCT COUNTY-WIDE" value={String(oz.summary.qct)} sub="separate program" />
           </div>
           <div className="mono mt-2 max-h-36 overflow-y-auto rounded border border-[var(--line)]">
             <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 border-b border-[var(--line)] bg-bg/40 px-2.5 py-1 text-[8px] tracking-[0.08em] text-muted">
@@ -382,7 +382,8 @@ function ZipDetail({ zip, rent, demo, oz, inds, metroLabel }) {
           )}
           <p className="mono mt-1.5 text-[8px] leading-relaxed text-muted/70">
             County-scoped. OZ: Cignal-computed from Census ACS ({oz.rule.vintage}) \u2014 not Treasury&apos;s official list.
-            QCT: HUD, {oz.lihtcRule.effective} list, {oz.lihtcRule.basisBoost}% LIHTC basis boost. HMDA rate suppressed below 50 applications.
+            Listed tracts are OZ-eligible. LIHTC QCT is a separate HUD program ({oz.lihtcRule.effective} list) granting a {oz.lihtcRule.basisBoost}% basis boost to
+            affordable-housing developers \u2014 shown because a tract can carry both. HMDA rate suppressed below 50 applications.
             Governors nominate up to {oz.rule.nominationShare}% of eligible tracts; designations effective {oz.rule.effective}, OZ 1.0 sunsets {oz.rule.oz1Sunset}.
             Designation confers tax treatment, not an assured return.
           </p>
