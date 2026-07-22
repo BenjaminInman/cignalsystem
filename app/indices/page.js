@@ -217,7 +217,7 @@ export default function IndicesPage() {
                   <Split size={13} /> DIVERGENCE
                 </span>
                 <p className="mono mt-2 max-w-[250px] text-[11px] leading-relaxed text-muted">
-                  this quarter: {strongest.category} leading{strongest.qtd != null ? ` (${strongest.qtd >= 0 ? "+" : ""}${strongest.qtd.toFixed(2)}%)` : ""}, {weakest.category.toLowerCase()} lagging{weakest.qtd != null ? ` (${weakest.qtd >= 0 ? "+" : ""}${weakest.qtd.toFixed(2)}%)` : ""}
+                  this quarter: {strongest.category} leading{strongest.qtd != null ? ` (${strongest.qtd >= 0 ? "+" : ""}${strongest.qtd.toFixed(2)}%)` : ""}, {weakest.category} lagging{weakest.qtd != null ? ` (${weakest.qtd >= 0 ? "+" : ""}${weakest.qtd.toFixed(2)}%)` : ""}
                 </p>
               </>
             ) : (
