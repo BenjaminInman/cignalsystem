@@ -388,6 +388,7 @@ function ZipLookup() {
   const [demo, setDemo] = useState(null); // ZIP-level Census demographics
   const [signals, setSignals] = useState(null); // metro-level signals (jobs, RPP, rent CPI…)
   const [oz, setOz] = useState(null); // Opportunity Zone 2.0 eligibility (tract grain)
+  const [inds, setInds] = useState(null); // metro industry employment mix
   const [status, setStatus] = useState("idle"); // idle | loading | error
   const [msg, setMsg] = useState("");
   const [userId, setUserId] = useState(undefined); // undefined = loading; null = signed out
@@ -422,7 +423,7 @@ function ZipLookup() {
   const search = async () => {
     const v = q.trim();
     if (!v) { setStatus("error"); setMsg("Enter a ZIP code or City, State."); setData(null); return; }
-    setStatus("loading"); setMsg(""); setData(null); setDemo(null); setSignals(null); setOz(null);
+    setStatus("loading"); setMsg(""); setData(null); setDemo(null); setSignals(null); setOz(null); setInds(null);
     const isZip = /^\d{5}$/.test(v);
     try {
       const [zr, dr, sr] = await Promise.all([
@@ -442,6 +443,14 @@ function ZipLookup() {
       // OZ 2.0 is tract-grain; the lookup hands back the tightest scope it could
       // resolve (county when known, else CBSA). Fetched separately so a slow or
       // missing OZ read never delays the rent card.
+      // Industry mix is metro-grain only; a ZIP/city lookup uses its parent CBSA.
+      const cbsaForInds = zr.d?.metroCbsa;
+      if (cbsaForInds) {
+        fetch(`/api/industries?cbsa=${encodeURIComponent(cbsaForInds)}`)
+          .then((r) => r.json())
+          .then((o) => { if (o?.found) setInds(o); })
+          .catch(() => {});
+      }
       const scope = zr.d?.ozScope;
       if (scope) {
         fetch(`/api/oz?${scope.kind === "county" ? "county" : "cbsa"}=${encodeURIComponent(scope.code)}`)
@@ -594,6 +603,68 @@ function ZipLookup() {
           <p className="mono mt-3 text-[10px] tracking-[0.08em] text-muted">
             Zillow Observed Rent Index · {data.label} · {data.basis === "multifamily" ? "multifamily (5+ units)" : "all rental types (SFR + condo + MF)"} · market asking rent, smoothed &amp; seasonally adjusted · as of {data.asOf}
           </p>
+          {inds && inds.industries?.length > 0 && (
+            <div className="mt-4 border-t border-[var(--line)] pt-4">
+              <div className="flex flex-wrap items-baseline gap-2">
+                <p className="mono text-[10px] tracking-[0.1em] text-muted">
+                  INDUSTRY GROWTH · {data.metroLabel || "METRO"} · BLS CES
+                </p>
+                <span className="mono text-[9px] text-muted/70">
+                  {fmtMonth(inds.asOf)} · {inds.totalEmployment.toLocaleString()}k jobs
+                </span>
+              </div>
+              {inds.topByAdds?.length > 0 && (
+                <p className="mono mt-1.5 text-[11px] leading-relaxed text-muted">
+                  Driving job growth:{" "}
+                  <span className="text-ink">{inds.topByAdds.join(" \u00b7 ")}</span>
+                </p>
+              )}
+              <div className="mt-2 rounded border border-[var(--line)]">
+                <div className="mono grid grid-cols-[1.5fr_auto_auto_auto] gap-2 border-b border-[var(--line)] bg-bg/40 px-3 py-1.5 text-[9px] tracking-[0.08em] text-muted">
+                  <span>INDUSTRY</span><span>JOBS</span><span>YoY</span><span>24MO PATH</span>
+                </div>
+                {inds.industries.map((r) => (
+                  <div key={r.slug} className="mono grid grid-cols-[1.5fr_auto_auto_auto] items-center gap-2 border-b border-[var(--line)]/50 px-3 py-1.5 text-[10px]">
+                    <span className="text-ink">
+                      {r.name}
+                      <span className="ml-1 text-muted/60">{r.share}%</span>
+                    </span>
+                    <span className="text-muted">{r.employment.toLocaleString()}k</span>
+                    <span style={{ color: toneColor(r.yoyPct >= 0 ? "bull" : "bear") }}>
+                      {r.yoyPct >= 0 ? "+" : ""}{r.yoyPct}%
+                    </span>
+                    {r.traj ? (
+                      <span
+                        className="flex items-center gap-1"
+                        title={`${r.traj.label} \u2014 ${r.traj.note}`}
+                      >
+                        <span className="text-muted/70">
+                          {[r.traj.segments[0].from, ...r.traj.segments.map((sg) => sg.to)]
+                            .map((v) => `${v >= 0 ? "+" : ""}${v}`)
+                            .join(" \u203a ")}
+                        </span>
+                        <span style={{ color: toneColor(r.traj.tone) }}>
+                          {r.traj.direction === "improving" ? "\u2197" : r.traj.direction === "deteriorating" ? "\u2198" : "\u2192"}
+                        </span>
+                        {r.traj.inflection && (
+                          <span className="rounded bg-signal/15 px-1 text-[8px] text-signal">TURN</span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-muted/50">\u2014</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <p className="mono mt-2 text-[9px] leading-relaxed text-muted/70">
+                Eleven mutually exclusive supersectors that sum to total nonfarm \u2014 aggregates (Total Private, Goods Producing) and
+                sub-components are excluded so nothing double-counts. Share is of metro employment; the path reads each industry&apos;s own
+                growth rate over 24 months in 12-month steps. Not seasonally adjusted, so every read is year-over-year.
+                {data.grain !== "metro" && " Industry data is metro-grain: no public source publishes establishment-based industry employment at ZIP or city level."}
+              </p>
+            </div>
+          )}
+
           {oz && oz.summary?.eligible > 0 && (
             <div className="mt-4 border-t border-[var(--line)] pt-4">
               <div className="flex flex-wrap items-baseline gap-2">

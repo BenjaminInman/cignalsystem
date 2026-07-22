@@ -33,6 +33,14 @@ async function sb(path) {
 // county FIPS when the crosswalk gives us a county (ZIP/city lookups), otherwise
 // the CBSA. County is preferred — a metro spans many counties and would return a
 // far broader tract list than the user asked about.
+// Metro CBSA for this lookup. Industry employment is published at metro grain
+// only, so a ZIP or city lookup still needs its parent CBSA to show industry mix.
+async function metroCbsaFor(zillowCode) {
+  if (!zillowCode) return null;
+  const m = await sb(`cbsa_zillow_xwalk?zillow_code=eq.${encodeURIComponent(zillowCode)}&select=cbsa&limit=1`);
+  return m?.[0]?.cbsa || null;
+}
+
 async function ozScopeFor({ countyLabel, metroLabel, metroCode }) {
   if (countyLabel) {
     const c = await sb(`regions?region_type=eq.county&code=eq.${encodeURIComponent(countyLabel)}&select=fips&limit=1`);
@@ -117,8 +125,11 @@ export async function GET(req) {
         if (mf) metroMf = { label: xw.metro_label, rent: mf.rent, yoyPct: mf.yoyPct, asOf: mf.asOf, traj: mf.traj, basis: "multifamily" };
       }
       const z = await fetchSeries("zori_zip", zip);
-      const ozScope = await ozScopeFor({ countyLabel: xw?.county_label, metroLabel: xw?.metro_label });
-      if (z) return Response.json({ found: true, grain: "zip", label: `ZIP ${zip}`, place, query: zip, metro, metroMf, ozScope, basis: "all rentals", ...z });
+      const [ozScope, metroCbsa] = await Promise.all([
+        ozScopeFor({ countyLabel: xw?.county_label, metroLabel: xw?.metro_label }),
+        metroCbsaFor(xw?.metro_label),
+      ]);
+      if (z) return Response.json({ found: true, grain: "zip", label: `ZIP ${zip}`, place, query: zip, metro, metroMf, ozScope, metroCbsa, metroLabel: xw?.metro_label || null, basis: "all rentals", ...z });
       if (xw) {
         // Rollup order mirrors the city path: on the multifamily vertical the metro
         // (multifamily) rung outranks the blended city/county rungs.
@@ -129,7 +140,7 @@ export async function GET(req) {
         for (const [grain, slug, code] of ladder) {
           if (!code) continue;
           const res = await fetchSeries(slug, code);
-          if (res) return Response.json({ found: true, grain, label: grain === "metro" ? `${code} metro` : code, place, query: zip, rolledUp: true, rolledFrom: `ZIP ${zip}`, metro: grain === "metro" ? null : metro, basis: grain === "metro" && mfFirst ? "multifamily" : "all rentals", ozScope: await ozScopeFor({ countyLabel: xw?.county_label, metroLabel: xw?.metro_label }), ...res });
+          if (res) return Response.json({ found: true, grain, label: grain === "metro" ? `${code} metro` : code, place, query: zip, rolledUp: true, rolledFrom: `ZIP ${zip}`, metro: grain === "metro" ? null : metro, basis: grain === "metro" && mfFirst ? "multifamily" : "all rentals", ozScope: await ozScopeFor({ countyLabel: xw?.county_label, metroLabel: xw?.metro_label }), metroCbsa: await metroCbsaFor(xw?.metro_label), metroLabel: xw?.metro_label || null, ...res });
         }
       }
       return Response.json({ found: false, query: zip, kind: "zip", place });
@@ -160,8 +171,11 @@ export async function GET(req) {
           const m = await fetchSeries(METRO_ALL, parsed.code, true);
           if (m) metro = { label: m.code || parsed.code, rent: m.rent, yoyPct: m.yoyPct, asOf: m.asOf, basis: "all rentals" };
         }
-        const ozScope = await ozScopeFor({ metroCode: parsed.code, metroLabel: name });
-        return Response.json({ found: true, grain, label: grain === "metro" ? `${name} metro` : name, place: name, query: q, metro, basis, ozScope, ...res });
+        const [ozScope, metroCbsa] = await Promise.all([
+          ozScopeFor({ metroCode: parsed.code, metroLabel: name }),
+          metroCbsaFor(parsed.code),
+        ]);
+        return Response.json({ found: true, grain, label: grain === "metro" ? `${name} metro` : name, place: name, query: q, metro, basis, ozScope, metroCbsa, metroLabel: parsed.code, ...res });
       }
     }
     return Response.json({ found: false, query: q, kind: "city" });

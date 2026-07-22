@@ -61,6 +61,12 @@ export default function MyZipCodes() {
       // Opportunity Zone 2.0 is tract-grain. /api/zip hands back the tightest scope
       // it could resolve (county for a ZIP), which we then look up. Chained rather
       // than parallel because the scope is only known after the rent call returns.
+      let indRes = null;
+      if (rRes?.metroCbsa) {
+        const o = await fetch(`/api/industries?cbsa=${encodeURIComponent(rRes.metroCbsa)}`)
+          .then((r) => r.json()).catch(() => null);
+        if (o?.found) indRes = o;
+      }
       let ozRes = null;
       const scope = rRes?.ozScope;
       if (scope) {
@@ -75,6 +81,8 @@ export default function MyZipCodes() {
           rent: rRes && rRes.found ? rRes : null,
           demo: dRes && dRes.found ? dRes : null,
           oz: ozRes,
+          inds: indRes,
+          metroLabel: rRes?.metroLabel || null,
         },
       }));
     } catch {
@@ -206,7 +214,7 @@ export default function MyZipCodes() {
                       ) : d.error ? (
                         <p className="mono text-[12px] text-down">Couldn&apos;t load data for {zip}. Try again shortly.</p>
                       ) : (
-                        <ZipDetail zip={zip} rent={d.rent} demo={d.demo} oz={d.oz} />
+                        <ZipDetail zip={zip} rent={d.rent} demo={d.demo} oz={d.oz} inds={d.inds} metroLabel={d.metroLabel} />
                       )}
                     </div>
                   )}
@@ -233,7 +241,7 @@ function Stat({ label, value, sub }) {
   );
 }
 
-function ZipDetail({ zip, rent, demo, oz }) {
+function ZipDetail({ zip, rent, demo, oz, inds, metroLabel }) {
   const up = rent && rent.yoyPct != null && rent.yoyPct >= 0;
   return (
     <div className="space-y-5">
@@ -278,6 +286,46 @@ function ZipDetail({ zip, rent, demo, oz }) {
         </div>
       ) : (
         <p className="mono text-[11px] text-muted">No Census demographic snapshot loaded for this ZIP.</p>
+      )}
+
+      {inds && inds.industries?.length > 0 && (
+        <div>
+          <p className="mono mb-2 text-[9px] tracking-[0.12em] text-muted">
+            INDUSTRY GROWTH \u00b7 {(metroLabel || "METRO").toUpperCase()} \u00b7 BLS CES
+          </p>
+          {inds.topByAdds?.length > 0 && (
+            <p className="mono mb-2 text-[10px] text-muted">
+              Driving job growth: <span className="text-ink">{inds.topByAdds.join(" \u00b7 ")}</span>
+            </p>
+          )}
+          <div className="mono rounded border border-[var(--line)]">
+            <div className="grid grid-cols-[1.5fr_auto_auto_auto] gap-2 border-b border-[var(--line)] bg-bg/40 px-2.5 py-1 text-[8px] tracking-[0.08em] text-muted">
+              <span>INDUSTRY</span><span>JOBS</span><span>YoY</span><span>PATH</span>
+            </div>
+            {inds.industries.map((r) => (
+              <div key={r.slug} className="grid grid-cols-[1.5fr_auto_auto_auto] items-center gap-2 border-b border-[var(--line)]/50 px-2.5 py-1 text-[9px]">
+                <span className="text-ink">{r.name}<span className="ml-1 text-muted/60">{r.share}%</span></span>
+                <span className="text-muted">{r.employment.toLocaleString()}k</span>
+                <span style={{ color: toneColor(r.yoyPct >= 0 ? "bull" : "bear") }}>{r.yoyPct >= 0 ? "+" : ""}{r.yoyPct}%</span>
+                {r.traj ? (
+                  <span className="flex items-center gap-1" title={`${r.traj.label} \u2014 ${r.traj.note}`}>
+                    <span className="text-muted/70">
+                      {[r.traj.segments[0].from, ...r.traj.segments.map((sg) => sg.to)].map((v) => `${v >= 0 ? "+" : ""}${v}`).join(" \u203a ")}
+                    </span>
+                    <span style={{ color: toneColor(r.traj.tone) }}>
+                      {r.traj.direction === "improving" ? "\u2197" : r.traj.direction === "deteriorating" ? "\u2198" : "\u2192"}
+                    </span>
+                  </span>
+                ) : <span className="text-muted/50">\u2014</span>}
+              </div>
+            ))}
+          </div>
+          <p className="mono mt-1.5 text-[8px] leading-relaxed text-muted/70">
+            Metro grain \u2014 no public source publishes establishment-based industry employment at ZIP level. Eleven mutually exclusive
+            supersectors summing to total nonfarm; aggregates and sub-components excluded so nothing double-counts. Not seasonally
+            adjusted, so reads are year-over-year.
+          </p>
+        </div>
       )}
 
       {/* Opportunity Zone 2.0 — tract grain, scoped to this ZIP's county */}
