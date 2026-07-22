@@ -16,9 +16,20 @@ const ICONS = {
   "Residential REITs and Operators": Building,
 };
 
+// "2026-06-30" -> "Jun 30" — the anchor is shown so a reader can see exactly
+// what the comparison is against rather than trusting an unlabelled number.
+function fmtAnchor(iso) {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-").map(Number);
+  const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return `${MON[m - 1]} ${d}`;
+}
+
 export default function IndicesPage() {
   const { INDICES = [] } = useContent();
   const [quotes, setQuotes] = useState({});
+  const [trends, setTrends] = useState({});
+  const [trendMeta, setTrendMeta] = useState(null);
   const [gse, setGse] = useState({});
   const [live, setLive] = useState(false);
   const [open, setOpen] = useState({});
@@ -38,6 +49,18 @@ export default function IndicesPage() {
       .catch(() => {});
   }, [symbolsKey]);
 
+  // Period returns (quarter-to-date, year-to-date). Daily moves are noise for a
+  // cycle read; these two horizons are where the trend actually shows.
+  useEffect(() => {
+    fetch(`/api/index-trends`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.periods) setTrends(d.periods);
+        if (d?.quarterAnchor) setTrendMeta({ q: d.quarterAnchor, y: d.yearAnchor });
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     fetch(`/api/gse-signals`)
       .then((r) => r.json())
@@ -50,6 +73,17 @@ export default function IndicesPage() {
   // never render as quotes. A name the feed doesn't cover is dropped from the
   // donut and its average rather than contributing a made-up move, and shows a
   // dash in the holdings list.
+  // Equal-weights a period return across members, matching the daily donut
+  // methodology exactly so the three readings on a card are comparable rather
+  // than three different constructs. Members without a figure for that horizon
+  // are skipped, not zero-filled -- a zero would drag the index toward flat.
+  const periodAvg = (ms, key) => {
+    const vals = ms
+      .map((m) => trends[m.ticker]?.[key])
+      .filter((v) => typeof v === "number" && Number.isFinite(v));
+    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  };
+
   const merged = (m) => {
     const q = quotes[m.ticker];
     return q
@@ -70,12 +104,20 @@ export default function IndicesPage() {
     return { category: cat.category, avg, n: ms.length };
   }).filter((c) => c.avg != null);
 
-  const allMembers = INDICES.flatMap((cat) =>
-    cat.members.filter((m) => !m.gse).map(merged)
-  ).filter((m) => m.quoted);
+  // Dedupe by ticker before blending. CBRE, JLL and CWK each appear in two
+  // categories (Brokerages and Commercial Real Estate Services), so a flat map
+  // counted them twice -- the headline read "39 names" against 36 real ones and
+  // over-weighted those three firms in the composite.
+  const allMembers = Object.values(
+    INDICES.flatMap((cat) => cat.members.filter((m) => !m.gse).map(merged))
+      .filter((m) => m.quoted)
+      .reduce((acc, m) => ({ ...acc, [m.ticker]: m }), {})
+  );
   const blended = allMembers.length
     ? allMembers.reduce((s, m) => s + m.chg, 0) / allMembers.length
     : 0;
+  const blendedQtd = periodAvg(allMembers, "qtd");
+  const blendedYtd = periodAvg(allMembers, "ytd");
   const subVals = priceCats.map((c) => c.avg);
   const spread = subVals.length ? Math.max(...subVals) - Math.min(...subVals) : 0;
   const diverging = spread >= 1.0; // ≥1pp spread between sub-indices reads as divergence
@@ -129,6 +171,24 @@ export default function IndicesPage() {
                 blended · {allMembers.length} names {live ? "· daily close" : "· reference"}
               </span>
             </div>
+            {/* The same two horizons as the category cards, so the headline is
+                read on the cycle rather than on one session's tape. */}
+            <div className="mt-3 flex flex-wrap items-baseline gap-x-6 gap-y-1">
+              {[
+                { label: "this quarter", v: blendedQtd },
+                { label: "since 2025 close", v: blendedYtd },
+              ].map((c) => (
+                <span key={c.label} className="mono text-[12px] text-muted">
+                  {c.label}{" "}
+                  <span
+                    className="font-medium"
+                    style={{ color: c.v == null ? "#797E85" : c.v >= 0 ? "#5FB97C" : "#E5634D" }}
+                  >
+                    {c.v == null ? "—" : `${c.v >= 0 ? "+" : ""}${c.v.toFixed(2)}%`}
+                  </span>
+                </span>
+              ))}
+            </div>
           </div>
           <div className="text-right">
             {diverging ? (
@@ -177,6 +237,8 @@ export default function IndicesPage() {
             ? members.reduce((s, m) => s + m.chg, 0) / members.length
             : 0;
           const up = members.filter((m) => m.chg > 0).length;
+          const qtd = periodAvg(members, "qtd");
+          const ytd = periodAvg(members, "ytd");
           const positive = avg >= 0;
           const color = positive ? "#5FB97C" : "#E5634D";
           const isOpen = !!open[cat.category];
@@ -214,6 +276,30 @@ export default function IndicesPage() {
               <div className="mt-4 flex justify-center">
                 <IndexDonut members={members} />
               </div>
+
+              {/* Trend readings. The daily number above is the tape; these two are
+                  the cycle. They frequently disagree with it and with each other --
+                  Home Builders can print -9% for the quarter while the year is
+                  still positive -- and that disagreement is the read. */}
+              {(qtd != null || ytd != null) && (
+                <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-[var(--line)] bg-[var(--line)]">
+                  {[
+                    { label: "THIS QUARTER", v: qtd, sub: trendMeta ? `since ${fmtAnchor(trendMeta.q)}` : "quarter to date" },
+                    { label: "SINCE 2025 CLOSE", v: ytd, sub: trendMeta ? `since ${fmtAnchor(trendMeta.y)}` : "year to date" },
+                  ].map((cell) => (
+                    <div key={cell.label} className="bg-bg2 px-4 py-3">
+                      <p className="mono text-[10px] tracking-[0.12em] text-muted">{cell.label}</p>
+                      <p
+                        className="mono mt-1 text-lg font-medium"
+                        style={{ color: cell.v == null ? "#797E85" : cell.v >= 0 ? "#5FB97C" : "#E5634D" }}
+                      >
+                        {cell.v == null ? "—" : `${cell.v >= 0 ? "+" : ""}${cell.v.toFixed(2)}%`}
+                      </p>
+                      <p className="mono text-[10px] text-muted/70">{cell.sub}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* expandable holdings */}
               {isOpen && (
