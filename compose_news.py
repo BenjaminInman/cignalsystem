@@ -115,8 +115,14 @@ begin
   if exists (select 1 from information_schema.columns
              where table_name='drafts' and column_name='fact_ids'
                and udt_name <> '_uuid') then
-    alter table drafts alter column fact_ids  type uuid[] using fact_ids::text[]::uuid[];
+    -- the column default ('{}' as bigint[]) blocks an automatic cast, so drop
+    -- it, change the type, then restore it
+    alter table drafts alter column fact_ids    drop default;
+    alter table drafts alter column article_ids drop default;
+    alter table drafts alter column fact_ids    type uuid[] using fact_ids::text[]::uuid[];
     alter table drafts alter column article_ids type uuid[] using article_ids::text[]::uuid[];
+    alter table drafts alter column fact_ids    set default '{}';
+    alter table drafts alter column article_ids set default '{}';
   end if;
 end $$;
 """
