@@ -32,7 +32,7 @@ ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
 ANTHROPIC_MODEL = os.environ.get("COMPOSE_MODEL", "claude-sonnet-4-6")
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 
-LOOKBACK_DAYS = int(os.environ.get("COMPOSE_LOOKBACK_DAYS", "3"))
+LOOKBACK_DAYS = int(os.environ.get("COMPOSE_LOOKBACK_DAYS", "7"))
 MAX_DRAFTS = int(os.environ.get("COMPOSE_MAX_DRAFTS", "2"))
 SITE = os.environ.get("COMPOSE_SITE", "multifamily30x")
 VERTICAL = os.environ.get("COMPOSE_VERTICAL", "multifamily")
@@ -44,7 +44,7 @@ OPERATOR_CATEGORIES = ("rents", "occupancy", "supply", "demand")
 
 # Gate thresholds. Deliberately strict to start — a high early rejection rate is
 # the gate working. Tune against what it rejects, not toward a publish target.
-MIN_FACTS = 6
+MIN_FACTS = 4
 MIN_NUMERIC_FACTS = 2
 MIN_CONFIDENCE = 3.0          # news_facts.confidence is 1-5
 MIN_BODY_PARAS = 2
