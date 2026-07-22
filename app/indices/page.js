@@ -401,7 +401,30 @@ export default function IndicesPage() {
         Equity data provided by Databento. GSE delinquency from public Fannie Mae / Freddie Mac filings.
       </p>
 
-      <BuffettIndicator />
+      {/* Section break before the Buffett Indicator.
+          Two things were wrong with it sitting flush here. It read as a seventh
+          index rather than a change of scope — and it sat directly beneath the
+          Databento attribution, which implies a source it does not use: Buffett
+          is Fed Z.1 market cap over BEA GDP, nothing to do with the equity feed.
+          The rule closes the equity section so the attribution belongs to the
+          cards above it, and the label signals the zoom-out.
+
+          The label is "ZOOMING OUT", not "MACRO BACKDROP", because the component
+          below already opens with a "Macro · Broad Market" kicker — stacking a
+          second Macro label would read as a mistake. This one names the move
+          instead of restating the category. */}
+      <div className="mt-14 flex items-center gap-4" aria-hidden="true">
+        <span className="h-px flex-1 bg-[var(--line)]" />
+        <span className="mono text-[10px] tracking-[0.18em] text-muted/70">ZOOMING OUT</span>
+        <span className="h-px flex-1 bg-[var(--line)]" />
+      </div>
+
+      {/* The card carries its own mt-14, which would leave the label floating far
+          above the thing it introduces. Override it so the two read as one unit:
+          the space belongs ABOVE the divider, separating the equity section. */}
+      <div className="[&>*]:!mt-6">
+        <BuffettIndicator />
+      </div>
     </div>
   );
 }
