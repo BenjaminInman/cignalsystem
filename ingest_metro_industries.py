@@ -31,7 +31,9 @@ import requests, psycopg2
 
 SM_DATA = "https://download.bls.gov/pub/time.series/sm/sm.data.0.Current"
 UA = {"User-Agent": "CignalSystem/1.0 (ben@benjamininman.com)"}
-START_YEAR = dt.date.today().year - 2      # ~30 months: enough for YoY + 24mo trajectory
+# Year-over-year consumes the first 12 months, and the trajectory needs a full
+# 24 months of YoY on top of that — so pull four calendar years, not two.
+START_YEAR = dt.date.today().year - 4
 
 # supersector code -> indicator slug. Mutually exclusive; sums to total nonfarm.
 SUPERSECTORS = {
