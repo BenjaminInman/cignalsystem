@@ -17,17 +17,17 @@ import psycopg2.extras
 
 DB_URL = os.environ["SUPABASE_DB_URL"]
 
-# name, feed_url, why
+# name, site url, feed_url, why
 CANDIDATES = [
-    ("Zego", "https://www.gozego.com/feed/",
+    ("Zego", "https://www.gozego.com", "https://www.gozego.com/feed/",
      "8/10 headlines operational — utility billing, resident payments, fraud/NOI"),
-    ("Multifamily Executive", "https://www.multifamilyexecutive.com/rss.xml",
+    ("Multifamily Executive", "https://www.multifamilyexecutive.com", "https://www.multifamilyexecutive.com/rss.xml",
      "7/10 — maintenance playbook, NOI erosion, resident experience, margin"),
-    ("RealPage Analytics", "https://www.realpage.com/analytics/feed/",
+    ("RealPage Analytics", "https://www.realpage.com/analytics", "https://www.realpage.com/analytics/feed/",
      "market-level rent/supply/occupancy data; feeds tracked indicators"),
-    ("Grace Hill", "https://gracehill.com/feed/",
+    ("Grace Hill", "https://gracehill.com", "https://gracehill.com/feed/",
      "staffing, training, fair-housing compliance, employee turnover"),
-    ("Multi-Housing News", "https://www.multihousingnews.com/feed/",
+    ("Multi-Housing News", "https://www.multihousingnews.com", "https://www.multihousingnews.com/feed/",
      "general trade volume"),
 ]
 
@@ -42,7 +42,10 @@ def main():
                         "where tier is not null group by tier order by n desc")
             tiers = cur.fetchall()
             print("existing tiers:", [(t["tier"], t["n"]) for t in tiers] or "none")
-            default_tier = tiers[0]["tier"] if tiers else None
+            # tier is an integer quality rank. These are trade press and vendor
+            # blogs, not primary data — assign the weakest rank in use so
+            # reconciliation never lets them outrank a Census or FRED figure.
+            default_tier = max((t["tier"] for t in tiers), default=3)
 
             cur.execute("select count(*) c from news_sources where is_active")
             print("active sources before:", cur.fetchone()["c"])
@@ -52,14 +55,14 @@ def main():
 
         added = 0
         with conn.cursor() as cur:
-            for name, url, why in CANDIDATES:
+            for name, site_url, url, why in CANDIDATES:
                 if url in have:
                     print(f"  exists   {name}")
                     continue
                 cur.execute(
-                    "insert into news_sources (name, feed_url, tier, vertical, is_active) "
-                    "values (%s,%s,%s,'multifamily',true)",
-                    (name, url, default_tier),
+                    "insert into news_sources (name, url, feed_url, tier, vertical, is_active) "
+                    "values (%s,%s,%s,%s,'multifamily',true)",
+                    (name, site_url, url, default_tier),
                 )
                 added += 1
                 print(f"  ADDED    {name}  — {why}")
