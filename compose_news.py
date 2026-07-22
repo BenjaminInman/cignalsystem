@@ -77,6 +77,50 @@ def db():
     return psycopg2.connect(DB_URL)
 
 
+# The job creates its own table. The Actions runner already holds
+# SUPABASE_DB_URL, so there is no separate migration step and nobody has to open
+# a SQL editor. Every statement is guarded, so running it on each pass is a
+# no-op once the table exists.
+DDL = """
+create table if not exists drafts (
+  id            uuid primary key default gen_random_uuid(),
+  site          text not null,
+  vertical      text not null default 'multifamily',
+  slug          text,
+  headline      text,
+  dek           text,
+  body          jsonb not null,
+  fact_ids      bigint[] not null default '{}',
+  article_ids   bigint[] not null default '{}',
+  corroboration int default 1,
+  gate_pass     boolean default false,
+  gate_failures jsonb default '[]'::jsonb,
+  coverage      numeric,
+  status        text default 'draft',
+  model         text,
+  created_at    timestamptz default now(),
+  reviewed_at   timestamptz,
+  published_at  timestamptz,
+  unique (site, slug)
+);
+create index if not exists idx_drafts_status on drafts (site, status, created_at desc);
+alter table drafts enable row level security;
+"""
+
+POLICY = """
+drop policy if exists "read published drafts" on drafts;
+create policy "read published drafts" on drafts for select using (status = 'published');
+"""
+
+
+def ensure_schema(conn):
+    with conn.cursor() as cur:
+        cur.execute(DDL)
+        cur.execute(POLICY)
+    conn.commit()
+    log("schema ready (drafts)")
+
+
 # ---------------------------------------------------------------------------
 # Clustering — group stories covering the same event
 # ---------------------------------------------------------------------------
@@ -417,6 +461,7 @@ def main():
     conn = db()
     conn.autocommit = False
     try:
+        ensure_schema(conn)
         rows = load_facts(conn)
         log(f"facts in window: {len(rows)} (vertical={VERTICAL}, {LOOKBACK_DAYS}d, "
             f"categories={','.join(OPERATOR_CATEGORIES)})")
