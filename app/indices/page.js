@@ -101,7 +101,7 @@ export default function IndicesPage() {
     // bias the composite.
     const ms = cat.members.filter((m) => !m.gse).map(merged).filter((m) => m.quoted);
     const avg = ms.length ? ms.reduce((s, m) => s + m.chg, 0) / ms.length : null;
-    return { category: cat.category, avg, n: ms.length };
+    return { category: cat.category, avg, qtd: periodAvg(ms, "qtd"), n: ms.length };
   }).filter((c) => c.avg != null);
 
   // Dedupe by ticker before blending. CBRE, JLL and CWK each appear in two
@@ -118,11 +118,21 @@ export default function IndicesPage() {
     : 0;
   const blendedQtd = periodAvg(allMembers, "qtd");
   const blendedYtd = periodAvg(allMembers, "ytd");
-  const subVals = priceCats.map((c) => c.avg);
+  // Divergence is measured on the QUARTER, not the day. A one-session spread
+  // between sub-indices is noise -- sectors scatter every day on nothing. A
+  // spread that persists across a quarter is a regime signal, which is what the
+  // words "leading" and "lagging" actually claim. It also has to match the
+  // headline it sits beside: with the card now leading on annual and quarterly
+  // figures, a flag computed on today's tape would read as though those
+  // leading/lagging numbers were the same horizon. Threshold raised to 4pp
+  // accordingly -- quarterly spreads run far wider than daily ones (13.2pp
+  // today against 2.0pp on the day), so the old 1pp bar would fire permanently.
+  const divCats = priceCats.filter((c) => typeof c.qtd === "number");
+  const subVals = divCats.map((c) => c.qtd);
   const spread = subVals.length ? Math.max(...subVals) - Math.min(...subVals) : 0;
-  const diverging = spread >= 1.0; // ≥1pp spread between sub-indices reads as divergence
-  const strongest = priceCats.reduce((a, b) => (b.avg > a.avg ? b : a), priceCats[0] || {});
-  const weakest = priceCats.reduce((a, b) => (b.avg < a.avg ? b : a), priceCats[0] || {});
+  const diverging = subVals.length >= 2 && spread >= 4.0;
+  const strongest = divCats.reduce((a, b) => (b.qtd > a.qtd ? b : a), divCats[0] || {});
+  const weakest = divCats.reduce((a, b) => (b.qtd < a.qtd ? b : a), divCats[0] || {});
   const blendedColor = blended >= 0 ? "#5FB97C" : "#E5634D";
 
   return (
@@ -163,31 +173,41 @@ export default function IndicesPage() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="mono text-[10px] tracking-[0.18em] text-muted">HOUSING EQUITY COMPLEX</p>
+            {/* Ordered by signal strength, not recency: annual leads at full
+                size, the quarter sits beneath it, and today's move is smallest.
+                A cycle platform that leads with the daily tape is arguing
+                against its own thesis -- one session tells you almost nothing
+                about where the market is in the cycle, and the year tells you
+                most of it. */}
             <div className="mt-2 flex items-baseline gap-3">
-              <span className="headline text-4xl" style={{ color: blendedColor }}>
-                {blended >= 0 ? "+" : ""}{blended.toFixed(2)}%
+              <span
+                className="headline text-4xl"
+                style={{ color: blendedYtd == null ? "#797E85" : blendedYtd >= 0 ? "#5FB97C" : "#E5634D" }}
+              >
+                {blendedYtd == null ? "—" : `${blendedYtd >= 0 ? "+" : ""}${blendedYtd.toFixed(2)}%`}
               </span>
               <span className="mono text-[11px] text-muted">
-                blended · {allMembers.length} names {live ? "· daily close" : "· reference"}
+                since 2025 close · {allMembers.length} names
               </span>
             </div>
-            {/* The same two horizons as the category cards, so the headline is
-                read on the cycle rather than on one session's tape. */}
-            <div className="mt-3 flex flex-wrap items-baseline gap-x-6 gap-y-1">
-              {[
-                { label: "this quarter", v: blendedQtd },
-                { label: "since 2025 close", v: blendedYtd },
-              ].map((c) => (
-                <span key={c.label} className="mono text-[12px] text-muted">
-                  {c.label}{" "}
-                  <span
-                    className="font-medium"
-                    style={{ color: c.v == null ? "#797E85" : c.v >= 0 ? "#5FB97C" : "#E5634D" }}
-                  >
-                    {c.v == null ? "—" : `${c.v >= 0 ? "+" : ""}${c.v.toFixed(2)}%`}
-                  </span>
-                </span>
-              ))}
+            <div className="mt-2.5 flex items-baseline gap-3">
+              <span
+                className="mono text-xl font-medium"
+                style={{ color: blendedQtd == null ? "#797E85" : blendedQtd >= 0 ? "#5FB97C" : "#E5634D" }}
+              >
+                {blendedQtd == null ? "—" : `${blendedQtd >= 0 ? "+" : ""}${blendedQtd.toFixed(2)}%`}
+              </span>
+              <span className="mono text-[11px] text-muted">
+                this quarter{trendMeta ? ` · since ${fmtAnchor(trendMeta.q)}` : ""}
+              </span>
+            </div>
+            <div className="mt-1.5 flex items-baseline gap-3">
+              <span className="mono text-[13px] font-medium" style={{ color: blendedColor }}>
+                {blended >= 0 ? "+" : ""}{blended.toFixed(2)}%
+              </span>
+              <span className="mono text-[11px] text-muted/70">
+                today {live ? "· daily close" : "· reference"}
+              </span>
             </div>
           </div>
           <div className="text-right">
@@ -196,8 +216,8 @@ export default function IndicesPage() {
                 <span className="mono inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] tracking-[0.08em]" style={{ color: "#E8B04B", backgroundColor: "#E8B04B1a", border: "1px solid #E8B04B40" }}>
                   <Split size={13} /> DIVERGENCE
                 </span>
-                <p className="mono mt-2 max-w-[240px] text-[11px] leading-relaxed text-muted">
-                  {strongest.category} leading{strongest.avg != null ? ` (${strongest.avg >= 0 ? "+" : ""}${strongest.avg.toFixed(2)}%)` : ""}, {weakest.category.toLowerCase()} lagging{weakest.avg != null ? ` (${weakest.avg >= 0 ? "+" : ""}${weakest.avg.toFixed(2)}%)` : ""}
+                <p className="mono mt-2 max-w-[250px] text-[11px] leading-relaxed text-muted">
+                  this quarter: {strongest.category} leading{strongest.qtd != null ? ` (${strongest.qtd >= 0 ? "+" : ""}${strongest.qtd.toFixed(2)}%)` : ""}, {weakest.category.toLowerCase()} lagging{weakest.qtd != null ? ` (${weakest.qtd >= 0 ? "+" : ""}${weakest.qtd.toFixed(2)}%)` : ""}
                 </p>
               </>
             ) : (
@@ -208,19 +228,27 @@ export default function IndicesPage() {
           </div>
         </div>
 
-        {/* sub-index dials */}
-        <div className="mt-5 grid gap-3 border-t border-[var(--line)] pt-5 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Sub-index dials, quarterly to match the divergence flag. Labelled
+            explicitly -- an unlabelled percentage next to an annual headline
+            invites the reader to assume the wrong horizon. */}
+        <div className="mt-5 border-t border-[var(--line)] pt-5">
+          <p className="mono mb-3 text-[10px] tracking-[0.12em] text-muted">BY SUB-INDEX · THIS QUARTER</p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {priceCats.map((c) => {
-            const col = c.avg >= 0 ? "#5FB97C" : "#E5634D";
             return (
               <div key={c.category} className="flex items-baseline justify-between gap-3">
                 <span className="text-[13px] text-muted">{c.category}</span>
-                <span className="mono text-sm font-medium" style={{ color: col }}>
-                  {c.avg >= 0 ? "+" : ""}{c.avg.toFixed(2)}%
+                {/* Quarterly, matching the divergence flag above. */}
+                <span
+                  className="mono text-sm font-medium"
+                  style={{ color: c.qtd == null ? "#797E85" : c.qtd >= 0 ? "#5FB97C" : "#E5634D" }}
+                >
+                  {c.qtd == null ? "—" : `${c.qtd >= 0 ? "+" : ""}${c.qtd.toFixed(2)}%`}
                 </span>
               </div>
             );
           })}
+          </div>
         </div>
       </div>
       </PaywallBlur>
@@ -262,44 +290,52 @@ export default function IndicesPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
+                  {/* The headline number is the ANNUAL read, not the daily one.
+                      Signal strength runs annual > quarterly > daily for a cycle
+                      platform, so the visual hierarchy follows it: the strongest
+                      horizon gets the largest type and the top position, and the
+                      daily sits furthest down as context. Leading with the daily
+                      put the noisiest number in the most prominent slot. */}
                   <div className="text-right">
-                    <div className="headline text-2xl" style={{ color }}>
-                      {positive ? "+" : ""}{avg.toFixed(2)}%
+                    <div className="headline text-2xl" style={{ color: ytd == null ? "#797E85" : ytd >= 0 ? "#5FB97C" : "#E5634D" }}>
+                      {ytd == null ? "—" : `${ytd >= 0 ? "+" : ""}${ytd.toFixed(2)}%`}
                     </div>
-                    <p className="mono text-[10px] tracking-[0.12em] text-muted">CATEGORY AVG</p>
+                    <p className="mono text-[10px] tracking-[0.12em] text-muted">
+                      SINCE 2025 CLOSE
+                    </p>
                   </div>
                   <ChevronDown size={18} className="text-muted transition-transform" style={{ transform: isOpen ? "rotate(180deg)" : undefined }} />
                 </div>
               </button>
 
-              {/* performance donut — always visible, the at-a-glance read */}
+              {/* Trend readings sit ABOVE the donut, ordered strongest to
+                  weakest: the header carries the annual, then the quarter, then
+                  today. The donut below is a daily visualisation, so the daily
+                  figure sits with it. The three horizons routinely disagree --
+                  Home Builders can print -9% for the quarter while the year is
+                  still positive -- and that disagreement is the actual read. */}
+              <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-[var(--line)] bg-[var(--line)]">
+                {[
+                  { label: "THIS QUARTER", v: qtd, sub: trendMeta ? `since ${fmtAnchor(trendMeta.q)}` : "quarter to date" },
+                  { label: "TODAY", v: members.length ? avg : null, sub: live ? "daily close" : "reference" },
+                ].map((cell) => (
+                  <div key={cell.label} className="bg-bg2 px-4 py-3">
+                    <p className="mono text-[10px] tracking-[0.12em] text-muted">{cell.label}</p>
+                    <p
+                      className="mono mt-1 text-lg font-medium"
+                      style={{ color: cell.v == null ? "#797E85" : cell.v >= 0 ? "#5FB97C" : "#E5634D" }}
+                    >
+                      {cell.v == null ? "—" : `${cell.v >= 0 ? "+" : ""}${cell.v.toFixed(2)}%`}
+                    </p>
+                    <p className="mono text-[10px] text-muted/70">{cell.sub}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* performance donut — the daily move, member by member */}
               <div className="mt-4 flex justify-center">
                 <IndexDonut members={members} />
               </div>
-
-              {/* Trend readings. The daily number above is the tape; these two are
-                  the cycle. They frequently disagree with it and with each other --
-                  Home Builders can print -9% for the quarter while the year is
-                  still positive -- and that disagreement is the read. */}
-              {(qtd != null || ytd != null) && (
-                <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-[var(--line)] bg-[var(--line)]">
-                  {[
-                    { label: "THIS QUARTER", v: qtd, sub: trendMeta ? `since ${fmtAnchor(trendMeta.q)}` : "quarter to date" },
-                    { label: "SINCE 2025 CLOSE", v: ytd, sub: trendMeta ? `since ${fmtAnchor(trendMeta.y)}` : "year to date" },
-                  ].map((cell) => (
-                    <div key={cell.label} className="bg-bg2 px-4 py-3">
-                      <p className="mono text-[10px] tracking-[0.12em] text-muted">{cell.label}</p>
-                      <p
-                        className="mono mt-1 text-lg font-medium"
-                        style={{ color: cell.v == null ? "#797E85" : cell.v >= 0 ? "#5FB97C" : "#E5634D" }}
-                      >
-                        {cell.v == null ? "—" : `${cell.v >= 0 ? "+" : ""}${cell.v.toFixed(2)}%`}
-                      </p>
-                      <p className="mono text-[10px] text-muted/70">{cell.sub}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
 
               {/* expandable holdings */}
               {isOpen && (
