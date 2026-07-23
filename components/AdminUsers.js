@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Search, Users, Crown, ShieldCheck, Loader2, ChevronDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { audienceOptions, matchesAudience, audienceLabel } from "@/lib/audience";
 
 const STATUSES = ["active", "suspended", "cancelled"];
 
@@ -13,6 +14,7 @@ export default function AdminUsers({ initialUsers }) {
   const [savingId, setSavingId] = useState(null);
   const [error, setError] = useState("");
   const [showList, setShowList] = useState(false);
+  const [aud, setAud] = useState("all");
 
   const stats = useMemo(
     () => ({
@@ -24,15 +26,18 @@ export default function AdminUsers({ initialUsers }) {
     [users]
   );
 
+  const audOpts = useMemo(() => audienceOptions(users, "origin_vertical"), [users]);
+
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
-    if (!t) return users;
-    return users.filter((u) =>
-      [u.email, u.full_name, u.company]
+    return users.filter((u) => {
+      if (!matchesAudience(u, "origin_vertical", aud)) return false;
+      if (!t) return true;
+      return [u.email, u.full_name, u.company]
         .filter(Boolean)
-        .some((v) => v.toLowerCase().includes(t))
-    );
-  }, [users, q]);
+        .some((v) => v.toLowerCase().includes(t));
+    });
+  }, [users, q, aud]);
 
   async function patch(id, fields) {
     setError("");
@@ -87,6 +92,27 @@ export default function AdminUsers({ initialUsers }) {
 
       {showList && (
         <div id="admin-subscriber-list">
+          {/* Audience — which site each account signed up through */}
+          {audOpts.length > 1 && (
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              <span className="kicker mr-1 text-muted">Audience</span>
+              {audOpts.map((o) => (
+                <button
+                  key={o.value}
+                  type="button"
+                  onClick={() => setAud(o.value)}
+                  className={`mono rounded-md border px-2.5 py-1 text-[11px] transition-colors ${
+                    aud === o.value
+                      ? "border-signal/70 bg-signal/10 text-signal"
+                      : "border-[var(--line)] text-muted hover:border-signal/40"
+                  }`}
+                >
+                  {o.label} · {o.count}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Search */}
           <div className="relative mt-2 max-w-sm">
         <Search size={15} strokeWidth={1.8} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />

@@ -135,7 +135,7 @@ export default async function AdminPage() {
   // Users (RLS lets an admin read every row; a non-admin only ever sees their own).
   const usersP = supabase
     .from("profiles")
-    .select("id,email,full_name,company,tier,status,is_admin,created_at")
+    .select("id,email,full_name,company,tier,status,is_admin,created_at,origin_vertical")
     .order("created_at", { ascending: false });
 
   // Coverage stats: live geography/observation counts + per-source tallies.
@@ -153,7 +153,7 @@ export default async function AdminPage() {
     .limit(5);
   const appsP = supabase
     .from("training_applications")
-    .select("id,created_at,name,email,company,phone,role,portfolio,goals,status")
+    .select("id,created_at,name,email,company,phone,role,portfolio,goals,status,vertical")
     .order("created_at", { ascending: false });
 
   const [{ data: users }, { data: stats }, { data: inds }, { data: mig }, { data: subs }, { data: sends }, { data: apps }] =

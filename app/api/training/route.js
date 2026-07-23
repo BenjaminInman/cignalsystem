@@ -2,6 +2,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { sendEmail, isEmailConfigured } from "@/lib/email/resend";
+import { verticalFromRequest } from "@/lib/vertical-request";
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -22,7 +23,11 @@ export async function POST(req) {
   const role = clip(b.role, 60);
   const portfolio = clip(b.portfolio, 200);
   const goals = clip(b.goals, 2000);
-  const vertical = clip(b.vertical, 60) || "multifamily";
+  // Derive the originating vertical from the request HOST, not the request
+  // BODY. A client-supplied origin is spoofable and silently wrong whenever the
+  // form omits it — and this field drives audience segmentation, so it has to
+  // reflect the site the applicant was actually on.
+  const vertical = verticalFromRequest(req);
 
   if (!name) return Response.json({ error: "Please enter your name." }, { status: 400 });
   if (!email || !EMAIL_RE.test(email)) return Response.json({ error: "Please enter a valid email address." }, { status: 400 });

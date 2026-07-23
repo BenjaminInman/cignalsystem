@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Mail, Lock, ArrowRight, Loader2, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { verticalSlugFromHost } from "@/lib/vertical-slug";
 
 // mode: "signin" | "signup"
 export default function AuthForm({ mode }) {
@@ -37,7 +38,19 @@ export default function AuthForm({ mode }) {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: redirectTo, data: { full_name: fullName.trim() } },
+          options: {
+            emailRedirectTo: redirectTo,
+            // Stamp which site this signup came through so the admin can
+            // segment the funnel by audience. Read from the live host with the
+            // same alias map the middleware uses, so investor./realestate./
+            // multifamily. all resolve identically on both sides.
+            data: {
+              full_name: fullName.trim(),
+              origin_vertical: verticalSlugFromHost(
+                typeof window !== "undefined" ? window.location.hostname : ""
+              ),
+            },
+          },
         });
         if (error) throw error;
         if (data.session) {

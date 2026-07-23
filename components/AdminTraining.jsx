@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { GraduationCap, Download, ChevronDown, ChevronRight } from "lucide-react";
+import { audienceOptions, matchesAudience, audienceLabel } from "@/lib/audience";
 
 const STATUSES = ["new", "contacted", "enrolled", "archived"];
 const STATUS_STYLE = {
@@ -15,15 +16,25 @@ const fmt = (d) => (d ? new Date(d).toLocaleDateString("en-US", { month: "short"
 export default function AdminTraining({ initialApps = [] }) {
   const [apps, setApps] = useState(initialApps);
   const [filter, setFilter] = useState("all");
+  const [aud, setAud] = useState("all");
   const [open, setOpen] = useState(null);
 
-  const counts = useMemo(() => {
-    const c = { all: apps.length };
-    for (const st of STATUSES) c[st] = apps.filter((a) => a.status === st).length;
-    return c;
-  }, [apps]);
+  const audOpts = useMemo(() => audienceOptions(apps, "vertical"), [apps]);
 
-  const rows = filter === "all" ? apps : apps.filter((a) => a.status === filter);
+  // Scope status counts to the selected audience — otherwise the tallies
+  // describe a different set of rows than the list underneath them.
+  const inAudience = useMemo(
+    () => apps.filter((a) => matchesAudience(a, "vertical", aud)),
+    [apps, aud]
+  );
+
+  const counts = useMemo(() => {
+    const c = { all: inAudience.length };
+    for (const st of STATUSES) c[st] = inAudience.filter((a) => a.status === st).length;
+    return c;
+  }, [inAudience]);
+
+  const rows = filter === "all" ? inAudience : inAudience.filter((a) => a.status === filter);
 
   const setStatus = async (id, status) => {
     setApps((p) => p.map((a) => (a.id === id ? { ...a, status } : a)));
@@ -33,13 +44,13 @@ export default function AdminTraining({ initialApps = [] }) {
   };
 
   const exportCsv = () => {
-    const head = "created,name,email,company,phone,role,portfolio,goals,status\n";
+    const head = "created,name,email,company,phone,role,portfolio,goals,status,audience\n";
     const body = rows
-      .map((a) => [a.created_at, a.name, a.email, a.company, a.phone, a.role, a.portfolio, a.goals, a.status].map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(","))
+      .map((a) => [a.created_at, a.name, a.email, a.company, a.phone, a.role, a.portfolio, a.goals, a.status, audienceLabel(a.vertical)].map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(","))
       .join("\n");
     const url = URL.createObjectURL(new Blob([head + body], { type: "text/csv" }));
     const el = document.createElement("a");
-    el.href = url; el.download = `cignal-training-${filter}.csv`; el.click();
+    el.href = url; el.download = `cignal-training-${aud}-${filter}.csv`; el.click();
     URL.revokeObjectURL(url);
   };
 
@@ -55,6 +66,21 @@ export default function AdminTraining({ initialApps = [] }) {
           <Download size={13} /> EXPORT CSV
         </button>
       </div>
+
+      {audOpts.length > 1 && (
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          <span className="kicker mr-1 text-muted">Audience</span>
+          {audOpts.map((o) => (
+            <button
+              key={o.value}
+              onClick={() => setAud(o.value)}
+              className={`mono rounded-full border px-3 py-1.5 text-[11px] tracking-[0.1em] transition-colors ${aud === o.value ? "border-signal/50 bg-signal/[0.06] text-signal" : "border-[var(--line)] text-muted hover:border-signal/30"}`}
+            >
+              {o.label.toUpperCase()} <span className="text-muted">·{o.count}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="mt-5 flex flex-wrap gap-2">
         {["all", ...STATUSES].map((k) => (

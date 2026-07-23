@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 
 import { createClient } from "@/lib/supabase/server";
 import { computeResult, isValidAnswers } from "@/lib/cignalscore";
+import { verticalFromRequest } from "@/lib/vertical-request";
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -63,6 +64,8 @@ export async function POST(req) {
           dimension_scores: result.dimension_scores,
           source,
           profile_id,
+          // Derived from the request host, never client-supplied.
+          origin_vertical: verticalFromRequest(req),
         }),
       });
     } catch {
