@@ -389,6 +389,7 @@ function ZipLookup() {
   const [signals, setSignals] = useState(null); // metro-level signals (jobs, RPP, rent CPI…)
   const [oz, setOz] = useState(null); // Opportunity Zone 2.0 eligibility (tract grain)
   const [inds, setInds] = useState(null); // metro industry employment mix
+  const [expo, setExpo] = useState(null); // industry exposure: concentration (LQ) x local growth
   const [status, setStatus] = useState("idle"); // idle | loading | error
   const [msg, setMsg] = useState("");
   const [userId, setUserId] = useState(undefined); // undefined = loading; null = signed out
@@ -423,7 +424,7 @@ function ZipLookup() {
   const search = async () => {
     const v = q.trim();
     if (!v) { setStatus("error"); setMsg("Enter a ZIP code or City, State."); setData(null); return; }
-    setStatus("loading"); setMsg(""); setData(null); setDemo(null); setSignals(null); setOz(null); setInds(null);
+    setStatus("loading"); setMsg(""); setData(null); setDemo(null); setSignals(null); setOz(null); setInds(null); setExpo(null);
     const isZip = /^\d{5}$/.test(v);
     try {
       const [zr, dr, sr] = await Promise.all([
@@ -449,6 +450,12 @@ function ZipLookup() {
         fetch(`/api/industries?cbsa=${encodeURIComponent(cbsaForInds)}`)
           .then((r) => r.json())
           .then((o) => { if (o?.found) setInds(o); })
+          .catch(() => {});
+        // Exposure = how concentrated this metro is in each sector (location
+        // quotient), crossed with how that sector is doing LOCALLY.
+        fetch(`/api/industry-exposure?cbsa=${encodeURIComponent(cbsaForInds)}`)
+          .then((r) => r.json())
+          .then((o) => { if (o?.found) setExpo(o); })
           .catch(() => {});
       }
       const scope = zr.d?.ozScope;
@@ -619,12 +626,34 @@ function ZipLookup() {
                   <span className="text-ink">{inds.topByAdds.join(" \u00b7 ")}</span>
                 </p>
               )}
+              {expo?.concentration && (
+                <p className="mono mt-1 text-[11px] leading-relaxed text-muted">
+                  Most concentrated in{" "}
+                  <span className="text-ink">{expo.concentration.topSectorLabel}</span>{" "}
+                  <span className="text-muted/70">
+                    ({expo.concentration.maxLq}\u00d7 the average metro
+                    {expo.concentration.topSectorYoy != null && (
+                      <>, <span style={{ color: toneColor(expo.concentration.topSectorYoy >= 0 ? "bull" : "bear") }}>
+                        {expo.concentration.topSectorYoy >= 0 ? "+" : ""}{expo.concentration.topSectorYoy}% locally
+                      </span></>
+                    )})
+                  </span>
+                  {expo.fragileSectors?.length > 0 && (
+                    <>
+                      {" \u00b7 "}
+                      <span style={{ color: toneColor("bear") }}>
+                        fragile: {expo.fragileSectors.join(", ")}
+                      </span>
+                    </>
+                  )}
+                </p>
+              )}
               <div className="mt-2 rounded border border-[var(--line)]">
-                <div className="mono grid grid-cols-[1.5fr_auto_auto_auto] gap-2 border-b border-[var(--line)] bg-bg/40 px-3 py-1.5 text-[9px] tracking-[0.08em] text-muted">
-                  <span>INDUSTRY</span><span>JOBS</span><span>YoY</span><span>GROWTH PATH (12MO AVG)</span>
+                <div className="mono grid grid-cols-[1.4fr_auto_auto_auto_auto] gap-2 border-b border-[var(--line)] bg-bg/40 px-3 py-1.5 text-[9px] tracking-[0.08em] text-muted">
+                  <span>INDUSTRY</span><span>JOBS</span><span>YoY</span><span title="Location quotient: this metro's share of the sector vs the average metro. 2.0 = twice as concentrated.">CONC.</span><span>GROWTH PATH (12MO AVG)</span>
                 </div>
                 {inds.industries.map((r) => (
-                  <div key={r.slug} className="mono grid grid-cols-[1.5fr_auto_auto_auto] items-center gap-2 border-b border-[var(--line)]/50 px-3 py-1.5 text-[10px]">
+                  <div key={r.slug} className="mono grid grid-cols-[1.4fr_auto_auto_auto_auto] items-center gap-2 border-b border-[var(--line)]/50 px-3 py-1.5 text-[10px]">
                     <span className="text-ink">
                       {r.name}
                       <span className="ml-1 text-muted/60">{r.share}%</span>
@@ -633,6 +662,32 @@ function ZipLookup() {
                     <span style={{ color: toneColor(r.yoyPct >= 0 ? "bull" : "bear") }}>
                       {r.yoyPct >= 0 ? "+" : ""}{r.yoyPct}%
                     </span>
+                    {(() => {
+                      const e = expo?.sectors?.find((x) => `metro_emp_${x.sector}` === r.slug);
+                      if (!e) return <span className="text-muted/40">\u2014</span>;
+                      // Bold the LQ only where the metro is genuinely specialized;
+                      // an LQ near 1.0 is the average and carries no signal.
+                      const conc = e.lq >= 1.2;
+                      return (
+                        <span
+                          title={`${e.name}: ${e.lq}\u00d7 the average metro (${e.localSharePct}% of local jobs vs ${e.natlSharePct}% nationally) \u2014 ${e.state.label}`}
+                          className="flex items-center gap-1"
+                        >
+                          <span className={conc ? "text-ink" : "text-muted/60"}>{e.lq}\u00d7</span>
+                          {conc && e.state.tone && (
+                            <span
+                              className="rounded px-1 text-[8px]"
+                              style={{
+                                color: toneColor(e.state.tone),
+                                background: `${toneColor(e.state.tone)}22`,
+                              }}
+                            >
+                              {e.state.key === "fragile" ? "FRAGILE" : e.state.key === "compounding" ? "COMPOUND" : "FLAT"}
+                            </span>
+                          )}
+                        </span>
+                      );
+                    })()}
                     {r.traj ? (
                       <span
                         className="flex items-center gap-1"
@@ -659,6 +714,13 @@ function ZipLookup() {
                 sub-components are excluded so nothing double-counts. Share is of metro employment; the path is each industry&apos;s AVERAGE
                 year-over-year growth in the prior 12 months versus the most recent 12 \u2014 averages, not endpoints, so a single noisy month cannot flip the read. Not seasonally adjusted, so every read is year-over-year.
                 {data.grain !== "metro" && " Industry data is metro-grain: no public source publishes establishment-based industry employment at ZIP or city level."}
+                {expo && (
+                  <>
+                    {" "}CONC. is the location quotient \u2014 this metro&apos;s share of a sector against the average metro; 2.0\u00d7 means twice as concentrated.
+                    Growth is always measured <span className="text-muted">locally</span>: across 393 metros, 35% of metro-industry pairs move opposite to their own national trend,
+                    so a national trend cannot be used to infer local performance. <span style={{ color: toneColor("bear") }}>FRAGILE</span> marks a sector this market is specialized in and losing.
+                  </>
+                )}
               </p>
             </div>
           )}
