@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { MapPin, Building2, ChevronDown, Truck, Package, Search, Bookmark, Check, Loader2 } from "lucide-react";
+import { MapPin, Building2, ChevronDown, Truck, Package, Search, Bookmark, Check, Loader2, Factory } from "lucide-react";
 import { toneColor, Sparkline } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { useContent, useVertical } from "@/components/VerticalProvider";
@@ -406,10 +406,15 @@ const EXPO_SECTORS = [
 ];
 
 function IndustryExposureScreen() {
+  const [open, setOpen] = useState(false);
   const [sector, setSector] = useState("manufacturing");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  // Lazy: nothing is fetched until the drawer is opened, so the module costs
+  // nothing on a page most visitors scroll past.
   useEffect(() => {
+    if (!open) return;
     let on = true;
     setLoading(true); setData(null);
     fetch(`/api/industry-exposure?sector=${sector}`)
@@ -417,73 +422,92 @@ function IndustryExposureScreen() {
       .then((d) => { if (on) { setData(d?.found ? d : null); setLoading(false); } })
       .catch(() => { if (on) setLoading(false); });
     return () => { on = false; };
-  }, [sector]);
+  }, [sector, open]);
 
   const top = data?.markets?.filter((m) => m.lq >= 1.2).slice(0, 12) || [];
+
   return (
-    <div className="mt-8 rounded-lg border border-[var(--line)] bg-bg2/40 p-5">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="mono text-[12px] tracking-[0.1em] text-muted">INDUSTRY EXPOSURE SCREEN</p>
-        {data && (
-          <span className="mono text-[9px] text-muted/70">
-            {fmtMonth(data.asOf)} · BLS CES · {data.summary.metros} metros
-          </span>
-        )}
-      </div>
-      <p className="mono mt-1 text-[11px] leading-relaxed text-muted">
-        Which markets <span className="text-ink">depend</span> on a sector, and how that sector is doing <span className="text-ink">there</span>.
-      </p>
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {EXPO_SECTORS.map(([k, label]) => (
-          <button
-            key={k}
-            onClick={() => setSector(k)}
-            className={`mono rounded px-2 py-1 text-[10px] transition ${
-              sector === k ? "bg-signal/15 text-signal" : "text-muted hover:text-ink"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      {loading && <p className="mono mt-3 text-[11px] text-muted">Loading…</p>}
-      {data && (
-        <>
-          <p className="mono mt-3 text-[11px] leading-relaxed text-muted">
-            <span className="text-ink">{data.summary.concentrated}</span> of {data.summary.metros} metros are concentrated in{" "}
-            {data.sectorLabel} (≥1.2×). Of those,{" "}
-            <span style={{ color: toneColor("bull") }}>{data.summary.concentratedGrowing} growing</span>
-            {" · "}
-            <span style={{ color: toneColor("bear") }}>{data.summary.concentratedDeclining} declining</span>
-            {" locally."}
+    <div className="mt-14">
+      <div
+        role="button" tabIndex={0} aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen((v) => !v); } }}
+        className="card flex w-full cursor-pointer items-start gap-4 p-6 text-left transition hover:border-signal/30"
+      >
+        <div className="flex-1">
+          <p className="kicker mb-2 flex items-center gap-2"><Factory size={13} className="text-signal" /> Employment Base Intelligence</p>
+          <h2 className="headline text-2xl text-ink md:text-3xl">Industry Exposure Screen</h2>
+          <p className="mt-2 max-w-2xl text-sm text-muted">
+            Which markets <span className="text-ink">depend</span> on a given industry — and whether that industry is actually growing <span className="text-ink">there</span>.
+            Concentration is measured by location quotient; performance is always measured locally, never inferred from the national trend.
           </p>
-          <div className="mono mt-2 rounded border border-[var(--line)]">
-            <div className="grid grid-cols-[1.6fr_auto_auto_auto] gap-2 border-b border-[var(--line)] bg-bg/40 px-3 py-1.5 text-[9px] tracking-[0.08em] text-muted">
-              <span>MARKET</span><span>CONC.</span><span>LOCAL YoY</span><span>READ</span>
-            </div>
-            {top.map((m) => (
-              <div key={m.cbsa} className="grid grid-cols-[1.6fr_auto_auto_auto] items-center gap-2 border-b border-[var(--line)]/50 px-3 py-1.5 text-[10px]">
-                <span className="text-ink">{m.name}</span>
-                <span className="text-muted">{m.lq}×</span>
-                <span style={{ color: toneColor((m.yoyPct ?? 0) >= 0 ? "bull" : "bear") }}>
-                  {m.yoyPct == null ? "—" : `${m.yoyPct >= 0 ? "+" : ""}${m.yoyPct}%`}
-                </span>
-                <span
-                  className="rounded px-1 text-[8px]"
-                  style={{ color: toneColor(m.state.tone || "neutral"), background: `${toneColor(m.state.tone || "neutral")}22` }}
-                >
-                  {m.state.label}
-                </span>
-              </div>
+        </div>
+        <ChevronDown size={20} className={`mt-1 shrink-0 text-muted transition-transform ${open ? "rotate-180" : ""}`} />
+      </div>
+
+      {open && (
+        <div className="mt-6 rounded-lg border border-[var(--line)] bg-bg2/40 p-5">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="mono text-[12px] tracking-[0.1em] text-muted">SELECT AN INDUSTRY</p>
+            {data && (
+              <span className="mono text-[9px] text-muted/70">
+                {fmtMonth(data.asOf)} \u00b7 BLS CES \u00b7 {data.summary.metros} metros
+              </span>
+            )}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {EXPO_SECTORS.map(([k, label]) => (
+              <button
+                key={k}
+                onClick={() => setSector(k)}
+                className={`mono rounded px-2 py-1 text-[10px] transition ${
+                  sector === k ? "bg-signal/15 text-signal" : "text-muted hover:text-ink"
+                }`}
+              >
+                {label}
+              </button>
             ))}
           </div>
-          <p className="mono mt-2 text-[9px] leading-relaxed text-muted/70">
-            CONC. is the location quotient — a metro&apos;s share of the sector against the average metro. Ranked by concentration, not by growth:
-            the screen answers who is <span className="text-muted">exposed</span>, then shows whether that exposure is paying off locally.
-            Growth is never inferred from the national trend — 35% of metro-industry pairs move the opposite way from theirs.
-            A supporting-industries map is deliberately omitted: across all 36 supersector pairs, median correlation of local growth is 0.07, so linkage is not measurable at this grain.
-          </p>
-        </>
+          {loading && <p className="mono mt-3 text-[11px] text-muted">Loading\u2026</p>}
+          {data && (
+            <>
+              <p className="mono mt-3 text-[11px] leading-relaxed text-muted">
+                <span className="text-ink">{data.summary.concentrated}</span> of {data.summary.metros} metros are concentrated in{" "}
+                {data.sectorLabel} (\u22651.2\u00d7). Of those,{" "}
+                <span style={{ color: toneColor("bull") }}>{data.summary.concentratedGrowing} growing</span>
+                {" \u00b7 "}
+                <span style={{ color: toneColor("bear") }}>{data.summary.concentratedDeclining} declining</span>
+                {" locally."}
+              </p>
+              <div className="mono mt-2 rounded border border-[var(--line)]">
+                <div className="grid grid-cols-[1.6fr_auto_auto_auto] gap-2 border-b border-[var(--line)] bg-bg/40 px-3 py-1.5 text-[9px] tracking-[0.08em] text-muted">
+                  <span>MARKET</span><span>CONC.</span><span>LOCAL YoY</span><span>READ</span>
+                </div>
+                {top.map((m) => (
+                  <div key={m.cbsa} className="grid grid-cols-[1.6fr_auto_auto_auto] items-center gap-2 border-b border-[var(--line)]/50 px-3 py-1.5 text-[10px]">
+                    <span className="text-ink">{m.name}</span>
+                    <span className="text-muted">{m.lq}\u00d7</span>
+                    <span style={{ color: toneColor((m.yoyPct ?? 0) >= 0 ? "bull" : "bear") }}>
+                      {m.yoyPct == null ? "\u2014" : `${m.yoyPct >= 0 ? "+" : ""}${m.yoyPct}%`}
+                    </span>
+                    <span
+                      className="rounded px-1 text-[8px]"
+                      style={{ color: toneColor(m.state.tone || "neutral"), background: `${toneColor(m.state.tone || "neutral")}22` }}
+                    >
+                      {m.state.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className="mono mt-2 text-[9px] leading-relaxed text-muted/70">
+                CONC. is the location quotient \u2014 a metro&apos;s share of the sector against the average metro. Ranked by concentration, not by growth:
+                the screen answers who is <span className="text-muted">exposed</span>, then shows whether that exposure is paying off locally.
+                Growth is never inferred from the national trend \u2014 35% of metro-industry pairs move the opposite way from theirs.
+                A supporting-industries map is deliberately omitted: across all 36 supersector pairs, median correlation of local growth is 0.07, so linkage is not measurable at this grain.
+              </p>
+            </>
+          )}
+        </div>
       )}
     </div>
   );
