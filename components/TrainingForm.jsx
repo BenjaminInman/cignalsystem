@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { ArrowRight, Check } from "lucide-react";
+import { useVertical } from "@/components/VerticalProvider";
 
 const ROLES = ["Owner", "Operator", "Investor", "Management firm", "Lender / Equity", "Other"];
 
 export default function TrainingForm() {
+  const vertical = useVertical();
   const [f, setF] = useState({ name: "", email: "", company: "", phone: "", role: "", portfolio: "", goals: "" });
   const [state, setState] = useState("idle"); // idle | sending | done | error
   const [err, setErr] = useState("");
@@ -22,7 +24,11 @@ export default function TrainingForm() {
       const r = await fetch("/api/training", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(f),
+        // Stamp the vertical the lead came in through so the admin panel can
+        // segment applications by audience (Operator / Investor / …). The route
+        // defaults to "multifamily" if this is omitted, which would mis-file
+        // Investor-site leads — so pass it explicitly.
+        body: JSON.stringify({ ...f, vertical: vertical?.slug || "multifamily" }),
       });
       const d = await r.json();
       if (!r.ok) { setErr(d.error || "Something went wrong."); setState("error"); return; }
