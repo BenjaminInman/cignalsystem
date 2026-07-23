@@ -63,6 +63,50 @@ def fetch_release_dates(series_id, key):
         return {}
 
 
+# Derived series: computed from stored legs rather than pulled from FRED.
+# (target, left, right) -> target = left - right
+DERIVED = [
+    ("baa_aaa_spread", "baa_yield", "aaa_yield"),
+]
+
+
+def derive_spreads(cur, nat):
+    """Recompute derived spreads from their stored legs.
+
+    The legs are ordinary FRED series ingested above with first prints intact;
+    the spread is recomputed from whatever the legs currently say. It follows
+    the same insert-if-changed + revision policy as a primary series, so a
+    revised leg produces a NEW revision of the spread rather than overwriting
+    the original — the derivation stays auditable against its inputs.
+
+    Only revision-0 legs are read, so a spread is always the difference of two
+    first prints and never silently mixes a first print with a restatement."""
+    for target, left, right in DERIVED:
+        cur.execute("SELECT slug, id FROM indicators WHERE slug = ANY(%s)", ([target, left, right],))
+        ids = dict(cur.fetchall())
+        if len(ids) < 3:
+            print(f"  [derived {target}] skipped - missing leg")
+            continue
+        cur.execute("""
+            INSERT INTO observations (indicator_id, region_id, obs_date, value, revision, release_date)
+            SELECT %(t)s, %(nat)s, lo.obs_date, lo.value - ro.value,
+                   COALESCE(latest.revision + 1, 0),
+                   GREATEST(lo.release_date, ro.release_date)
+            FROM observations lo
+            JOIN observations ro
+              ON ro.indicator_id = %(r)s AND ro.region_id = %(nat)s
+             AND ro.revision = 0 AND ro.obs_date = lo.obs_date
+            LEFT JOIN LATERAL (
+                SELECT o.value, o.revision FROM observations o
+                WHERE o.indicator_id = %(t)s AND o.region_id = %(nat)s AND o.obs_date = lo.obs_date
+                ORDER BY o.revision DESC LIMIT 1
+            ) latest ON true
+            WHERE lo.indicator_id = %(l)s AND lo.region_id = %(nat)s AND lo.revision = 0
+              AND latest.value IS DISTINCT FROM (lo.value - ro.value);
+        """, {"t": ids[target], "l": ids[left], "r": ids[right], "nat": nat})
+        print(f"  [derived {target}] {cur.rowcount} inserted")
+
+
 def main():
     key = os.environ.get("FRED_API_KEY")
     db  = os.environ.get("SUPABASE_DB_URL")
@@ -106,6 +150,8 @@ def main():
                     WHERE latest.value IS DISTINCT FROM s.value;
                 """, {"ind": ind_id, "nat": nat, "rel": release})
                 print(f"  [{slug}] {sid}: {len(rows)} pulled, {cur.rowcount} inserted")
+        with conn.cursor() as cur:
+            derive_spreads(cur, nat)
         conn.commit(); print("Done. Committed.")
         conn.autocommit = True
         with conn.cursor() as cur:
