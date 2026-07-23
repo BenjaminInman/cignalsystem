@@ -72,7 +72,7 @@ const GROUPS = [
       },
       {
         q: "Can I track my own portfolio?",
-        a: "Yes. The Portfolio tool lets you enter your properties and see how their fundamentals stack up against the live market read — so you can tell which holdings are riding a tailwind and which are exposed to a turn.",
+        a: "Yes. The Portfolio tool lets you enter your holdings and see how their fundamentals stack up against the live market read — so you can tell which holdings are riding a tailwind and which are exposed to a turn.",
       },
     ],
   },

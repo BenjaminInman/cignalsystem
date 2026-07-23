@@ -7,11 +7,11 @@ import AskCanary from "@/components/AskCanary";
 import TrainingForm from "@/components/TrainingForm";
 import { getActiveContent } from "@/lib/active-vertical";
 
-const SUITE = [
+const suiteFor = (COPY = {}) => [
   {
     icon: Activity,
     name: "Indicators",
-    desc: "Dozens of leading and lagging indicators that drive multifamily, each classified by whether it turns before or after the cycle and grouped by supply, demand, capital, and macro. Live values, full history, and submarket lookup down to your ZIP — so you track the signals that move first, not the ones that only confirm the move.",
+    desc: `Dozens of leading and lagging indicators that drive ${COPY.aboutAsset || "multifamily"}, each classified by whether it turns before or after the cycle and grouped by supply, demand, capital, and macro. Live values, full history, and submarket lookup down to your ZIP — so you track the signals that move first, not the ones that only confirm the move.`,
   },
   {
     icon: Radio,
@@ -36,7 +36,9 @@ const SUITE = [
   {
     icon: Briefcase,
     name: "Portfolio",
-    desc: "Track your properties against the live market read to see which holdings ride a tailwind and which are exposed to a turn. Auto-fill the numbers straight from a rent roll or income statement, with NOI, expenses, and cycle position in one place.",
+    desc:
+      COPY.aboutPortfolio ||
+      "Track your properties against the live market read to see which holdings ride a tailwind and which are exposed to a turn. Auto-fill the numbers straight from a rent roll or income statement, with NOI, expenses, and cycle position in one place.",
   },
 ];
 
@@ -217,7 +219,7 @@ export default function AboutPage() {
             </p>
             <p className="mt-4 leading-relaxed text-muted">
               Generic market dashboards track data. Cignal tracks <span className="text-ink">signals</span> —
-              classified, triangulated, and tuned to where you operate. The difference is the difference
+              classified, triangulated, and tuned to {COPY.aboutTuned || "where you operate"}. The difference is the difference
               between watching the weather and reading the radar.
             </p>
           </section>
@@ -226,7 +228,7 @@ export default function AboutPage() {
           <section>
             <p className="kicker mb-5">Inside the system</p>
             <div className="grid gap-4 sm:grid-cols-2">
-              {SUITE.map(({ icon: Icon, name, desc }) => (
+              {suiteFor(COPY).map(({ icon: Icon, name, desc }) => (
                 <div key={name} className="card p-5">
                   <Icon size={18} className="text-signal" strokeWidth={1.8} />
                   <h3 className="mt-3 font-semibold text-ink">{name}</h3>
