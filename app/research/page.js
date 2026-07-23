@@ -260,6 +260,26 @@ function ResearchInner() {
         </div>
       </Link>
 
+      {/* Fundamentals Gap */}
+      <Link href="/research/fundamentals-gap" className="group mt-4 block overflow-hidden rounded-2xl border border-signal/30 bg-gradient-to-r from-signal/[0.10] via-signal/[0.04] to-transparent p-6 transition-colors hover:border-signal/55 md:p-7">
+        <div className="flex items-center justify-between gap-5">
+          <div className="flex items-start gap-4">
+            <span className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-signal/40 bg-signal/[0.08]">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#F5B544" strokeWidth="1.6">
+                <path d="M3 15 C7 15 8 6 12 6 C16 6 17 11 21 11" /><path d="M3 19 C7 19 8 17 12 17 C16 17 17 19 21 19" />
+              </svg>
+            </span>
+            <div>
+              <h2 className="headline text-2xl text-ink md:text-3xl">The Fundamentals Gap</h2>
+              <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted md:max-w-2xl">
+                What consumers say against what the data says &mdash; now at its widest in four decades. And the tests showing it forecasts nothing, which is the more useful half.
+              </p>
+            </div>
+          </div>
+          <ArrowUpRight size={22} className="shrink-0 text-signal/70 transition-colors group-hover:text-signal" />
+        </div>
+      </Link>
+
       {/* Release Radar — inline */}
       <div className="mt-4 overflow-hidden rounded-2xl border border-signal/30 bg-gradient-to-r from-signal/[0.10] via-signal/[0.04] to-transparent p-6 md:p-7">
         <div className="flex items-start gap-4">
