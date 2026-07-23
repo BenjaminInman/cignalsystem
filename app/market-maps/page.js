@@ -113,6 +113,7 @@ function MarketMapsInner() {
       <MigrationTrends data={mig?.uhaul} />
       <PodsTrends data={mig?.pods} />
       <EmergingMarkets />
+      <IndustryExposureScreen />
     </div>
   );
 }
@@ -377,6 +378,113 @@ function Metric({ label, value, tone }) {
     <div className="hidden md:block">
       <p className="mono text-[10px] tracking-[0.12em] text-muted">{label}</p>
       <p className="mono mt-1 text-sm" style={{ color: tone ? toneColor(tone) : "#eceeef" }}>{value}</p>
+    </div>
+  );
+}
+
+
+/* ---------------------------------------------------------------------------
+   Industry Exposure Screen — cross-market.
+
+   Pick a sector; see which metros actually depend on it (location quotient) and
+   how that sector is performing IN THOSE MARKETS. Deliberately NOT a national
+   trend screen: 35% of metro-industry pairs move opposite to their own national
+   trend, so "this industry is hot nationally" does not identify a market. What
+   identifies a market is exposure crossed with local performance.
+--------------------------------------------------------------------------- */
+const EXPO_SECTORS = [
+  ["manufacturing", "Manufacturing"],
+  ["prof_business", "Professional & Business"],
+  ["education_health", "Education & Health"],
+  ["leisure_hospitality", "Leisure & Hospitality"],
+  ["trade_transport", "Trade & Transport"],
+  ["information", "Information"],
+  ["financial", "Financial"],
+  ["mining_construction", "Mining & Construction"],
+  ["government", "Government"],
+  ["other_services", "Other Services"],
+];
+
+function IndustryExposureScreen() {
+  const [sector, setSector] = useState("manufacturing");
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    let on = true;
+    setLoading(true); setData(null);
+    fetch(`/api/industry-exposure?sector=${sector}`)
+      .then((r) => r.json())
+      .then((d) => { if (on) { setData(d?.found ? d : null); setLoading(false); } })
+      .catch(() => { if (on) setLoading(false); });
+    return () => { on = false; };
+  }, [sector]);
+
+  const top = data?.markets?.filter((m) => m.lq >= 1.2).slice(0, 12) || [];
+  return (
+    <div className="mt-8 rounded-lg border border-[var(--line)] bg-bg2/40 p-5">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="mono text-[12px] tracking-[0.1em] text-muted">INDUSTRY EXPOSURE SCREEN</p>
+        {data && (
+          <span className="mono text-[9px] text-muted/70">
+            {fmtMonth(data.asOf)} · BLS CES · {data.summary.metros} metros
+          </span>
+        )}
+      </div>
+      <p className="mono mt-1 text-[11px] leading-relaxed text-muted">
+        Which markets <span className="text-ink">depend</span> on a sector, and how that sector is doing <span className="text-ink">there</span>.
+      </p>
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {EXPO_SECTORS.map(([k, label]) => (
+          <button
+            key={k}
+            onClick={() => setSector(k)}
+            className={`mono rounded px-2 py-1 text-[10px] transition ${
+              sector === k ? "bg-signal/15 text-signal" : "text-muted hover:text-ink"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {loading && <p className="mono mt-3 text-[11px] text-muted">Loading…</p>}
+      {data && (
+        <>
+          <p className="mono mt-3 text-[11px] leading-relaxed text-muted">
+            <span className="text-ink">{data.summary.concentrated}</span> of {data.summary.metros} metros are concentrated in{" "}
+            {data.sectorLabel} (≥1.2×). Of those,{" "}
+            <span style={{ color: toneColor("bull") }}>{data.summary.concentratedGrowing} growing</span>
+            {" · "}
+            <span style={{ color: toneColor("bear") }}>{data.summary.concentratedDeclining} declining</span>
+            {" locally."}
+          </p>
+          <div className="mono mt-2 rounded border border-[var(--line)]">
+            <div className="grid grid-cols-[1.6fr_auto_auto_auto] gap-2 border-b border-[var(--line)] bg-bg/40 px-3 py-1.5 text-[9px] tracking-[0.08em] text-muted">
+              <span>MARKET</span><span>CONC.</span><span>LOCAL YoY</span><span>READ</span>
+            </div>
+            {top.map((m) => (
+              <div key={m.cbsa} className="grid grid-cols-[1.6fr_auto_auto_auto] items-center gap-2 border-b border-[var(--line)]/50 px-3 py-1.5 text-[10px]">
+                <span className="text-ink">{m.name}</span>
+                <span className="text-muted">{m.lq}×</span>
+                <span style={{ color: toneColor((m.yoyPct ?? 0) >= 0 ? "bull" : "bear") }}>
+                  {m.yoyPct == null ? "—" : `${m.yoyPct >= 0 ? "+" : ""}${m.yoyPct}%`}
+                </span>
+                <span
+                  className="rounded px-1 text-[8px]"
+                  style={{ color: toneColor(m.state.tone || "neutral"), background: `${toneColor(m.state.tone || "neutral")}22` }}
+                >
+                  {m.state.label}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="mono mt-2 text-[9px] leading-relaxed text-muted/70">
+            CONC. is the location quotient — a metro&apos;s share of the sector against the average metro. Ranked by concentration, not by growth:
+            the screen answers who is <span className="text-muted">exposed</span>, then shows whether that exposure is paying off locally.
+            Growth is never inferred from the national trend — 35% of metro-industry pairs move the opposite way from theirs.
+            A supporting-industries map is deliberately omitted: across all 36 supersector pairs, median correlation of local growth is 0.07, so linkage is not measurable at this grain.
+          </p>
+        </>
+      )}
     </div>
   );
 }
