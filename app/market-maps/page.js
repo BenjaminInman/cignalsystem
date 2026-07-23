@@ -31,7 +31,7 @@ export default function MarketMapsPage() {
 
 function MarketMapsInner() {
   const { MARKET_GROUPS = [], COPY = {} } = useContent();
-  const [f, setF] = useState("All");
+  const [f, setF] = useState(MARKET_GROUPS[0]?.region || "All");
   const [mig, setMig] = useState(null);
   const [growth, setGrowth] = useState(null);
   const [card, setCard] = useState(null);
@@ -63,7 +63,10 @@ function MarketMapsInner() {
     return { ...base, rent: `${g >= 0 ? "+" : ""}${g}%`, rentVal: g, rentTone, live: true };
   };
   const groupsAll = MARKET_GROUPS.map((g) => ({ ...g, markets: g.markets.map(withLive) }));
-  const filters = ["All", ...MARKET_GROUPS.map((g) => g.region)];
+  const filters = [
+    ["All", groupsAll.reduce((n, g) => n + g.markets.length, 0)],
+    ...groupsAll.map((g) => [g.region, g.markets.length]),
+  ];
   const groups = groupsAll.filter((g) => f === "All" || g.region === f);
   const flat = groupsAll.flatMap((g) => g.markets);
   // Show every tracked market with live ZORI — growth AND decline (sorted high to low).
@@ -93,8 +96,10 @@ function MarketMapsInner() {
       </div>
 
       <div className="mt-8 flex flex-wrap gap-2">
-        {filters.map((x) => (
-          <button key={x} onClick={() => setF(x)} className={`mono rounded-md border px-4 py-2 text-[12px] tracking-[0.04em] ${f === x ? "border-signal/40 bg-signal/10 text-signal" : "border-[var(--line)] text-muted hover:text-ink"}`}>{x}</button>
+        {filters.map(([x, n]) => (
+          <button key={x} onClick={() => setF(x)} className={`mono rounded-md border px-4 py-2 text-[12px] tracking-[0.04em] ${f === x ? "border-signal/40 bg-signal/10 text-signal" : "border-[var(--line)] text-muted hover:text-ink"}`}>
+            {x} <span className="text-muted/60">{n}</span>
+          </button>
         ))}
       </div>
 
