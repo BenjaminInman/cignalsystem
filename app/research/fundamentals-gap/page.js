@@ -46,7 +46,7 @@ function Chart({ series }) {
   const years = [];
   series.forEach((r, i) => {
     const yr = parseInt(r.d.slice(0, 4), 10);
-    if (yr % 10 === 0 && r.d.slice(5, 7) === "01") years.push({ i, yr });
+    if (yr % 5 === 0 && r.d.slice(5, 7) === "01") years.push({ i, yr });
   });
 
   return (
@@ -60,6 +60,10 @@ function Chart({ series }) {
             <text x={P.l - 7} y={y(v) + 3.5} textAnchor="end" className="mono"
               fill="rgba(255,255,255,.42)" fontSize="9.5">{v}</text>
           </g>
+        ))}
+        {years.map(({ i, yr }) => (
+          <line key={`g${yr}`} x1={x(i)} x2={x(i)} y1={P.t} y2={H - P.b}
+            stroke="rgba(255,255,255,.05)" strokeWidth="1" />
         ))}
         <path d={band} fill="rgba(229,99,77,.13)" />
         <path d={path("f")} fill="none" stroke={FUND} strokeWidth="1.5" strokeDasharray="5 4" />
