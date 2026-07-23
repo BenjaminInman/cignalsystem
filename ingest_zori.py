@@ -42,6 +42,17 @@ SERIES = [
      "name": "Zillow Observed Rent Index — National (Multifamily, smoothed, SA)",
      "source_series": "Metro_zori_uc_mfr_sm_sa_month[US]",
      "url": f"{ZORI_BASE}/Metro_zori_uc_mfr_sm_sa_month.csv"},
+    # Single-family rental cut. Zillow publishes this only at METRO grain (the
+    # Zip/County SFR files 404), so sub-metro SFR rent falls back to the blended
+    # series and must be labeled as such -- same constraint as the MF cut.
+    {"slug": "zori_metro_sfr", "region_type": "metro", "region_filter": "msa",
+     "name": "Zillow Observed Rent Index — Metro (Single-Family, smoothed, SA)",
+     "source_series": "Metro_zori_uc_sfr_sm_sa_month",
+     "url": f"{ZORI_BASE}/Metro_zori_uc_sfr_sm_sa_month.csv"},
+    {"slug": "zori_national_sfr", "region_type": "national", "region_filter": "country", "code_override": "US",
+     "name": "Zillow Observed Rent Index — National (Single-Family, smoothed, SA)",
+     "source_series": "Metro_zori_uc_sfr_sm_sa_month[US]",
+     "url": f"{ZORI_BASE}/Metro_zori_uc_sfr_sm_sa_month.csv"},
     {"slug": "zori_city", "region_type": "city", "region_filter": "city", "code_with_state": True,
      "name": "Zillow Observed Rent Index — City (SFR+Condo+MF, smoothed, SA)",
      "source_series": "City_zori_uc_sfrcondomfr_sm_sa_month",
