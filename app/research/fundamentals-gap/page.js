@@ -158,7 +158,7 @@ export default function FundamentalsGapPage() {
             </div>
             <p className="mt-3 text-[13.5px] leading-relaxed text-muted">
               The gap forecasts nothing we could measure. Across four independent episodes since
-              1978, extreme readings carried no usable information about forward home prices,
+              1987, extreme readings carried no usable information about forward home prices,
               rents, vacancy, or employment &mdash; and where a relationship appeared at all, it
               ran opposite to the intuitive one. We publish it because the divergence is real and
               the lesson is worth more than the indicator: a series can sit at a forty-year
