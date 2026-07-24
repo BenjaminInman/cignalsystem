@@ -1,0 +1,39 @@
+name: drafts
+
+# List and publish composed articles without touching a SQL editor.
+# Run it from the Actions tab: pick an action, paste a slug if publishing.
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "What to do"
+        required: true
+        default: list
+        type: choice
+        options: [list, publish, unpublish, reject]
+      slug:
+        description: "Draft slug (only needed for publish/unpublish/reject)"
+        required: false
+        type: string
+      site:
+        description: "Which site"
+        required: false
+        default: multifamily30x
+        type: string
+
+jobs:
+  drafts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install psycopg2-binary
+      - env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          ACTION: ${{ inputs.action }}
+          SLUG: ${{ inputs.slug }}
+          SITE: ${{ inputs.site }}
+        run: python drafts_tool.py
