@@ -27,8 +27,10 @@ import psycopg2
 import psycopg2.extras
 import requests
 
-DB_URL = os.environ["SUPABASE_DB_URL"]
-ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
+DB_URL = os.environ.get("SUPABASE_DB_URL", "")
+# Read lazily: drafts_tool.py imports this module purely to reuse gate(), and
+# that path never calls the API, so it must not require the key to import.
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 ANTHROPIC_MODEL = os.environ.get("COMPOSE_MODEL", "claude-sonnet-4-6")
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 
@@ -307,6 +309,8 @@ def fact_line(f):
 
 
 def compose(facts):
+    if not ANTHROPIC_API_KEY:
+        raise RuntimeError("ANTHROPIC_API_KEY is not set")
     user = ("FACTS:\n" + "\n".join(fact_line(f) for f in facts) +
             "\n\nCompose the article from these facts. Set publishable=false only if the "
             "facts are genuinely contradictory or entirely off-topic for an operator "
@@ -494,6 +498,10 @@ def save_draft(conn, draft, facts, arts, ok, failures, coverage):
 
 
 def main():
+    if not DB_URL:
+        log("SUPABASE_DB_URL is not set"); sys.exit(1)
+    if not ANTHROPIC_API_KEY:
+        log("ANTHROPIC_API_KEY is not set"); sys.exit(1)
     conn = db()
     conn.autocommit = False
     try:
