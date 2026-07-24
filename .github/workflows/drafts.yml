@@ -10,7 +10,7 @@ on:
         required: true
         default: list
         type: choice
-        options: [list, publish, unpublish, reject]
+        options: [list, regate, publish, unpublish, reject]
       slug:
         description: "Draft slug (only needed for publish/unpublish/reject)"
         required: false

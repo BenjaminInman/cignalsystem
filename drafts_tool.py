@@ -8,6 +8,11 @@ Exists so nobody has to open a SQL editor. Driven entirely by workflow inputs:
   ACTION=publish SLUG=<slug>      set a draft live
   ACTION=unpublish SLUG=<slug>    take it back down
   ACTION=reject SLUG=<slug>       mark it rejected so it stops appearing
+  ACTION=regate                   re-evaluate stored drafts against the current
+                                  gate. Gate results are written at compose
+                                  time, so a draft held by a gate bug keeps its
+                                  stale failure list until this is run. Costs no
+                                  API calls.
 
 Publishing only flips a status. The site reads status='published' through RLS,
 so an article appears within about five minutes of the change and no deploy is
@@ -16,6 +21,8 @@ needed.
 import os
 import sys
 import datetime as dt
+import importlib.util
+
 import psycopg2
 import psycopg2.extras
 
@@ -23,6 +30,47 @@ DB_URL = os.environ["SUPABASE_DB_URL"]
 ACTION = os.environ.get("ACTION", "list").strip().lower()
 SLUG = os.environ.get("SLUG", "").strip()
 SITE = os.environ.get("SITE", "multifamily30x").strip()
+
+
+def load_gate():
+    """Import gate() and its fact shape from compose_news.py so there is exactly
+    one definition of the rules."""
+    spec = importlib.util.spec_from_file_location(
+        "compose_news", os.path.join(os.path.dirname(os.path.abspath(__file__)), "compose_news.py"))
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m
+
+
+def regate(conn, cur):
+    m = load_gate()
+    cur.execute("select id, slug, headline, body, fact_ids, gate_pass from drafts where site = %s", (SITE,))
+    rows = cur.fetchall()
+    changed = 0
+    for r in rows:
+        if not r["fact_ids"]:
+            continue
+        cur.execute(
+            """select f.id, f.fact_text, f.value_numeric, f.unit, f.period_start,
+                      f.period_end, f.signal_role, f.novelty, f.is_estimate,
+                      f.confidence, f.metric_slug
+                 from news_facts f where f.id = any(%s)""",
+            (r["fact_ids"],),
+        )
+        facts = [dict(x) for x in cur.fetchall()]
+        for i, f in enumerate(facts, 1):
+            f["ref"] = f"f{i}"
+            f["corroboration"] = 1
+        ok, failures, coverage = m.gate(r["body"] or {}, facts)
+        if ok != r["gate_pass"]:
+            changed += 1
+            print(f"  {'HELD -> PASS' if ok else 'PASS -> HELD'}  {(r['headline'] or '')[:62]}")
+        cur.execute(
+            "update drafts set gate_pass = %s, gate_failures = %s, coverage = %s where id = %s",
+            (ok, psycopg2.extras.Json(failures), round(coverage, 3), r["id"]),
+        )
+    conn.commit()
+    print(f"\nre-gated {len(rows)} draft(s), {changed} changed verdict\n")
 
 
 def rule(n=104):
@@ -89,6 +137,9 @@ def main():
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             if ACTION == "list":
                 listing(cur)
+            elif ACTION == "regate":
+                regate(conn, cur)
+                listing(cur)
             elif ACTION in ("publish", "unpublish", "reject"):
                 set_status(cur, {"publish": "published",
                                  "unpublish": "draft",
@@ -97,7 +148,7 @@ def main():
                 print()
                 listing(cur)
             else:
-                print(f"Unknown ACTION '{ACTION}'. Use list, publish, unpublish or reject.")
+                print(f"Unknown ACTION '{ACTION}'. Use list, regate, publish, unpublish or reject.")
                 sys.exit(1)
     finally:
         conn.close()
