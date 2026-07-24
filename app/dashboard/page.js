@@ -28,8 +28,8 @@ export default function DashboardPage() {
 
 function DashboardInner() {
   const { DASH_STATS = [] } = useContent();
-  const mt = DASH_STATS.find((s) => s.label === "MARKETS TRACKED");
-  const markets = mt ? `${mt.value} ${mt.unit}` : "every major metro";
+  const mt = DASH_STATS.find((s) => s.label === "MULTIFAMILY MARKETS");
+  const markets = mt && mt.value !== "—" ? `${mt.value} ${mt.unit}` : "every major metro";
   const suite = SUITE.map((s) =>
     s.name === "Market Maps" ? { ...s, desc: `Fundamentals scored and ranked across ${markets}.` } : s
   );

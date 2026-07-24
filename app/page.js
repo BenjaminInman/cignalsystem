@@ -111,18 +111,23 @@ export default function Home() {
       .catch(() => {});
   }, []);
 
-  // Live platform stats strip.
+  // Live platform stats strip. Four warehouse facts, no polarity rules -- each
+  // ties to something a visitor can verify on the site. Deliberately NOT the
+  // old bull/bear signal counts: those came from 8 editorial signal_feed rows,
+  // had no indicator denominator, and a single indicator flipping tone (or
+  // moving leading<->trailing) would have shifted a headline number the visitor
+  // couldn't trace. The leading/coincident/trailing divergence read lives in the
+  // dashboard/training instead, where it can be explained.
   useEffect(() => {
     fetch("/api/stats")
       .then((r) => r.json())
       .then((d) => {
         const s = d?.stats;
         if (!s) return;
-        const total = (s.bull_count || 0) + (s.bear_count || 0) + (s.neutral_count || 0);
         setStats([
-          { label: "BULLISH SIGNALS", value: String(s.bull_count ?? 0), unit: total ? `/${total}` : "", tone: "bull" },
-          { label: "BEARISH SIGNALS", value: String(s.bear_count ?? 0), unit: total ? `/${total}` : "", tone: "bear" },
-          { label: "MARKETS TRACKED", value: String(s.msa_count ?? 0), unit: "MSAs", tone: "ink" },
+          { label: "INDICATORS TRACKED", value: String(s.indicator_count ?? 0), unit: "live", tone: "signal" },
+          { label: "MULTIFAMILY MARKETS", value: String(s.mf_metro_count ?? 0), unit: "metros", tone: "ink" },
+          { label: "ZIP CODES", value: fmtK(s.zip_count ?? 0), unit: "tracked", tone: "ink" },
           { label: "DATA POINTS", value: fmtK(s.obs_count ?? 0), unit: "live", tone: "signal" },
         ]);
       })
