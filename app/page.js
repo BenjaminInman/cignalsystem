@@ -82,15 +82,22 @@ export default function Home() {
       .then((r) => r.json())
       .then((d) => {
         const evs = d?.events || [];
-        const lead = evs.filter((e) => e.class === "leading");
-        const lag = evs.filter((e) => e.class !== "leading");
-        const picked = [];
-        for (let i = 0; i < 4; i++) {
-          const src = i % 2 === 0 ? lead : lag;
-          const next = src.shift() || (i % 2 === 0 ? lag : lead).shift();
-          if (next) picked.push(next);
-        }
-        setFeatured(picked);
+        // MF-relevant first (the section is "The Multifamily Trendline"), then
+        // fill with macro. Within each group, alternate leading/lagging so the
+        // divergence between the two is visible across the four cards.
+        const order = (list) => {
+          const lead = list.filter((e) => e.class === "leading");
+          const lag = list.filter((e) => e.class !== "leading");
+          const out = [];
+          while (lead.length || lag.length) {
+            if (lead.length) out.push(lead.shift());
+            if (lag.length) out.push(lag.shift());
+          }
+          return out;
+        };
+        const mf = order(evs.filter((e) => e.mf));
+        const macro = order(evs.filter((e) => !e.mf));
+        setFeatured([...mf, ...macro].slice(0, 4));
       })
       .catch(() => {});
   }, []);
@@ -296,9 +303,9 @@ export default function Home() {
           <div className="mb-6 flex items-end justify-between">
             <div>
               <p className="kicker mb-3 flex items-center gap-2">
-                <span className="h-1.5 w-1.5 animate-flicker rounded-full bg-signal" /> Today&apos;s featured signals
+                <span className="h-1.5 w-1.5 animate-flicker rounded-full bg-signal" /> Divergence from trend
               </p>
-              <h2 className="headline text-3xl text-ink md:text-4xl">Latest Signals</h2>
+              <h2 className="headline text-3xl text-ink md:text-4xl">The Multifamily Trendline</h2>
             </div>
             <Link href="/signals" className="hover-line mono text-[12px] tracking-[0.08em] text-muted hover:text-ink">VIEW ALL →</Link>
           </div>
