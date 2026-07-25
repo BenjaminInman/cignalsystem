@@ -13,17 +13,35 @@ revision; unchanged -> skipped. Refreshes mv_indicator_analytics at the end.
 Env:  FRED_API_KEY, SUPABASE_DB_URL (Session pooler URI)
 Deps: pip install psycopg2-binary requests
 """
-import io, os, sys, datetime as dt
+import io, os, sys, time, datetime as dt
 import requests, psycopg2
 
 FRED_URL = "https://api.stlouisfed.org/fred/series/observations"
 
 
+def fred_get(params, timeout=60, max_tries=5):
+    """GET with backoff on 429/5xx. FRED caps at 120 req/min per key; a busy
+    scheduled slot can trip it mid-run. Previously the raw raise_for_status()
+    turned a single 429 into a whole-run failure -- which is exactly why the
+    13:5x scheduled runs failed intermittently while quieter manual dispatches
+    succeeded. Honor Retry-After when present, otherwise exponential backoff."""
+    for attempt in range(max_tries):
+        r = requests.get(FRED_URL, params=params, timeout=timeout)
+        if r.status_code == 429 or r.status_code >= 500:
+            if attempt == max_tries - 1:
+                r.raise_for_status()
+            wait = float(r.headers.get("Retry-After", 0)) or (2 ** attempt)
+            time.sleep(min(wait, 30))
+            continue
+        r.raise_for_status()
+        return r
+    return r  # unreachable, but keeps the type obvious
+
+
 def fetch_fred(series_id, key):
-    r = requests.get(FRED_URL, params={
+    r = fred_get({
         "series_id": series_id, "api_key": key, "file_type": "json",
-    }, timeout=60)
-    r.raise_for_status()
+    })
     rows = []
     for o in r.json().get("observations", []):
         v = o.get("value")
@@ -46,11 +64,10 @@ def fetch_release_dates(series_id, key):
     we return {} and the caller uses today()."""
     floor = (dt.date.today() - dt.timedelta(days=450)).isoformat()
     try:
-        r = requests.get(FRED_URL, params={
+        r = fred_get({
             "series_id": series_id, "api_key": key, "file_type": "json",
             "output_type": 4, "realtime_start": floor, "realtime_end": "9999-12-31",
-        }, timeout=60)
-        r.raise_for_status()
+        })
         first = {}
         for o in r.json().get("observations", []):
             d, rs = o.get("date"), o.get("realtime_start")
@@ -124,7 +141,12 @@ def main():
             cur.execute("SELECT id, slug, source_series FROM indicators WHERE source = 'FRED' ORDER BY slug")
             inds = cur.fetchall()
             print(f"FRED ingestion — release_date {release} | {len(inds)} indicators")
+            # Each indicator issues 2 FRED calls (observations + release dates).
+            # ~74 indicators -> ~148 calls; FRED caps at 120/min per key. Pace to
+            # ~100/min so a normal run stays comfortably under, with fred_get's
+            # backoff as the backstop for any burst.
             for ind_id, slug, sid in inds:
+                time.sleep(1.2)
                 rows = fetch_fred(sid, key)
                 if not rows:
                     print(f"  [{slug}] {sid}: no observations"); continue
