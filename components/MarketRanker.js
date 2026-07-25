@@ -6,6 +6,7 @@ import { toneColor } from "@/components/ui";
 
 const FACTOR_MENU = [
   { key: "job_growth", label: "Job Growth", source: "BLS", lead: true, hint: "Metro payroll employment, YoY" },
+  { key: "wage_growth", label: "Wage Growth", source: "BLS QCEW", hint: "Average weekly wage, YoY" },
   { key: "rent_growth", label: "Rent Growth", source: "Apartment List", hint: "Median rent, YoY" },
   { key: "vacancy", label: "Vacancy", source: "Apartment List", hint: "Lower ranks higher" },
   { key: "unemployment", label: "Unemployment", source: "BLS LAUS", hint: "Lower ranks higher" },

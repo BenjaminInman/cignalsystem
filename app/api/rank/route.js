@@ -16,6 +16,7 @@ async function sb(path) {
 // regions.code. higher=true means a bigger value ranks higher; false flips it.
 const FACTORS = {
   job_growth:     { slug: "bls_metro_employment",  yoy: true,  higher: true,  label: "Job Growth",             source: "BLS",            lead: true },
+  wage_growth:    { slug: "metro_wages",            yoy: true,  higher: true,  label: "Wage Growth",            source: "BLS QCEW" },
   rent_growth:    { slug: "apt_rent_estimate",      yoy: true,  higher: true,  label: "Rent Growth",            source: "Apartment List" },
   vacancy:        { slug: "apt_vacancy",            yoy: false, higher: false, label: "Vacancy",                source: "Apartment List" },
   unemployment:   { slug: "bls_metro_unemployment", yoy: false, higher: false, label: "Unemployment",           source: "BLS LAUS" },
