@@ -20,7 +20,7 @@ function Trendline({ spark, color }) {
   const pts = (spark || []).filter((v) => v != null);
   if (pts.length < 2) return null;
 
-  const W = 260, H = 56, PAD = 4;
+  const W = 480, H = 56, PAD = 4;
   const lo = Math.min(...pts, 0), hi = Math.max(...pts, 0);
   const span = hi - lo || 1;
   const x = (i) => PAD + (i * (W - 2 * PAD)) / (pts.length - 1);
@@ -37,7 +37,7 @@ function Trendline({ spark, color }) {
   const last = pts[pts.length - 1];
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="mt-3 w-full" preserveAspectRatio="none" style={{ height: 56 }}>
+    <svg viewBox={`0 0 ${W} ${H}`} className="mt-3 block w-full" preserveAspectRatio="xMidYMid meet" style={{ height: 56 }}>
       <defs>
         <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="0.22" />
@@ -47,8 +47,8 @@ function Trendline({ spark, color }) {
       {/* trend baseline (zero = on its own trend) */}
       <line x1={PAD} y1={zeroY} x2={W - PAD} y2={zeroY} stroke={MUT} strokeOpacity="0.35" strokeWidth="1" strokeDasharray="3 3" />
       <path d={area} fill={`url(#${gid})`} />
-      <path d={line} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-      <circle cx={x(pts.length - 1)} cy={y(last)} r="3" fill={color} />
+      <path d={line} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+      <circle cx={x(pts.length - 1)} cy={y(last)} r="3.5" fill={color} />
     </svg>
   );
 }
