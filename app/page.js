@@ -82,10 +82,12 @@ export default function Home() {
       .then((r) => r.json())
       .then((d) => {
         const evs = d?.events || [];
-        // MF-relevant first (the section is "The Multifamily Trendline"), then
-        // fill with macro. Within each group, alternate leading/lagging so the
-        // divergence between the two is visible across the four cards.
-        const order = (list) => {
+        // Order by tier (DIRECT measures MF, DRIVER moves it, MACRO backdrop),
+        // then alternate leading/lagging within a tier so the divergence between
+        // the two shows across the cards. DIRECT+DRIVER nearly always fill the
+        // four slots; MACRO only appears if a tier runs short.
+        const rank = { DIRECT: 0, DRIVER: 1, MACRO: 2 };
+        const alt = (list) => {
           const lead = list.filter((e) => e.class === "leading");
           const lag = list.filter((e) => e.class !== "leading");
           const out = [];
@@ -95,9 +97,10 @@ export default function Home() {
           }
           return out;
         };
-        const mf = order(evs.filter((e) => e.mf));
-        const macro = order(evs.filter((e) => !e.mf));
-        setFeatured([...mf, ...macro].slice(0, 4));
+        const byTier = ["DIRECT", "DRIVER", "MACRO"].flatMap((t) =>
+          alt(evs.filter((e) => (e.tier || "MACRO") === t))
+        );
+        setFeatured(byTier.slice(0, 4));
       })
       .catch(() => {});
   }, []);

@@ -83,9 +83,14 @@ export default function SignalEventCard({ e }) {
         >
           {layer}
         </span>
-        {e.mf && (
+        {e.tier === "DIRECT" && (
           <span className="mono rounded-sm px-2 py-1 text-[10px] tracking-[0.14em] text-signal" style={{ border: "1px solid var(--signal)" }}>
             MF
+          </span>
+        )}
+        {e.tier === "DRIVER" && (
+          <span className="mono rounded-sm px-2 py-1 text-[10px] tracking-[0.14em]" style={{ color: MUT, border: `1px solid ${MUT}55` }}>
+            MF DRIVER
           </span>
         )}
       </div>
