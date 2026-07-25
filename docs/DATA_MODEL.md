@@ -121,3 +121,45 @@ not against ourselves.
 indicators. It does not refresh and must not be used to determine what exists.
 Query `https://multifamily.cignalsystem.com/api/indicators` (public, no
 credentials) instead.
+
+---
+
+## 5. Source-truth verification (2026-07-25 audit)
+
+An external check compared stored values against the sources directly, since the
+GDP bug came from having no such check.
+
+**FRED (74 national series):** exact match on both latest date and value — 0
+behind, 0 mismatched. Script: fetch each series' `fredgraph.csv` (public, no
+key) and compare. This is the check that would have caught the GDP revision
+staleness.
+
+**Non-FRED national series:** all `current` or one period `pending` in
+`v_indicator_freshness`. Pending cases are all expected publication lag, not
+gaps: Apartment List (next month not out), annual series HMDA/IRS SOI/ACS
+(1–2yr vintage lag by design), GSE monthly delinquency (prior month, current
+pending).
+
+**Bugs found and fixed:**
+- `zhvi_national` — ingest hardcoded `RegionType=='msa'`, dropping the country
+  row; series existed but silently stopped at May. Reworked ingest_zhvi to a
+  two-series list; backfilled to 318 obs (2000–Jun 2026).
+- FRED scheduled runs 429'd intermittently — 148 calls/run vs FRED's 120/min
+  cap, one 429 killed the whole transactional run. Added `fred_get()` backoff +
+  1.2s pacing.
+
+**The Vercel "webhook broken" theory was wrong** — every commit did deploy. The
+false alarm was polling `/deployments?ref=<sha>` seconds after push, before
+Vercel registered it, then firing a redundant empty commit. Wait and confirm
+the SHA registers before retriggering.
+
+## 6. panel_tiers
+
+`panel_tiers(slug, tier, note, added_at)` assigns each national-tab indicator to
+DIRECT (measures MF), DRIVER (moves MF: rates, credit, labor, demand), or MACRO
+(backdrop). Drives the home "Multifamily Trendline" card order. Unlisted slugs
+default to MACRO ordering — so the 3 editorial-only cards (Market Rent Growth
+(Multifamily), Rentership Rate, Renter-Age Employment) that have no standalone DB
+slug sort last safely without a row. Metro/ZIP/county-grain series and GDP
+sub-components are intentionally not tiered; the panel only draws national-tab
+indicators.
