@@ -3,6 +3,7 @@ import { Lock, Check, LineChart, BookOpen, Briefcase, Users, Sparkles, Activity,
 import { createClient } from "@/lib/supabase/server";
 import { PAGE_LABELS } from "@/lib/access";
 import UpgradeCTA from "@/components/UpgradeCTA";
+import IndicatorsDemo from "@/components/IndicatorsDemo";
 
 export const metadata = { title: "Upgrade · Cignal System" };
 export const dynamic = "force-dynamic";
@@ -69,6 +70,8 @@ export default async function UpgradePage({ searchParams }) {
           ← Back to dashboard
         </Link>
       </div>
+
+      {slug === "indicators" && <IndicatorsDemo />}
 
       <div className="mt-12">
         <p className="kicker mb-4">What Pro unlocks</p>

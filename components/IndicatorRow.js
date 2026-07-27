@@ -255,6 +255,8 @@ export default function IndicatorRow({ row, ask }) {
   const [qoq, setQoq] = useState(null);
   const [qoqDone, setQoqDone] = useState(false);
   useEffect(() => {
+    // Demo/preview rows carry a frozen QoQ directly and never touch the network.
+    if (r.staticQoQ) { setQoq(r.staticQoQ); setQoqDone(true); return; }
     if (!open || !slug || qoqDone) return;
     let live = true;
     fetch(`/api/compare?slugs=${encodeURIComponent(slug)}&years=10`)
@@ -270,7 +272,7 @@ export default function IndicatorRow({ row, ask }) {
       })
       .catch(() => live && setQoqDone(true));
     return () => { live = false; };
-  }, [open, slug, qoqDone]);
+  }, [open, slug, qoqDone, r.staticQoQ]);
 
   return (
     <div className="card overflow-hidden">

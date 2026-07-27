@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 
 import { createClient } from "@/lib/supabase/server";
 import { transformSeries } from "@/lib/indicator-series";
+import { hasTier } from "@/lib/tiers";
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -78,7 +79,7 @@ export async function GET(req) {
         .select("tier, is_admin")
         .eq("id", user.id)
         .single();
-      isPro = !!prof?.is_admin || prof?.tier === "pro";
+      isPro = !!prof?.is_admin || hasTier(prof?.tier, "pro");
     }
   } catch {
     /* fall through as free */
@@ -86,6 +87,14 @@ export async function GET(req) {
 
   const caps = isPro ? TIERS.pro : TIERS.free;
   const { searchParams } = new URL(req.url);
+
+  // The full comparison history (the series behind the charts and the drawer's
+  // quarter-over-quarter reads) is a paid surface. Its only consumers live on
+  // the Pro-gated Indicators tab, so non-Pro callers -- free members and
+  // anonymous scrapers alike -- get nothing rather than the old free teaser.
+  if (!isPro) {
+    return Response.json({ tier: "locked", gated: true, series: [] });
+  }
 
   const slugs = (searchParams.get("slugs") || "")
     .split(",")
