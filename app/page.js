@@ -65,12 +65,17 @@ function IndicatorCard({ c }) {
 export default function Home() {
   const {
     COMPOSITE = {}, DASH_STATS = [], LEADING_CARDS = [], TRAILING_CARDS = [],
-    TOP_MARKETS = [], SIGNALS = [], NEWS = [], COPY = {},
+    TOP_MARKETS = [], SIGNALS = [], NEWS = [], COPY = {}, INDICATORS = [],
   } = useContent();
   const [tab, setTab] = useState("leading");
   const [liveInd, setLiveInd] = useState({});
   const [composite, setComposite] = useState(COMPOSITE);
   const [stats, setStats] = useState(DASH_STATS);
+  // Drives the "N INDICATORS" subtitle. Seeded from the editorial array length
+  // (correct on first render, no flash) and overwritten with the live
+  // indicator_count from /api/stats so it always matches the INDICATORS TRACKED
+  // stat card exactly.
+  const [indicatorCount, setIndicatorCount] = useState(INDICATORS.length || 0);
   const cards = (tab === "leading" ? LEADING_CARDS : TRAILING_CARDS).map((c) => mergeLiveCard(c, liveInd));
   const compColor = toneColor(composite.tone);
 
@@ -134,6 +139,7 @@ export default function Home() {
       .then((d) => {
         const s = d?.stats;
         if (!s) return;
+        setIndicatorCount(s.indicator_count ?? INDICATORS.length);
         setStats([
           { label: "INDICATORS TRACKED", value: String(s.indicator_count ?? 0), unit: "live", tone: "signal" },
           { label: "MULTIFAMILY MARKETS", value: String(s.mf_metro_count ?? 0), unit: "metros", tone: "ink" },
@@ -358,7 +364,7 @@ export default function Home() {
 
             <div className="mt-auto border-t border-[var(--line)] pt-6">
               <p className="mono text-[10.5px] tracking-[0.08em] text-muted">
-                70 INDICATORS &middot; LEADING TO LAGGING &middot; UPDATED ON RELEASE
+                {indicatorCount} INDICATORS &middot; LEADING TO LAGGING &middot; UPDATED ON RELEASE
               </p>
               <Link
                 href="/indicators"
