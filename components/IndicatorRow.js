@@ -235,7 +235,10 @@ export default function IndicatorRow({ row, ask }) {
       .then((d) => {
         if (!live) return;
         const s = (d?.series || []).find((x) => x.slug === slug);
-        setQoq(s ? computeQoQ(s.points, s.unit) : null);
+        // Determine pp-vs-% from the row's own display unit (r.unit), which is
+        // always populated; the compare endpoint's transform unit can come back
+        // empty for indicators without a transform mapping (e.g. savings_rate).
+        setQoq(s ? computeQoQ(s.points, r.unit || s.unit) : null);
         setQoqDone(true);
       })
       .catch(() => live && setQoqDone(true));
