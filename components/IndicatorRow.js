@@ -208,6 +208,33 @@ function computeQoQ(points, unit, maxSteps = 4) {
   return steps.length ? steps.slice(-maxSteps) : null;
 }
 
+// Quarter-over-quarter readout, colored good/bad by the indicator's own good-up
+// logic. Rendered under the sparkline in the trend column (and, for the rare
+// indicator that has quarterly data but no sparkline, as a standalone block so
+// it never silently vanishes).
+function QoQReadout({ qoq, goodUp }) {
+  if (!qoq || !qoq.length) return null;
+  return (
+    <>
+      <p className="mono text-[10px] tracking-[0.16em] text-muted">QUARTER-OVER-QUARTER</p>
+      <div className="mt-2 flex flex-wrap items-start gap-x-6 gap-y-2">
+        {qoq.map((s, i) => {
+          const t = goodUp == null ? "neutral" : ((s.sign >= 0) === goodUp ? "bull" : "bear");
+          return (
+            <span key={i} className="inline-flex flex-col">
+              <span className="mono text-[10px] text-muted/80">{s.label}</span>
+              <span className="mono text-[13px]" style={{ color: toneColor(t) }}>{s.delta}</span>
+            </span>
+          );
+        })}
+      </div>
+      <p className="mono mt-2.5 text-[9.5px] leading-relaxed text-muted/70">
+        Change in the quarterly average vs. the prior quarter — percentage points for rates, percent for levels.
+      </p>
+    </>
+  );
+}
+
 // Presentational indicator row used by both the national Indicators list and the
 // submarket lookup. Self-manages its expanded state. The historical-trend panel
 // only renders when a trend series is supplied (local signals may omit it).
@@ -284,25 +311,6 @@ export default function IndicatorRow({ row, ask }) {
               <div className="mt-5 rounded-lg border border-[var(--line)] bg-bg/40 p-4">
                 <p className="mono text-[11px] tracking-[0.16em]" style={{ color: "#38BDF8" }}>INVESTMENT IMPACT</p>
                 <p className="mt-2 text-sm leading-relaxed text-ink/90">{r.impact}</p>
-                {qoq && qoq.length > 0 && (
-                  <div className="mt-4 border-t border-[var(--line)]/60 pt-3">
-                    <p className="mono text-[10px] tracking-[0.16em] text-muted">QUARTER-OVER-QUARTER</p>
-                    <div className="mt-2 flex flex-wrap items-start gap-x-6 gap-y-2">
-                      {qoq.map((s, i) => {
-                        const t = goodUp == null ? "neutral" : ((s.sign >= 0) === goodUp ? "bull" : "bear");
-                        return (
-                          <span key={i} className="inline-flex flex-col">
-                            <span className="mono text-[10px] text-muted/80">{s.label}</span>
-                            <span className="mono text-[13px]" style={{ color: toneColor(t) }}>{s.delta}</span>
-                          </span>
-                        );
-                      })}
-                    </div>
-                    <p className="mono mt-2.5 text-[9.5px] leading-relaxed text-muted/70">
-                      Change in the quarterly average vs. the prior quarter — percentage points for rates, percent for levels.
-                    </p>
-                  </div>
-                )}
               </div>
             )}
           </div>
@@ -326,6 +334,16 @@ export default function IndicatorRow({ row, ask }) {
                 Direction reads the recent trajectory — a red level that is climbing back still reads
                 <span style={{ color: "#5FB97C" }}> improving</span>.
               </p>
+              {qoq && qoq.length > 0 && (
+                <div className="mt-4 border-t border-[var(--line)]/60 pt-3">
+                  <QoQReadout qoq={qoq} goodUp={goodUp} />
+                </div>
+              )}
+            </div>
+          )}
+          {!hasTrend && qoq && qoq.length > 0 && (
+            <div className="rounded-lg border border-[var(--line)] bg-bg/40 p-4">
+              <QoQReadout qoq={qoq} goodUp={goodUp} />
             </div>
           )}
           {r.traj && (
