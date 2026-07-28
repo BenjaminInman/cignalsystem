@@ -14,26 +14,23 @@ async function sb(path) {
   return r.ok ? r.json() : null;
 }
 
-// Newest-first national history, enough rows to build ~6 quarters.
-async function history(slug) {
+async function hist(slug, code, limit = 60) {
   const data = await sb(
-    `v_indicator_analytics?slug=eq.${slug}&region_code=eq.US` +
-      `&select=obs_date,value,yoy_change&order=obs_date.desc&limit=48`
+    `v_indicator_analytics?slug=eq.${slug}&region_code=eq.${encodeURIComponent(code)}` +
+      `&select=obs_date,value,yoy_change&order=obs_date.desc&limit=${limit}`
   );
   return Array.isArray(data) ? data : [];
 }
 
 const PHASE_ORDER = ["recovery", "expansion", "hypersupply", "contraction"];
 
-// Group basis-derived metrics into calendar quarters (avg), newest last.
 function quarters(rows, basis) {
   const map = new Map();
   for (const row of rows) {
     const m = metricFromRow(row, basis);
     if (m == null || !Number.isFinite(m) || !row.obs_date) continue;
     const d = String(row.obs_date);
-    const y = +d.slice(0, 4);
-    const q = Math.floor((+d.slice(5, 7) - 1) / 3) + 1;
+    const y = +d.slice(0, 4), q = Math.floor((+d.slice(5, 7) - 1) / 3) + 1;
     const key = `${y}-${q}`;
     const cur = map.get(key) || { sum: 0, n: 0, y, q };
     cur.sum += m; cur.n += 1; map.set(key, cur);
@@ -46,72 +43,123 @@ function quarters(rows, basis) {
     .map((x) => ({ y: x.y, q: x.q, val: x.sum / x.n }));
 }
 
-// Position within a phase (0..1) from how far the metric sits from its norm,
-// polarity-adjusted and scaled by the norm's magnitude. Keeps dots off the
-// exact phase boundary so they read clearly.
 function posInPhase(metric, norm, polarity) {
   const scale = Math.abs(norm) > 1e-9 ? Math.abs(norm) : 1;
   const mag = Math.min(1, Math.abs(metric - norm) / (scale * 0.6));
-  return 0.2 + mag * 0.6; // 0.2..0.8
+  return 0.2 + mag * 0.6;
 }
 
-export async function GET() {
+// Build one indicator dot. If cfg.norm is null, self-calibrate from this
+// series' own history mean (used for local signals so each market is measured
+// against its own normal).
+function buildIndicator(rows, cfg) {
+  if (!rows || !rows.length) return null;
+  const qs = quarters(rows, cfg.basis);
+  if (qs.length < 2) return null;
+  const norm = cfg.norm != null ? cfg.norm : qs.reduce((a, q) => a + q.val, 0) / qs.length;
+  const cur = qs[qs.length - 1], prev = qs[qs.length - 2];
+  const dir = cur.val - prev.val;
+  const trail = qs.slice(-5).map((q, idx, arr) => {
+    const d = idx > 0 ? q.val - arr[idx - 1].val : dir;
+    return { label: `Q${q.q} '${String(q.y).slice(2)}`, phase: phaseOf(q.val, norm, cfg.polarity, d), pos: posInPhase(q.val, norm, cfg.polarity) };
+  });
+  return {
+    slug: cfg.slug, label: cfg.label, cls: cfg.cls, unit: cfg.unit, ring: cfg.ring,
+    grain: cfg.grain || "National",
+    value: Math.round(cur.val * 100) / 100,
+    norm: Math.round(norm * 100) / 100,
+    polarity: cfg.polarity,
+    phase: phaseOf(cur.val, norm, cfg.polarity, dir),
+    pos: posInPhase(cur.val, norm, cfg.polarity),
+    trajectory: dir > 0 ? "rising" : dir < 0 ? "falling" : "flat",
+    trail, latest: rows[0]?.obs_date || null,
+  };
+}
+
+// ---- local resolution (mirrors the market-read ladder) ----
+const LOCAL_CONFIG = {
+  rent:    { slug: "rent_local",    label: "Rent Growth",   cls: "coincident", unit: "% YoY", polarity: 1,  basis: "yoyPct" },
+  vacancy: { slug: "vacancy_local", label: "Vacancy",       cls: "trailing",   unit: "%",     polarity: -1, basis: "value" },
+  jobs:    { slug: "jobs_local",    label: "Job Growth",    cls: "leading",    unit: "% YoY", polarity: 1,  basis: "yoyPct" },
+  unemp:   { slug: "unemp_local",   label: "Unemployment",  cls: "trailing",   unit: "%",     polarity: -1, basis: "value" },
+  wages:   { slug: "wages_local",   label: "Wage Growth",   cls: "coincident", unit: "% YoY", polarity: 1,  basis: "yoyPct" },
+  gdp:     { slug: "gdp_local",     label: "Local GDP",     cls: "coincident", unit: "% YoY", polarity: 1,  basis: "yoyPct" },
+};
+
+async function rentLadder(zip, xw) {
+  const z = await hist("zori_zip", zip);
+  if (z.length) return { rows: z, grain: "ZIP" };
+  for (const [slug, code, grain] of [["zori_city", xw?.city_label, "City"], ["zori_county", xw?.county_label, "County"], ["zori_metro_mf", xw?.metro_label, "Metro"]]) {
+    if (!code) continue;
+    const rs = await hist(slug, code);
+    if (rs.length) return { rows: rs, grain };
+  }
+  return null;
+}
+
+async function localIndicators(zip) {
+  const xw = (await sb(`zip_crosswalk?zip=eq.${zip}&select=city_label,county_label,metro_label`))?.[0] || null;
+  const cbsaRow = (await sb(`zip_cbsa_crosswalk?zip=eq.${zip}&select=cbsa,res_ratio&order=res_ratio.desc&limit=1`))?.[0];
+  const cbsa = cbsaRow?.cbsa || null;
+  const county = xw?.county_label || null;
+  let metroName = null;
+  if (cbsa) metroName = (await sb(`regions?code=eq.${cbsa}&region_type=eq.metro&select=name&limit=1`))?.[0]?.name || null;
+
+  const rent = await rentLadder(zip, xw);
+  const [vac, jobs, unemp, wages, gdp] = await Promise.all([
+    cbsa ? hist("apt_vacancy", cbsa) : Promise.resolve(null),
+    cbsa ? hist("bls_metro_employment", cbsa) : Promise.resolve(null),
+    cbsa ? hist("bls_metro_unemployment", cbsa) : Promise.resolve(null),
+    county ? hist("county_wages", county) : Promise.resolve(null),
+    county ? hist("gdp_county", county) : Promise.resolve(null),
+  ]);
+
+  const out = [];
+  const push = (rows, key, grain) => {
+    const ind = buildIndicator(rows, { ...LOCAL_CONFIG[key], ring: "local", norm: null, grain });
+    if (ind) out.push(ind);
+  };
+  if (rent) push(rent.rows, "rent", rent.grain);
+  push(vac, "vacancy", "Metro");
+  push(jobs, "jobs", "Metro");
+  push(unemp, "unemp", "Metro");
+  push(wages, "wages", "County");
+  push(gdp, "gdp", "County");
+
+  return { local: out, market: { cbsa, county, metroName, grain: rent?.grain || (cbsa ? "Metro" : null) } };
+}
+
+export async function GET(req) {
   try {
-    const hist = await Promise.all(CYCLE_CALIBRATION.map((c) => history(c.slug)));
-    const indicators = [];
-    let asOf = null;
+    const { searchParams } = new URL(req.url);
+    const zipRaw = (searchParams.get("zip") || "").trim();
+    const zip = /^\d{5}$/.test(zipRaw) ? zipRaw : null;
 
-    CYCLE_CALIBRATION.forEach((c, i) => {
-      const rows = hist[i];
-      if (!rows || !rows.length) return;
-      const qs = quarters(rows, c.basis);
-      if (qs.length < 2) return;
-
-      const cur = qs[qs.length - 1];
-      const prev = qs[qs.length - 2];
-      const dir = cur.val - prev.val;
-      const phase = phaseOf(cur.val, c.norm, c.polarity, dir);
-      const pos = posInPhase(cur.val, c.norm, c.polarity);
-
-      // Trail: last up-to-4 quarters as phase+pos points (oldest->newest).
-      const trail = qs.slice(-5).map((q, idx, arr) => {
-        const d = idx > 0 ? q.val - arr[idx - 1].val : dir;
-        return {
-          label: `Q${q.q} '${String(q.y).slice(2)}`,
-          phase: phaseOf(q.val, c.norm, c.polarity, d),
-          pos: posInPhase(q.val, c.norm, c.polarity),
-        };
-      });
-
-      const latestDate = rows[0]?.obs_date || null;
-      if (latestDate && (!asOf || latestDate > asOf)) asOf = latestDate;
-
-      indicators.push({
-        slug: c.slug,
-        label: c.label,
-        cls: c.cls,
-        unit: c.unit,
-        value: Math.round(cur.val * 100) / 100,
-        norm: c.norm,
-        polarity: c.polarity,
-        phase,
-        pos,
-        trajectory: dir > 0 ? "rising" : dir < 0 ? "falling" : "flat",
-        trail,
-      });
+    const natHist = await Promise.all(CYCLE_CALIBRATION.map((c) => hist(c.slug, "US")));
+    const national = [];
+    natHist.forEach((rows, i) => {
+      const ind = buildIndicator(rows, { ...CYCLE_CALIBRATION[i], ring: "national", grain: "National" });
+      if (ind) national.push(ind);
     });
 
-    // Aggregate lean: count indicators per phase (leading weighted, since they
-    // point where the cycle is heading).
-    const tally = { recovery: 0, expansion: 0, hypersupply: 0, contraction: 0 };
-    for (const ind of indicators) {
-      tally[ind.phase] += ind.cls === "leading" ? 1.5 : ind.cls === "coincident" ? 1 : 0.75;
+    let local = [], market = null, localCoverage = null;
+    if (zip) {
+      const res = await localIndicators(zip);
+      local = res.local; market = res.market;
+      localCoverage = local.length > 0;
     }
+
+    const indicators = [...national, ...local];
+    let asOf = null;
+    for (const x of indicators) if (x.latest && (!asOf || x.latest > asOf)) asOf = x.latest;
+
+    const tally = { recovery: 0, expansion: 0, hypersupply: 0, contraction: 0 };
+    for (const ind of indicators) tally[ind.phase] += ind.cls === "leading" ? 1.5 : ind.cls === "coincident" ? 1 : 0.75;
     let lean = null, best = -1;
     for (const p of PHASE_ORDER) if (tally[p] > best) { best = tally[p]; lean = p; }
 
-    return Response.json({ asOf, indicators, tally, lean });
+    return Response.json({ asOf, indicators, national, local, tally, lean, zip, market, localCoverage });
   } catch (e) {
-    return Response.json({ indicators: [], tally: {}, lean: null, error: "Cycle clock unavailable." }, { status: 502 });
+    return Response.json({ indicators: [], national: [], local: [], tally: {}, lean: null, error: "Cycle clock unavailable." }, { status: 502 });
   }
 }
