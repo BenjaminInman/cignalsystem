@@ -71,6 +71,15 @@ export default function CycleClock() {
   const national = indicators.filter((i) => i.ring === "national");
   const local = indicators.filter((i) => i.ring === "local");
 
+  // Per-phase counts, split by class, from the visible dots. "Where it is"
+  // reads off coincident/trailing; "where it's headed" off leading.
+  const phaseCounts = useMemo(() => {
+    const c = {};
+    for (const p of PHASES) c[p.key] = { leading: 0, coincident: 0, trailing: 0, total: 0 };
+    for (const ind of shown) { c[ind.phase][ind.cls] += 1; c[ind.phase].total += 1; }
+    return c;
+  }, [shown]);
+
   return (
     <div>
       {/* ZIP control */}
@@ -118,6 +127,25 @@ export default function CycleClock() {
               {PHASES.map((p) => { const [x, y] = polar((p.a0 + p.a1) / 2, R_OUT + 16); return <text key={p.key} x={x} y={y} fill="#cfd2c8" fontSize={11} letterSpacing="1.5" textAnchor="middle" dominantBaseline="middle" fontFamily="var(--font-mono, monospace)">{p.label.toUpperCase()}</text>; })}
               <text x={CX} y={CY - 5} fill="#6f746a" fontSize={9} letterSpacing="2" textAnchor="middle" fontFamily="var(--font-mono, monospace)">CYCLE</text>
               <text x={CX} y={CY + 8} fill="#6f746a" fontSize={9} letterSpacing="2" textAnchor="middle" fontFamily="var(--font-mono, monospace)">CLOCK</text>
+
+              {/* per-phase class-split counters */}
+              {PHASES.map((p) => {
+                const ct = phaseCounts[p.key];
+                if (!ct || !ct.total) return null;
+                const [x, y] = polar((p.a0 + p.a1) / 2, 184);
+                return (
+                  <g key={"ct" + p.key}>
+                    <text x={x} y={y - 1} fill={p.txt} fontSize={17} fontWeight="bold" textAnchor="middle" fontFamily="var(--font-mono, monospace)">{ct.total}</text>
+                    <text x={x} y={y + 12} fontSize={8.5} textAnchor="middle" fontFamily="var(--font-mono, monospace)">
+                      <tspan fill="#F5B544">{ct.leading}L</tspan>
+                      <tspan fill="#6f746a"> · </tspan>
+                      <tspan fill="#5AA9E6">{ct.coincident}C</tspan>
+                      <tspan fill="#6f746a"> · </tspan>
+                      <tspan fill="#8A8F84">{ct.trailing}T</tspan>
+                    </text>
+                  </g>
+                );
+              })}
 
               {sel && sel.trail && sel.trail.map((pt, i) => {
                 const ring = RINGS[sel.cls];

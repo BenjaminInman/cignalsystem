@@ -22,7 +22,7 @@ const PRIMARY = [
 const SUITE = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Signals", href: "/signals", icon: Radio },
-  { label: "Where Are We", href: "/where-are-we", icon: Compass },
+  { label: "Cycle Clock", href: "/where-are-we", icon: Compass },
   { label: "Indicators", href: "/indicators", icon: Activity, tier: "pro" },
   // `tier` marks what a row REQUIRES; absent = pro. Rows whose slug is in
   // FREE_PAGES open on a free account despite the pro default. Market Maps and
