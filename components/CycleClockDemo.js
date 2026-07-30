@@ -80,11 +80,9 @@ export default function CycleClockDemo() {
           <circle cx={CX} cy={CY} r={R_OUT} fill="none" stroke="#fff" strokeOpacity={0.1} />
           {[0, 90, 180, 270].map((a) => { const [x, y] = polar(a, R_OUT); return <line key={a} x1={CX} y1={CY} x2={x} y2={y} stroke="#fff" strokeOpacity={0.08} />; })}
           {PHASES.map((p) => { const [x, y] = polar((p.a0 + p.a1) / 2, R_OUT + 16); return <text key={p.key} x={x} y={y} fill="#cfd2c8" fontSize={11} letterSpacing="1.5" textAnchor="middle" dominantBaseline="middle" fontFamily="var(--font-mono, monospace)">{p.label.toUpperCase()}</text>; })}
-          <text x={CX} y={CY - 5} fill="#6f746a" fontSize={9} letterSpacing="2" textAnchor="middle" fontFamily="var(--font-mono, monospace)">CYCLE</text>
-          <text x={CX} y={CY + 8} fill="#6f746a" fontSize={9} letterSpacing="2" textAnchor="middle" fontFamily="var(--font-mono, monospace)">CLOCK</text>
-          {PHASES.map((p) => { const ct = counts[p.key]; if (!ct.total) return null; const [x, y] = polar((p.a0 + p.a1) / 2, 184); return (
+          {PHASES.map((p) => { const ct = counts[p.key]; if (!ct.total) return null; const [x, y] = polar((p.a0 + p.a1) / 2, 64); return (
             <g key={"ct" + p.key}>
-              <text x={x} y={y - 1} fill={p.txt} fontSize={17} fontWeight="bold" textAnchor="middle" fontFamily="var(--font-mono, monospace)">{ct.total}</text>
+              <text x={x} y={y - 1} fill={p.txt} fontSize={19} fontWeight="bold" textAnchor="middle" fontFamily="var(--font-mono, monospace)">{ct.total}</text>
               <text x={x} y={y + 12} fontSize={8.5} textAnchor="middle" fontFamily="var(--font-mono, monospace)">
                 <tspan fill="#F5B544">{ct.leading}L</tspan><tspan fill="#6f746a"> · </tspan><tspan fill="#5AA9E6">{ct.coincident}C</tspan><tspan fill="#6f746a"> · </tspan><tspan fill="#8A8F84">{ct.trailing}T</tspan>
               </text>
