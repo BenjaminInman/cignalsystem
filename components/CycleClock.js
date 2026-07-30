@@ -125,24 +125,7 @@ export default function CycleClock() {
               <circle cx={CX} cy={CY} r={R_OUT} fill="none" stroke="#fff" strokeOpacity={0.1} />
               {[0, 90, 180, 270].map((a) => { const [x, y] = polar(a, R_OUT); return <line key={a} x1={CX} y1={CY} x2={x} y2={y} stroke="#fff" strokeOpacity={0.08} />; })}
               {PHASES.map((p) => { const [x, y] = polar((p.a0 + p.a1) / 2, R_OUT + 16); return <text key={p.key} x={x} y={y} fill="#cfd2c8" fontSize={11} letterSpacing="1.5" textAnchor="middle" dominantBaseline="middle" fontFamily="var(--font-mono, monospace)">{p.label.toUpperCase()}</text>; })}
-              {/* per-phase class-split counters, seated inside each wedge */}
-              {PHASES.map((p) => {
-                const ct = phaseCounts[p.key];
-                if (!ct || !ct.total) return null;
-                const [x, y] = polar((p.a0 + p.a1) / 2, 64);
-                return (
-                  <g key={"ct" + p.key}>
-                    <text x={x} y={y - 1} fill={p.txt} fontSize={19} fontWeight="bold" textAnchor="middle" fontFamily="var(--font-mono, monospace)">{ct.total}</text>
-                    <text x={x} y={y + 12} fontSize={8.5} textAnchor="middle" fontFamily="var(--font-mono, monospace)">
-                      <tspan fill="#F5B544">{ct.leading}L</tspan>
-                      <tspan fill="#6f746a"> · </tspan>
-                      <tspan fill="#5AA9E6">{ct.coincident}C</tspan>
-                      <tspan fill="#6f746a"> · </tspan>
-                      <tspan fill="#8A8F84">{ct.trailing}T</tspan>
-                    </text>
-                  </g>
-                );
-              })}
+              <text x={CX} y={CY + 3} fill="#6f746a" fontSize={13} textAnchor="middle" fontFamily="var(--font-mono, monospace)">◉</text>
 
               {sel && sel.trail && sel.trail.map((pt, i) => {
                 const ring = RINGS[sel.cls];
@@ -212,6 +195,22 @@ export default function CycleClock() {
                 <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full ring-2 ring-white" style={{ background: "#5AA9E6" }} /> Local (white ring)</span>
               </div>
             </div>
+          </div>
+
+          {/* phase scoreboard */}
+          <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {PHASES.map((p) => {
+              const ct = phaseCounts[p.key];
+              return (
+                <div key={p.key} className="rounded-lg border border-[var(--line)] bg-bg2/30 px-3 py-2.5 text-center">
+                  <p className="mono text-[9.5px] tracking-[0.14em]" style={{ color: p.txt }}>{p.label.toUpperCase()}</p>
+                  <p className="headline text-2xl leading-tight" style={{ color: p.txt }}>{ct.total}</p>
+                  <p className="mono text-[9.5px] text-muted">
+                    <span style={{ color: "#F5B544" }}>{ct.leading}L</span> · <span style={{ color: "#5AA9E6" }}>{ct.coincident}C</span> · <span style={{ color: "#8A8F84" }}>{ct.trailing}T</span>
+                  </p>
+                </div>
+              );
+            })}
           </div>
 
           <p className="mono mt-5 border-t border-[var(--line)] pt-3 text-[10.5px] leading-relaxed text-muted/80">

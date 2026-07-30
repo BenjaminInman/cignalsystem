@@ -32,7 +32,8 @@ const SAMPLE = [
   { slug: "sent", label: "Consumer Sentiment", cls: "leading", unit: "idx", value: 47.3, phase: "contraction", pos: 0.7, trail: [["hypersupply", .5], ["contraction", .3], ["contraction", .5], ["contraction", .7]] },
   { slug: "perm", label: "MF Permits", cls: "leading", unit: "K", value: 470, phase: "recovery", pos: 0.4, trail: [["contraction", .6], ["contraction", .8], ["recovery", .2], ["recovery", .4]] },
   { slug: "start", label: "MF Starts", cls: "leading", unit: "K", value: 428, phase: "recovery", pos: 0.55 },
-  { slug: "dom", label: "Days on Market", cls: "leading", unit: "days", value: 52, phase: "expansion", pos: 0.4 },
+  { slug: "dom", label: "Days on Market (For Sale)", cls: "leading", unit: "days", value: 52, phase: "expansion", pos: 0.4 },
+  { slug: "lease", label: "Days to Lease (Rental)", cls: "leading", unit: "days", value: 31, phase: "hypersupply", pos: 0.4 },
   { slug: "gdp", label: "GDP", cls: "coincident", unit: "%", value: 1.6, phase: "recovery", pos: 0.6, trail: [["contraction", .5], ["contraction", .7], ["recovery", .3], ["recovery", .6]] },
   { slug: "pce", label: "Real PCE", cls: "coincident", unit: "% YoY", value: 2.11, phase: "contraction", pos: 0.4 },
   { slug: "jobs", label: "Job Growth", cls: "coincident", unit: "% YoY", value: 0.28, phase: "recovery", pos: 0.35 },
@@ -80,14 +81,7 @@ export default function CycleClockDemo() {
           <circle cx={CX} cy={CY} r={R_OUT} fill="none" stroke="#fff" strokeOpacity={0.1} />
           {[0, 90, 180, 270].map((a) => { const [x, y] = polar(a, R_OUT); return <line key={a} x1={CX} y1={CY} x2={x} y2={y} stroke="#fff" strokeOpacity={0.08} />; })}
           {PHASES.map((p) => { const [x, y] = polar((p.a0 + p.a1) / 2, R_OUT + 16); return <text key={p.key} x={x} y={y} fill="#cfd2c8" fontSize={11} letterSpacing="1.5" textAnchor="middle" dominantBaseline="middle" fontFamily="var(--font-mono, monospace)">{p.label.toUpperCase()}</text>; })}
-          {PHASES.map((p) => { const ct = counts[p.key]; if (!ct.total) return null; const [x, y] = polar((p.a0 + p.a1) / 2, 64); return (
-            <g key={"ct" + p.key}>
-              <text x={x} y={y - 1} fill={p.txt} fontSize={19} fontWeight="bold" textAnchor="middle" fontFamily="var(--font-mono, monospace)">{ct.total}</text>
-              <text x={x} y={y + 12} fontSize={8.5} textAnchor="middle" fontFamily="var(--font-mono, monospace)">
-                <tspan fill="#F5B544">{ct.leading}L</tspan><tspan fill="#6f746a"> · </tspan><tspan fill="#5AA9E6">{ct.coincident}C</tspan><tspan fill="#6f746a"> · </tspan><tspan fill="#8A8F84">{ct.trailing}T</tspan>
-              </text>
-            </g>
-          ); })}
+          <text x={CX} y={CY + 3} fill="#6f746a" fontSize={13} textAnchor="middle" fontFamily="var(--font-mono, monospace)">◉</text>
           {sel && sel.trail && sel.trail.map((pt, i) => { const ring = RINGS[sel.cls]; const [x, y] = polar(posToAngle(pt[0], pt[1]), ring); let line = null; if (i > 0) { const pv = sel.trail[i - 1]; const [px, py] = polar(posToAngle(pv[0], pv[1]), ring); line = <line x1={px} y1={py} x2={x} y2={y} stroke="#F5B544" strokeOpacity={0.35} strokeWidth={1.5} strokeDasharray="2 3" />; } return <g key={i}>{line}<circle cx={x} cy={y} r={3} fill="#F5B544" fillOpacity={0.15 + i * 0.18} /></g>; })}
           {shown.map((ind) => { const ring = RINGS[ind.cls]; const [x, y] = polar(posToAngle(ind.phase, ind.pos), ring); const col = CLS_COLOR[ind.cls]; const isSel = selected === ind.slug; return (
             <g key={ind.slug} style={{ cursor: "pointer" }} onClick={() => setSelected(ind.slug)}>
@@ -138,6 +132,22 @@ export default function CycleClockDemo() {
             <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: "#8A8F84" }} /> Trailing</span>
           </div>
         </div>
+      </div>
+
+      {/* phase scoreboard */}
+      <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {PHASES.map((p) => {
+          const ct = counts[p.key];
+          return (
+            <div key={p.key} className="rounded-lg border border-[var(--line)] bg-bg2/30 px-3 py-2.5 text-center">
+              <p className="mono text-[9.5px] tracking-[0.14em]" style={{ color: p.txt }}>{p.label.toUpperCase()}</p>
+              <p className="headline text-2xl leading-tight" style={{ color: p.txt }}>{ct.total}</p>
+              <p className="mono text-[9.5px] text-muted">
+                <span style={{ color: "#F5B544" }}>{ct.leading}L</span> · <span style={{ color: "#5AA9E6" }}>{ct.coincident}C</span> · <span style={{ color: "#8A8F84" }}>{ct.trailing}T</span>
+              </p>
+            </div>
+          );
+        })}
       </div>
 
       <div className="mt-6 flex items-center gap-2 rounded-lg border border-[var(--line)] bg-bg/40 px-4 py-3">
