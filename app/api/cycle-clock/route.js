@@ -14,10 +14,15 @@ async function sb(path) {
   return r.ok ? r.json() : null;
 }
 
-async function hist(slug, code, limit = 60) {
+// Look back ~5 years so every frequency forms multiple quarters: daily series
+// (Treasury) aren't truncated to a couple months, and annual series (county GDP)
+// still return several points.
+const LOOKBACK = (() => { const d = new Date(); d.setMonth(d.getMonth() - 60); return d.toISOString().slice(0, 10); })();
+
+async function hist(slug, code, limit = 2000) {
   const data = await sb(
     `v_indicator_analytics?slug=eq.${slug}&region_code=eq.${encodeURIComponent(code)}` +
-      `&select=obs_date,value,yoy_change&order=obs_date.desc&limit=${limit}`
+      `&obs_date=gte.${LOOKBACK}&select=obs_date,value,yoy_change&order=obs_date.desc&limit=${limit}`
   );
   return Array.isArray(data) ? data : [];
 }
