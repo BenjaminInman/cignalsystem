@@ -1,6 +1,5 @@
 "use client";
 
-import MarketReadWheel from "@/components/MarketReadWheel";
 import CycleClock from "@/components/CycleClock";
 
 export default function WhereAreWePage() {
@@ -16,20 +15,17 @@ export default function WhereAreWePage() {
         </p>
       </div>
 
-      <div className="card mb-6 p-6 sm:p-8">
+      <div className="card p-6 sm:p-8">
         <div className="mb-5">
-          <p className="kicker mb-2">National · Cycle Clock</p>
+          <p className="kicker mb-2">National + Local · Cycle Clock</p>
           <h2 className="headline text-2xl text-ink sm:text-3xl">Where the cycle is turning</h2>
           <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-muted">
             Every indicator placed around the four phases by its own level and trajectory. Pick the
-            signals you want to watch, and click any dot to trace its path through the cycle.
+            signals you want to watch, enter a ZIP to overlay your market, and click any dot to trace
+            its path through the cycle.
           </p>
         </div>
         <CycleClock />
-      </div>
-
-      <div className="card p-6 sm:p-8">
-        <MarketReadWheel />
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">

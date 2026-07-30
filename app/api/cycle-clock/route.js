@@ -2,9 +2,25 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { CYCLE_CALIBRATION, metricFromRow, phaseOf } from "@/lib/cycle-calibration";
+import { createClient } from "@/lib/supabase/server";
+import { hasTier } from "@/lib/tiers";
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+// The Cycle Clock is a Pro feature. Its endpoint is gated to match the page so
+// the read isn't reachable by hitting the API directly.
+async function isEntitled() {
+  try {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+    const { data: prof } = await supabase.from("profiles").select("tier, is_admin").eq("id", user.id).single();
+    return !!prof?.is_admin || hasTier(prof?.tier, "pro");
+  } catch {
+    return false;
+  }
+}
 
 async function sb(path) {
   const r = await fetch(`${SUPA}/rest/v1/${path}`, {
@@ -136,6 +152,9 @@ async function localIndicators(zip) {
 
 export async function GET(req) {
   try {
+    if (!(await isEntitled())) {
+      return Response.json({ indicators: [], national: [], local: [], tally: {}, lean: null, gated: true }, { status: 403 });
+    }
     const { searchParams } = new URL(req.url);
     const zipRaw = (searchParams.get("zip") || "").trim();
     const zip = /^\d{5}$/.test(zipRaw) ? zipRaw : null;
