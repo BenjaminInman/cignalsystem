@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PAGE_LABELS } from "@/lib/access";
 import UpgradeCTA from "@/components/UpgradeCTA";
 import IndicatorsDemo from "@/components/IndicatorsDemo";
+import CycleClockDemo from "@/components/CycleClockDemo";
 
 export const metadata = { title: "Upgrade · Cignal System" };
 export const dynamic = "force-dynamic";
@@ -72,6 +73,7 @@ export default async function UpgradePage({ searchParams }) {
       </div>
 
       {slug === "indicators" && <IndicatorsDemo />}
+      {slug === "where-are-we" && <CycleClockDemo />}
 
       <div className="mt-12">
         <p className="kicker mb-4">What Pro unlocks</p>
