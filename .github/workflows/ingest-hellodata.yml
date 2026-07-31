@@ -1,0 +1,30 @@
+name: Ingest HelloData
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "zip | metro | roster"
+        required: true
+        default: "metro"
+      url:
+        description: "Signed gcsBlob CSV URL from the export delivery"
+        required: true
+      obs_date:
+        description: "Observation date YYYY-MM-DD (blank = today)"
+        required: false
+        default: ""
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pandas psycopg2-binary requests
+      - env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          HD_MODE: ${{ github.event.inputs.mode }}
+          HD_URL: ${{ github.event.inputs.url }}
+          HD_OBS_DATE: ${{ github.event.inputs.obs_date }}
+        run: python ingest_hellodata.py
