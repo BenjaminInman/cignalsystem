@@ -76,3 +76,43 @@ lessThan, lessThanOrEqualTo, contains, notContains, from, to, isKnown, isUnknown
 tradeout — a cleaner leading indicator than anything currently in the stack),
 `exposure_percentage`, `is_lease_up`, and the `is_condo / is_student / is_senior /
 is_affordable / is_single_family` flags for a tighter conventional-MF universe.
+
+## Security fix — 2026-07-31
+
+The `restricted` gate was **not enforcing anything**. `v_indicator_analytics`
+filters `restricted = false`, but that view was trivially bypassable:
+
+- `anon` held full privileges on `mv_indicator_analytics`, and **materialized
+  views cannot carry RLS**. Anyone with the public anon key (it ships in the
+  browser bundle by design) could read every restricted indicator, with YoY and
+  z-scores already computed.
+- The RLS policies on `observations` and `indicators` checked `is_public = true`
+  but never `restricted`. Since restricted rows are also `is_public = true`, raw
+  restricted observations were readable too.
+
+Verified by recovering the anon key from the deployed bundle and reading both
+HelloData effective rents and Conference Board present-situation values.
+
+Applied:
+
+```sql
+revoke all on public.mv_indicator_analytics from anon, authenticated;
+alter policy p_obs_public_read on observations using (exists (
+  select 1 from indicators i where i.id = observations.indicator_id
+    and i.is_public = true and i.restricted = false));
+alter policy p_indicators_public_read on indicators
+  using (is_public = true and restricted = false);
+alter policy p_indicators_auth_read on indicators using (restricted = false);
+```
+
+Safe because `v_indicator_analytics` has no `security_invoker` option, so it runs
+with owner privileges and keeps working after the revoke. No app code reads the
+MV directly (all 25 call sites use the wrapper view). Verified after: restricted
+slugs return `[]` to the anon key; `/api/ticker`, `/api/trends`, `/api/indicators`,
+`/api/stats` all still 200 with an unchanged 68-indicator public catalog.
+
+**Consequence for the paid tier:** anon *and* authenticated are now both blocked
+from restricted data, so the paying-tier route cannot read HelloData with the anon
+key. Next step is a `SECURITY DEFINER` function granted to `authenticated`, with
+the tier check done server-side in the route before calling it. That avoids adding
+a service-role key to the app.
