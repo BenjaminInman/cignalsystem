@@ -32,7 +32,7 @@ METRICS = [
     ("hd_effective_rent", "effective_rent",    "USD",  "leading",    True,  1.0),
     ("hd_concession",     "concession",        "USD",  "leading",    False, 1.0),
     ("hd_leased_pct",     "leased_percentage", "%",    "coincident", True,  100.0),
-    ("hd_days_on_market", "days_on_market",    "days", "leading",    False, 1.0),
+    ("hd_dom",            "days_on_market",    "days", "leading",    False, 1.0),
 ]
 COVERAGE = [
     ("hd_property_count", "properties", "coincident", True),
@@ -153,6 +153,18 @@ def main():
                             agg[["_code", field]].itertuples(index=False)]
                     n = load(cur, ind, "metro", rows, release)
                     print(f"  {slug}: {len(rows):,} metros -> {n:,} written")
+            elif mode == "cleanup":
+                # HD_URL carries the slug to remove (indicator + its observations).
+                cur.execute("SELECT id FROM indicators WHERE slug=%s", (url,))
+                row = cur.fetchone()
+                if not row:
+                    print(f"  nothing to clean: {url} absent")
+                else:
+                    iid = row[0]
+                    cur.execute("DELETE FROM observations WHERE indicator_id=%s", (iid,))
+                    print(f"  deleted {cur.rowcount} observations for {url}")
+                    cur.execute("DELETE FROM indicators WHERE id=%s", (iid,))
+                    print(f"  deleted indicator {url}")
             else:
                 sys.exit(f"ERROR: unknown HD_MODE {mode}")
         conn.commit(); print("Committed.")
