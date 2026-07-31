@@ -107,8 +107,10 @@ def main():
     obs_date = os.environ.get("HD_OBS_DATE") or dt.date.today().isoformat()
     release = dt.date.today()
     print(f"HelloData ingestion - mode={mode} obs_date={obs_date}")
-    df = download(url)
-    print(f"  downloaded {len(df):,} rows; cols={list(df.columns)}")
+    df = None
+    if mode in ("zip", "metro", "roster"):
+        df = download(url)
+        print(f"  downloaded {len(df):,} rows; cols={list(df.columns)}")
 
     conn = psycopg2.connect(db); conn.autocommit = False
     try:
