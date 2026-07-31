@@ -18,6 +18,9 @@ Modes (HD_MODE):
   roster - CSV of property_id + msa + number_units; rolls up to per-metro
            property count + unit total (coverage indicators).
 
+If the export includes as_of_month, rows are dated per-month (history backfill).
+Otherwise HD_OBS_DATE (default: first of the current month) is used for all rows.
+
 Env: SUPABASE_DB_URL, HD_MODE, HD_URL, [HD_OBS_DATE=YYYY-MM-DD]
 Deps: pip install pandas psycopg2-binary requests
 """
@@ -44,6 +47,13 @@ def norm(s):
     s = re.sub(r"[-\s]+", " ", s)
     s = re.sub(r"\s*,\s*", ", ", s)
     return s
+
+def month_start(x):
+    """HelloData as_of_month -> first-of-month date string. Monthly series MUST be
+    dated by the month they describe, not by the day we loaded them, or YoY never
+    aligns across runs."""
+    d = pd.to_datetime(str(x)).date()
+    return d.replace(day=1).isoformat()
 
 def download(url):
     r = requests.get(url, timeout=300)
@@ -104,7 +114,7 @@ def main():
     url = os.environ.get("HD_URL")
     if not (db and mode and url):
         sys.exit("ERROR: need SUPABASE_DB_URL, HD_MODE, HD_URL")
-    obs_date = os.environ.get("HD_OBS_DATE") or dt.date.today().isoformat()
+    obs_date = os.environ.get("HD_OBS_DATE") or dt.date.today().replace(day=1).isoformat()
     release = dt.date.today()
     print(f"HelloData ingestion - mode={mode} obs_date={obs_date}")
     df = None
@@ -129,14 +139,26 @@ def main():
                     if len(miss):
                         print(f"  WARN {len(miss)} metros unmatched (e.g. {list(miss)[:3]})")
                     df = df[df["_code"].notna()].copy()
+                # History: if the export carries as_of_month, every row is dated by
+                # its own month, giving a real time series (and therefore YoY/z-score).
+                # Without it we fall back to a single snapshot date.
+                if "as_of_month" in df.columns:
+                    df["_date"] = df["as_of_month"].map(month_start)
+                    print(f"  history: {df['_date'].nunique()} months "
+                          f"({df['_date'].min()} -> {df['_date'].max()})")
+                else:
+                    df["_date"] = obs_date
+                    print(f"  snapshot: single date {obs_date}")
+
                 for slug, col, units, cls, hib, scale in METRICS:
                     if col not in df.columns:
                         print(f"  skip {slug}: column {col} absent"); continue
                     ind = ensure_indicator(cur, slug,
                         f"HelloData {slug.replace('hd_','').replace('_',' ').title()} (multifamily)",
                         f"querybuilder:{col}:mf50", units, cls, hib)
-                    sub = df[["_code", col]].dropna(subset=[col])
-                    rows = [(c, obs_date, float(v) * scale) for c, v in sub.itertuples(index=False)]
+                    sub = df[["_code", "_date", col]].dropna(subset=[col])
+                    rows = [(c, d, float(v) * scale)
+                            for c, d, v in sub.itertuples(index=False)]
                     n = load(cur, ind, region_type, rows, release)
                     print(f"  {slug}: {len(rows):,} cells -> {n:,} written")
             elif mode == "roster":
