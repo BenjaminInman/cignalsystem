@@ -525,6 +525,18 @@ function ZipLookup() {
   const [demo, setDemo] = useState(null); // ZIP-level Census demographics
   const [signals, setSignals] = useState(null); // metro-level signals (jobs, RPP, rent CPI…)
   const [hd, setHd] = useState(null); // licensed HelloData (Pro+); {gated:true} for free users
+
+  // HelloData leads the rent read when we have it: it is observed, unsmoothed,
+  // and carries effective rent. ZORI stays on the page as an independent
+  // cross-check but steps down to a context line. Free/ungated users keep ZORI
+  // as the headline, since there is nothing licensed to show them.
+  const hdLast = (slug) => {
+    const a = hd?.series?.[slug];
+    return Array.isArray(a) && a.length ? a[a.length - 1].value : null;
+  };
+  const hdHero = !!(hd && !hd.gated && hdLast("hd_effective_rent") != null);
+  const hdLoad = Array.isArray(hd?.concessionLoad) && hd.concessionLoad.length
+    ? hd.concessionLoad[hd.concessionLoad.length - 1].pct : null;
   const [oz, setOz] = useState(null); // Opportunity Zone 2.0 eligibility (tract grain)
   const [inds, setInds] = useState(null); // metro industry employment mix
   const [expo, setExpo] = useState(null); // industry exposure: concentration (LQ) x local growth
@@ -655,22 +667,58 @@ function ZipLookup() {
         </p>
       )}
 
+      {hdHero && (
+        <div className="mt-5 rounded-xl border border-signal/30 bg-bg2/60 p-5">
+          <p className="mono flex flex-wrap items-center gap-2 text-[11px] tracking-[0.12em] text-muted">
+            <span className="rounded bg-signal/15 px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-signal">
+              {hd.regionType === "zip" ? `ZIP ${hd.regionCode}` : "METRO"}
+            </span>
+            EFFECTIVE RENT
+            <span className="rounded bg-line/60 px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-muted">MULTIFAMILY 50+</span>
+          </p>
+          <p className="mt-1.5 text-3xl font-semibold text-ink">
+            ${Math.round(hdLast("hd_effective_rent")).toLocaleString()}
+            <span className="ml-1 text-sm text-muted">/mo net of concessions</span>
+          </p>
+          <div className="mono mt-3 flex flex-wrap gap-x-6 gap-y-1 text-[11px] tracking-[0.06em] text-muted">
+            {hdLast("hd_asking_rent") != null && (
+              <span>asking <span className="text-ink">${Math.round(hdLast("hd_asking_rent")).toLocaleString()}</span></span>
+            )}
+            {hdLoad != null && (
+              <span>concession load <span style={{ color: toneColor(hdLoad >= 6 ? "bear" : hdLoad >= 3 ? "neutral" : "bull") }}>{hdLoad.toFixed(1)}%</span></span>
+            )}
+            {hdLast("hd_leased_pct") != null && (
+              <span>leased <span className="text-ink">{Math.round(hdLast("hd_leased_pct"))}%</span></span>
+            )}
+            {hdLast("hd_dom") != null && (
+              <span>days on market <span className="text-ink">{Math.round(hdLast("hd_dom"))}</span></span>
+            )}
+          </div>
+          <p className="mono mt-3 text-[10px] leading-relaxed tracking-[0.08em] text-muted">
+            {hd.regionType === "zip"
+              ? "This ZIP only — neighbouring ZIPs carry their own rent levels and are not averaged in."
+              : "No ZIP-level coverage for this search — this is the whole metro, which spans every submarket in the CBSA."}
+            {" "}Observed listings, HelloData.
+          </p>
+        </div>
+      )}
+
       {data?.found && (
-        <div className="mt-5 rounded-xl border border-[var(--line)] bg-bg2/60 p-5">
+        <div className={`mt-5 rounded-xl border border-[var(--line)] bg-bg2/60 ${hdHero ? "p-4" : "p-5"}`}>
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="mono flex flex-wrap items-center gap-2 text-[11px] tracking-[0.12em] text-muted">
                 <span className="rounded bg-signal/15 px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-signal">{GRAIN[data.grain]}</span>
                 {data.place && /^\d{5}$/.test(String(data.query || ""))
                   ? `${data.place} · ZIP ${data.query}`
-                  : data.label} · OBSERVED RENT
+                  : data.label} · {hdHero ? "ZORI ASKING INDEX · CROSS-CHECK" : "OBSERVED RENT"}
                 {data.basis && (
                   <span className="rounded bg-line/60 px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-muted">
                     {data.basis === "multifamily" ? "MULTIFAMILY" : "ALL RENTALS"}
                   </span>
                 )}
               </p>
-              <p className="mt-1.5 text-3xl font-semibold text-ink">${data.rent.toLocaleString()}<span className="ml-1 text-sm text-muted">/mo</span></p>
+              <p className={`mt-1.5 font-semibold text-ink ${hdHero ? "text-xl" : "text-3xl"}`}>${data.rent.toLocaleString()}<span className="ml-1 text-sm text-muted">/mo</span></p>
               <p className="mt-1 text-sm">
                 {data.yoyPct == null ? (
                   <span className="text-muted">Not enough history for a year-over-year read yet.</span>
