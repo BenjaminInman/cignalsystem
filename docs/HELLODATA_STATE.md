@@ -260,3 +260,39 @@ update observations o set revision=0 from indicators i
 These are not revisions of one measurement — they are a different measurement, so
 they are removed rather than kept as history. Nashville was migrated to the
 MF50 + non-affordable basis this way on 2026-08-01.
+
+## Two metro families — 2026-08-01 (data-integrity hazard)
+
+`regions` carries **two parallel families of metro rows that share names**:
+
+| Family | Example code | Rows | ZORI | HelloData |
+|---|---|---|---|---|
+| CBSA-coded | `10420` | 408 | 0 | yes |
+| name-coded | `Akron, OH` | 929 | 671 | 0 |
+
+`/api/hellodata` resolves the metro from `metro-signals.cbsa` (e.g. `34980`), so
+**HelloData is pinned to the CBSA family**. Anything written to the name-coded
+rows is invisible to the site.
+
+The original `metro_code_map()` built `{norm(name): code}` over *all* metro rows.
+Because "Akron, OH" exists in both families, the dict kept whichever row the
+planner happened to return last — metro observations would have landed on an
+arbitrary family, nondeterministically. Now filtered to `code ~ '^[0-9]{5}$'`
+and ordered, so the choice is deterministic.
+
+The first national fire batch (2026-08-01, 50 exports) was queued *before* this
+fix and targeted name-coded rows selected by "has ZORI". Their ZIP files are
+unaffected (ZIP codes are universal); their metro files resolve through the
+corrected map.
+
+## Firing order
+
+`hd_metro_size` (region_id, properties, units) holds per-MSA tracked stock, from
+an MSA-grain coverage export — no pricing columns, so it runs nationally in one
+job. `fire_hellodata.py` orders by `units DESC` so a partial national run covers
+the markets people actually search. Without it the queue fired alphabetically:
+Aberdeen SD, Ada OK, Adrian MI… before Dallas.
+
+Top markets by tracked units: New York 2.81M, Dallas 986k, Philadelphia 841k,
+Houston 780k, Los Angeles 708k. 881 MSAs returned; 323 matched to CBSA rows by
+normalised name (the remainder are micropolitan areas with no CBSA row).

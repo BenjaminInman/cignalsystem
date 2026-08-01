@@ -143,7 +143,23 @@ def ensure_indicator(cur, slug, name, series, units, cls, hib):
     return nid
 
 def metro_code_map(cur):
-    cur.execute("SELECT code, name FROM regions WHERE region_type='metro'")
+    """Map a HelloData MSA label to a region code.
+
+    CRITICAL: `regions` carries TWO families of metro rows -
+      * CBSA-coded  (code '10420', 408 rows) - what /api/hellodata queries, and
+        where Nashville's HelloData already sits
+      * name-coded  (code 'Akron, OH', 929 rows) - where all 671 ZORI metros sit
+    and they SHARE NAMES ("Akron, OH" exists in both). A naive {name: code} dict
+    keeps whichever row the planner returned last, so metro observations would
+    land on an arbitrary family and the site - which looks up by CBSA - would
+    silently read nothing.
+
+    HelloData is pinned to the CBSA family. Ordering the query makes the choice
+    deterministic even if a name somehow resolves twice within a family.
+    """
+    cur.execute("""SELECT code, name FROM regions
+                    WHERE region_type='metro' AND code ~ '^[0-9]{5}$'
+                    ORDER BY code""")
     return {norm(n): c for c, n in cur.fetchall()}
 
 def upsert_zip_regions(cur, zips):

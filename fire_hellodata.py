@@ -50,24 +50,30 @@ def hd_label(name):
 
 
 def pending_metros(cur, mode, limit):
-    """Metros with no HelloData pricing yet, largest first — so a partial run
-    still covers the markets most users will search."""
+    """Metros with no HelloData pricing yet, LARGEST FIRST.
+
+    Restricted to the CBSA-coded family (see metro_code_map in
+    ingest_hellodata.py): ZORI lives on a parallel name-coded family, and the two
+    share names. /api/hellodata queries by CBSA, so anything written to the
+    name-coded rows would be invisible to the site.
+
+    Ordered by tracked units so a partial run covers the markets people actually
+    search. Metros with no size on file sort last rather than being dropped.
+    """
     cur.execute(
         """
         SELECT r.code, r.name
           FROM regions r
+          LEFT JOIN hd_metro_size s ON s.region_id = r.id
          WHERE r.region_type = 'metro'
+           AND r.code ~ '^[0-9]{5}$'
            AND NOT EXISTS (
                  SELECT 1 FROM observations o
                    JOIN indicators i ON i.id = o.indicator_id
                   WHERE i.source = 'HelloData'
                     AND i.slug = 'hd_effective_rent'
                     AND o.region_id = r.id)
-           AND EXISTS (
-                 SELECT 1 FROM observations o2
-                   JOIN indicators i2 ON i2.id = o2.indicator_id
-                  WHERE i2.slug = 'zori_metro_mf' AND o2.region_id = r.id)
-         ORDER BY r.name
+         ORDER BY COALESCE(s.units, -1) DESC, r.name
          LIMIT %s
         """,
         (limit,),
