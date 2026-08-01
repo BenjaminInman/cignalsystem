@@ -34,6 +34,8 @@ import requests, psycopg2
 API = "https://api.hellodata.ai/dataset/export"
 MF = {"column": "number_units", "filter": {"greaterThanOrEqualTo": 50}}
 AFF = {"column": "is_affordable", "filter": {"equals": False}}
+BACKOFF = int(os.environ.get("HD_FIRE_BACKOFF", "90"))
+
 AVGS = [
     {"column": "asking_rent", "aggregate": "Avg"},
     {"column": "effective_rent", "aggregate": "Avg"},
@@ -44,8 +46,14 @@ AVGS = [
 
 
 def hd_label(name):
-    """regions.name uses doubled hyphens (Census style); HelloData uses single.
-    'Nashville-Davidson--Murfreesboro--Franklin, TN' -> '...-Murfreesboro-Franklin, TN'"""
+    """Fallback only. Prefer hd_metro_size.msa_label, which is HelloData's own
+    string captured from an MSA-grain export.
+
+    Deriving the label from regions.name does not work: several rows have lost
+    their comma ("Dayton  OH" vs HelloData's "Dayton, OH", likewise Cleveland-
+    Elyria and Ocean City), and Census-style doubled hyphens differ too. A label
+    that does not match exactly is not an error - the export succeeds and returns
+    an empty file, which is far worse than failing loudly."""
     return name.replace("--", "-").replace(" (Metropolitan Statistical Area)", "").strip()
 
 
@@ -62,7 +70,7 @@ def pending_metros(cur, mode, limit):
     """
     cur.execute(
         """
-        SELECT r.code, r.name
+        SELECT r.code, COALESCE(s.msa_label, r.name)
           FROM regions r
           LEFT JOIN hd_metro_size s ON s.region_id = r.id
          WHERE r.region_type = 'metro'
@@ -140,6 +148,19 @@ def main():
                                                   {"column": "as_of_month"}] + AVGS))
         for jname, scopes in jobs:
             st, j = fire(key, jname, scopes, [mkt, MF, AFF], webhook)
+            # HelloData caps concurrent exports at 10 and answers 429 beyond it.
+            # Back off and retry rather than dropping the market silently.
+            tries = 0
+            while st == 429 and tries < 8:
+                tries += 1
+                print(f"    429 (concurrency cap) - waiting {BACKOFF}s, retry {tries}")
+                time.sleep(BACKOFF)
+                st, j = fire(key, jname, scopes, [mkt, MF, AFF], webhook)
+            if st == 429:
+                print("    still capped; stopping this batch cleanly")
+                conn2.close()
+                print(f"fired {fired} export(s) before hitting the concurrency cap.")
+                return
             uid = j.get("queryUUID")
             print(f"  {jname:26} {label[:44]:46} {st} {uid or j}")
             if uid:

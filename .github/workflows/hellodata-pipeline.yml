@@ -32,8 +32,11 @@ on:
     - cron: "17 * * * *"
 
 jobs:
+  # Fires a SMALL batch every 30 minutes. HelloData caps concurrent exports at
+  # 10, so a big one-shot run mostly 429s. Small paced batches let the national
+  # backfill complete unattended over a day or so.
   fire:
-    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'fire' || github.event.inputs.job == 'both')
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'fire' || github.event.inputs.job == 'both'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -43,7 +46,7 @@ jobs:
       - env:
           HELLODATA_API_KEY: ${{ secrets.HELLODATA_API_KEY }}
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-          HD_FIRE_LIMIT: ${{ github.event.inputs.fire_limit }}
+          HD_FIRE_LIMIT: ${{ github.event.inputs.fire_limit || '4' }}
           HD_FIRE_MODE: ${{ github.event.inputs.fire_mode }}
         run: python fire_hellodata.py
 
