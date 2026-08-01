@@ -14,7 +14,7 @@ import MigrationDivergence from "@/components/MigrationDivergence";
 import MarketConsensus from "@/components/MarketConsensus";
 import RentRadial from "@/components/RentRadial";
 import IndicatorRow from "@/components/IndicatorRow";
-import { metroSignalRows } from "@/lib/submarket-rows";
+import { metroSignalRows, hellodataRows } from "@/lib/submarket-rows";
 import AskCanary from "@/components/AskCanary";
 
 function fmtMonth(d) {
@@ -456,7 +456,7 @@ function IndustryExposureScreen() {
             <p className="mono text-[12px] tracking-[0.1em] text-muted">SELECT AN INDUSTRY</p>
             {data && (
               <span className="mono text-[9px] text-muted/70">
-                {fmtMonth(data.asOf)} \u00b7 BLS CES \u00b7 {data.summary.metros} metros
+                {fmtMonth(data.asOf)} · BLS CES · {data.summary.metros} metros
               </span>
             )}
           </div>
@@ -478,7 +478,7 @@ function IndustryExposureScreen() {
             <>
               <p className="mono mt-3 text-[11px] leading-relaxed text-muted">
                 <span className="text-ink">{data.summary.concentrated}</span> of {data.summary.metros} metros are concentrated in{" "}
-                {data.sectorLabel} (\u22651.2\u00d7). Of those,{" "}
+                {data.sectorLabel} (≥1.2×). Of those,{" "}
                 <span style={{ color: toneColor("bull") }}>{data.summary.concentratedGrowing} growing</span>
                 {" \u00b7 "}
                 <span style={{ color: toneColor("bear") }}>{data.summary.concentratedDeclining} declining</span>
@@ -491,7 +491,7 @@ function IndustryExposureScreen() {
                 {top.map((m) => (
                   <div key={m.cbsa} className="grid grid-cols-[1.6fr_auto_auto_auto] items-center gap-2 border-b border-[var(--line)]/50 px-3 py-1.5 text-[10px]">
                     <span className="text-ink">{m.name}</span>
-                    <span className="text-muted">{m.lq}\u00d7</span>
+                    <span className="text-muted">{m.lq}×</span>
                     <span style={{ color: toneColor((m.yoyPct ?? 0) >= 0 ? "bull" : "bear") }}>
                       {m.yoyPct == null ? "\u2014" : `${m.yoyPct >= 0 ? "+" : ""}${m.yoyPct}%`}
                     </span>
@@ -505,9 +505,9 @@ function IndustryExposureScreen() {
                 ))}
               </div>
               <p className="mono mt-2 text-[9px] leading-relaxed text-muted/70">
-                CONC. is the location quotient \u2014 a metro&apos;s share of the sector against the average metro. Ranked by concentration, not by growth:
+                CONC. is the location quotient — a metro&apos;s share of the sector against the average metro. Ranked by concentration, not by growth:
                 the screen answers who is <span className="text-muted">exposed</span>, then shows whether that exposure is paying off locally.
-                Growth is never inferred from the national trend \u2014 35% of metro-industry pairs move the opposite way from theirs.
+                Growth is never inferred from the national trend — 35% of metro-industry pairs move the opposite way from theirs.
                 A supporting-industries map is deliberately omitted: across all 36 supersector pairs, median correlation of local growth is 0.07, so linkage is not measurable at this grain.
               </p>
             </>
@@ -524,6 +524,7 @@ function ZipLookup() {
   const [data, setData] = useState(null);
   const [demo, setDemo] = useState(null); // ZIP-level Census demographics
   const [signals, setSignals] = useState(null); // metro-level signals (jobs, RPP, rent CPI…)
+  const [hd, setHd] = useState(null); // licensed HelloData (Pro+); {gated:true} for free users
   const [oz, setOz] = useState(null); // Opportunity Zone 2.0 eligibility (tract grain)
   const [inds, setInds] = useState(null); // metro industry employment mix
   const [expo, setExpo] = useState(null); // industry exposure: concentration (LQ) x local growth
@@ -561,7 +562,7 @@ function ZipLookup() {
   const search = async () => {
     const v = q.trim();
     if (!v) { setStatus("error"); setMsg("Enter a ZIP code or City, State."); setData(null); return; }
-    setStatus("loading"); setMsg(""); setData(null); setDemo(null); setSignals(null); setOz(null); setInds(null); setExpo(null);
+    setStatus("loading"); setMsg(""); setData(null); setDemo(null); setSignals(null); setOz(null); setInds(null); setExpo(null); setHd(null);
     const isZip = /^\d{5}$/.test(v);
     try {
       const [zr, dr, sr] = await Promise.all([
@@ -578,6 +579,19 @@ function ZipLookup() {
         signalRes = await fetch(`/api/metro-signals?metro=${encodeURIComponent(zr.d.code)}`).then((r) => r.json()).catch(() => null);
       }
       if (signalRes?.found) setSignals(signalRes);
+
+      // Licensed HelloData (Pro+). ZIP first, then metro fallback so a submarket
+      // with no coverage still shows a labeled read rather than nothing.
+      (async () => {
+        const get = (qs) => fetch(`/api/hellodata?${qs}`).then((r) => r.json()).catch(() => null);
+        let h = isZip ? await get(`zip=${v}`) : null;
+        const mc = signalRes?.metroCode || signalRes?.code || zr.d?.metroCode || zr.d?.code;
+        if ((!h || (!h.gated && !h.asOf)) && mc) {
+          const m = await get(`metro=${encodeURIComponent(mc)}`);
+          if (m?.asOf || m?.gated) h = m;
+        }
+        setHd(h);
+      })();
       // OZ 2.0 is tract-grain; the lookup hands back the tightest scope it could
       // resolve (county when known, else CBSA). Fetched separately so a slow or
       // missing OZ read never delays the rent card.
@@ -768,7 +782,7 @@ function ZipLookup() {
                   Most concentrated in{" "}
                   <span className="text-ink">{expo.concentration.topSectorLabel}</span>{" "}
                   <span className="text-muted/70">
-                    ({expo.concentration.maxLq}\u00d7 the average metro
+                    ({expo.concentration.maxLq}× the average metro
                     {expo.concentration.topSectorYoy != null && (
                       <>, <span style={{ color: toneColor(expo.concentration.topSectorYoy >= 0 ? "bull" : "bear") }}>
                         {expo.concentration.topSectorYoy >= 0 ? "+" : ""}{expo.concentration.topSectorYoy}% locally
@@ -801,7 +815,7 @@ function ZipLookup() {
                     </span>
                     {(() => {
                       const e = expo?.sectors?.find((x) => `metro_emp_${x.sector}` === r.slug);
-                      if (!e) return <span className="text-muted/40">\u2014</span>;
+                      if (!e) return <span className="text-muted/40">—</span>;
                       // Bold the LQ only where the metro is genuinely specialized;
                       // an LQ near 1.0 is the average and carries no signal.
                       const conc = e.lq >= 1.2;
@@ -810,7 +824,7 @@ function ZipLookup() {
                           title={`${e.name}: ${e.lq}\u00d7 the average metro (${e.localSharePct}% of local jobs vs ${e.natlSharePct}% nationally) \u2014 ${e.state.label}`}
                           className="flex items-center gap-1"
                         >
-                          <span className={conc ? "text-ink" : "text-muted/60"}>{e.lq}\u00d7</span>
+                          <span className={conc ? "text-ink" : "text-muted/60"}>{e.lq}×</span>
                           {conc && e.state.tone && (
                             <span
                               className="rounded px-1 text-[8px]"
@@ -841,19 +855,19 @@ function ZipLookup() {
                         )}
                       </span>
                     ) : (
-                      <span className="text-muted/50">\u2014</span>
+                      <span className="text-muted/50">—</span>
                     )}
                   </div>
                 ))}
               </div>
               <p className="mono mt-2 text-[9px] leading-relaxed text-muted/70">
-                Eleven mutually exclusive supersectors that sum to total nonfarm \u2014 aggregates (Total Private, Goods Producing) and
+                Eleven mutually exclusive supersectors that sum to total nonfarm — aggregates (Total Private, Goods Producing) and
                 sub-components are excluded so nothing double-counts. Share is of metro employment; the path is each industry&apos;s AVERAGE
-                year-over-year growth in the prior 12 months versus the most recent 12 \u2014 averages, not endpoints, so a single noisy month cannot flip the read. Not seasonally adjusted, so every read is year-over-year.
+                year-over-year growth in the prior 12 months versus the most recent 12 — averages, not endpoints, so a single noisy month cannot flip the read. Not seasonally adjusted, so every read is year-over-year.
                 {data.grain !== "metro" && " Industry data is metro-grain: no public source publishes establishment-based industry employment at ZIP or city level."}
                 {expo && (
                   <>
-                    {" "}CONC. is the location quotient \u2014 this metro&apos;s share of a sector against the average metro; 2.0\u00d7 means twice as concentrated.
+                    {" "}CONC. is the location quotient — this metro&apos;s share of a sector against the average metro; 2.0× means twice as concentrated.
                     Growth is always measured <span className="text-muted">locally</span>: across 393 metros, 35% of metro-industry pairs move opposite to their own national trend,
                     so a national trend cannot be used to infer local performance. <span style={{ color: toneColor("bear") }}>FRAGILE</span> marks a sector this market is specialized in and losing.
                   </>
@@ -930,10 +944,10 @@ function ZipLookup() {
                 </div>
               )}
               <p className="mono mt-2 text-[9px] leading-relaxed text-muted/70">
-                OZ: Cignal-computed from Census ACS ({oz.rule.vintage}) under the OZ 2.0 test \u2014 <span className="text-muted">not Treasury&apos;s official list</span>.
+                OZ: Cignal-computed from Census ACS ({oz.rule.vintage}) under the OZ 2.0 test — <span className="text-muted">not Treasury&apos;s official list</span>.
                 Treasury sets the final dataset; governors nominate up to {oz.rule.nominationShare}% of eligible tracts. Designations effective {oz.rule.effective}; OZ 1.0 sunsets {oz.rule.oz1Sunset}.
-                Designation confers tax treatment, not an assured return \u2014 research on OZ 1.0 found minimal measurable effect on prices and permitting.
-                Listed tracts are OZ-eligible. LIHTC Qualified Census Tracts are a <span className="text-muted">separate federal program</span> \u2014 HUD-designated, redesignated annually
+                Designation confers tax treatment, not an assured return — research on OZ 1.0 found minimal measurable effect on prices and permitting.
+                Listed tracts are OZ-eligible. LIHTC Qualified Census Tracts are a <span className="text-muted">separate federal program</span> — HUD-designated, redesignated annually
                 ({oz.lihtcRule.effective} lists), granting a {oz.lihtcRule.basisBoost}% basis boost to affordable-housing developers rather than capital-gains treatment to investors. Shown here because a tract can carry both.
                 HMDA denial rate is suppressed below 50 applications.
               </p>
@@ -963,6 +977,27 @@ function ZipLookup() {
                 Census ACS 5-Year · vintage {String(demo.asOf).slice(0, 4)} · <span className="text-ink/70">occupied stock</span>, what sitting tenants pay — not market asking rent. Contract rent is the rent line; utilities are shown separately. Rent burden is published by Census on a <span className="text-ink/70">gross</span> basis only.
               </p>
             </div>
+          )}
+
+          {hd && !hd.gated && hellodataRows(hd).length > 0 && (
+            <div className="mt-4 border-t border-[var(--line)] pt-4">
+              <p className="mono text-[12px] tracking-[0.1em] text-muted">
+                LEASE ECONOMICS{hd.regionType === "zip" ? ` · ZIP ${hd.regionCode}` : " · METRO"}
+              </p>
+              <div className="mt-3 space-y-3">
+                {hellodataRows(hd).map((row) => (
+                  <IndicatorRow key={row.name} row={row} />
+                ))}
+              </div>
+              <p className="mono mt-3 text-[10px] tracking-[0.08em] text-muted">{hd.attribution}</p>
+            </div>
+          )}
+
+          {hd?.gated && (
+            <a href="/upgrade" className="mono mt-4 flex items-center gap-2 rounded-md border border-signal/25 bg-signal/[0.06] px-4 py-3 text-[11px] tracking-[0.08em] text-muted transition-colors hover:border-signal/50">
+              <span className="text-signal">EFFECTIVE RENT · CONCESSION LOAD · DAYS ON MARKET</span>
+              <span>— licensed multifamily data, Pro and above</span>
+            </a>
           )}
 
           {signals && (

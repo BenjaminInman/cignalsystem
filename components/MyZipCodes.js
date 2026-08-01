@@ -291,7 +291,7 @@ function ZipDetail({ zip, rent, demo, oz, inds, metroLabel }) {
       {inds && inds.industries?.length > 0 && (
         <div>
           <p className="mono mb-2 text-[11px] tracking-[0.12em] text-muted">
-            INDUSTRY GROWTH \u00b7 {(metroLabel || "METRO").toUpperCase()} \u00b7 BLS CES
+            INDUSTRY GROWTH · {(metroLabel || "METRO").toUpperCase()} · BLS CES
           </p>
           {inds.topByAdds?.length > 0 && (
             <p className="mono mb-2 text-[10px] text-muted">
@@ -316,12 +316,12 @@ function ZipDetail({ zip, rent, demo, oz, inds, metroLabel }) {
                       {r.traj.direction === "improving" ? "\u2197" : r.traj.direction === "deteriorating" ? "\u2198" : "\u2192"}
                     </span>
                   </span>
-                ) : <span className="text-muted/50">\u2014</span>}
+                ) : <span className="text-muted/50">—</span>}
               </div>
             ))}
           </div>
           <p className="mono mt-1.5 text-[8px] leading-relaxed text-muted/70">
-            Metro grain \u2014 no public source publishes establishment-based industry employment at ZIP level. Eleven mutually exclusive
+            Metro grain — no public source publishes establishment-based industry employment at ZIP level. Eleven mutually exclusive
             supersectors summing to total nonfarm; aggregates and sub-components excluded so nothing double-counts. Not seasonally
             adjusted, so reads are year-over-year.
           </p>
@@ -363,14 +363,14 @@ function ZipDetail({ zip, rent, demo, oz, inds, metroLabel }) {
           </div>
           {oz.capital && (
             <div className="mt-2 border-t border-[var(--line)] pt-2">
-              <p className="mono text-[9px] tracking-[0.1em] text-muted">CREDIT ACCESS \u00b7 CFPB HMDA \u00b7 2023</p>
+              <p className="mono text-[9px] tracking-[0.1em] text-muted">CREDIT ACCESS · CFPB HMDA · 2023</p>
               <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
                 <span className="mono text-[10px] text-muted">
                   denial rate{" "}
                   {oz.capital.suppressed ? <span className="text-muted/60">insufficient sample</span> : (
                     <span style={{ color: toneColor(oz.capital.denialRate > 26 ? "bear" : "bull") }}>{oz.capital.denialRate}%</span>
                   )}
-                  <span className="text-muted/60"> \u00b7 US 26.0%</span>
+                  <span className="text-muted/60"> · US 26.0%</span>
                 </span>
                 <span className="mono text-[10px] text-muted">{oz.capital.applications?.toLocaleString()} apps</span>
                 {oz.capital.origVolume != null && (
@@ -381,9 +381,9 @@ function ZipDetail({ zip, rent, demo, oz, inds, metroLabel }) {
             </div>
           )}
           <p className="mono mt-1.5 text-[8px] leading-relaxed text-muted/70">
-            County-scoped. OZ: Cignal-computed from Census ACS ({oz.rule.vintage}) \u2014 not Treasury&apos;s official list.
+            County-scoped. OZ: Cignal-computed from Census ACS ({oz.rule.vintage}) — not Treasury&apos;s official list.
             Listed tracts are OZ-eligible. LIHTC QCT is a separate HUD program ({oz.lihtcRule.effective} list) granting a {oz.lihtcRule.basisBoost}% basis boost to
-            affordable-housing developers \u2014 shown because a tract can carry both. HMDA rate suppressed below 50 applications.
+            affordable-housing developers — shown because a tract can carry both. HMDA rate suppressed below 50 applications.
             Governors nominate up to {oz.rule.nominationShare}% of eligible tracts; designations effective {oz.rule.effective}, OZ 1.0 sunsets {oz.rule.oz1Sunset}.
             Designation confers tax treatment, not an assured return.
           </p>
