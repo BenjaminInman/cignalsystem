@@ -525,6 +525,7 @@ function ZipLookup() {
   const [demo, setDemo] = useState(null); // ZIP-level Census demographics
   const [signals, setSignals] = useState(null); // metro-level signals (jobs, RPP, rent CPI…)
   const [hd, setHd] = useState(null); // licensed HelloData (Pro+); {gated:true} for free users
+  const [hdMetro, setHdMetro] = useState(null); // parent-metro HelloData, shown as context beside a ZIP read
 
   // HelloData leads the rent read when we have it: it is observed, unsmoothed,
   // and carries effective rent. ZORI stays on the page as an independent
@@ -574,7 +575,7 @@ function ZipLookup() {
   const search = async () => {
     const v = q.trim();
     if (!v) { setStatus("error"); setMsg("Enter a ZIP code or City, State."); setData(null); return; }
-    setStatus("loading"); setMsg(""); setData(null); setDemo(null); setSignals(null); setOz(null); setInds(null); setExpo(null); setHd(null);
+    setStatus("loading"); setMsg(""); setData(null); setDemo(null); setSignals(null); setOz(null); setInds(null); setExpo(null); setHd(null); setHdMetro(null);
     const isZip = /^\d{5}$/.test(v);
     try {
       const [zr, dr, sr] = await Promise.all([
@@ -593,7 +594,10 @@ function ZipLookup() {
       if (signalRes?.found) setSignals(signalRes);
 
       // Licensed HelloData (Pro+). ZIP first, then metro fallback so a submarket
-      // with no coverage still shows a labeled read rather than nothing.
+      // with no coverage still shows a labeled read rather than nothing. When the
+      // ZIP DOES resolve we still pull its metro — not to blend, but to state the
+      // comparison outright so nobody has to infer whether a ZIP is rich or cheap
+      // relative to the market it sits in.
       (async () => {
         const get = (qs) => fetch(`/api/hellodata?${qs}`).then((r) => r.json()).catch(() => null);
         let h = isZip ? await get(`zip=${v}`) : null;
@@ -603,6 +607,11 @@ function ZipLookup() {
           if (m?.asOf || m?.gated) h = m;
         }
         setHd(h);
+        // Context only — never averaged into the ZIP figure.
+        if (h?.regionType === "zip" && h?.asOf && mc) {
+          const cm = await get(`metro=${encodeURIComponent(mc)}`);
+          if (cm?.asOf) setHdMetro(cm);
+        }
       })();
       // OZ 2.0 is tract-grain; the lookup hands back the tightest scope it could
       // resolve (county when known, else CBSA). Fetched separately so a slow or
@@ -700,6 +709,38 @@ function ZipLookup() {
               : "No ZIP-level coverage for this search — this is the whole metro, which spans every submarket in the CBSA."}
             {" "}Observed listings, HelloData.
           </p>
+
+          {/* Metro stated as context, never blended into the ZIP number. A ZIP is
+              only interpretable against the market it sits in — $2,021 means one
+              thing in a $1,637 metro and another in a $2,400 one. */}
+          {hdMetro && (() => {
+            const mEff = hdMetro.series?.hd_effective_rent?.slice(-1)[0]?.value;
+            const zEff = hdLast("hd_effective_rent");
+            if (mEff == null || zEff == null) return null;
+            const pct = Math.round(100 * (zEff / mEff - 1));
+            const mLoad = Array.isArray(hdMetro.concessionLoad) && hdMetro.concessionLoad.length
+              ? hdMetro.concessionLoad[hdMetro.concessionLoad.length - 1].pct : null;
+            return (
+              <p className="mono mt-2 border-t border-[var(--line)] pt-2 text-[10px] leading-relaxed tracking-[0.08em] text-muted">
+                <span className="text-muted/70">FOR CONTEXT · </span>
+                metro effective <span className="text-ink">${Math.round(mEff).toLocaleString()}</span>
+                {" — this ZIP is "}
+                <span className="text-ink">{pct === 0 ? "in line with" : `${Math.abs(pct)}% ${pct > 0 ? "above" : "below"}`}</span>
+                {" the metro"}
+                {mLoad != null && hdLoad != null && (
+                  <>
+                    {" · concession load "}
+                    <span style={{ color: toneColor(hdLoad > mLoad ? "bear" : hdLoad < mLoad ? "bull" : "neutral") }}>
+                      {hdLoad.toFixed(1)}%
+                    </span>
+                    {" vs "}
+                    <span className="text-ink">{mLoad.toFixed(1)}%</span>
+                    {" metro-wide"}
+                  </>
+                )}
+              </p>
+            );
+          })()}
         </div>
       )}
 
