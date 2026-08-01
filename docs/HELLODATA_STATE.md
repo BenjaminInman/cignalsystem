@@ -296,3 +296,39 @@ Aberdeen SD, Ada OK, Adrian MI… before Dallas.
 Top markets by tracked units: New York 2.81M, Dallas 986k, Philadelphia 841k,
 Houston 780k, Los Angeles 708k. 881 MSAs returned; 323 matched to CBSA rows by
 normalised name (the remainder are micropolitan areas with no CBSA row).
+
+## Open — public coverage stats (revisit after national backfill)
+
+Benjamin wants site-visitor-facing coverage figures, e.g. "20M units monitored"
+alongside the existing observation count. Decision deferred until the national
+backfill completes.
+
+**What the numbers actually mean** (worth stating correctly on the page):
+
+- **observations** = indicator × region × month. Nashville: 53 regions × 38
+  months × 5 indicators ≈ 9,773. Projected national HelloData total ≈ 1.4M, on
+  top of the existing ~3.98M.
+- **units / properties** = coverage metadata in `hd_region_coverage` and
+  `hd_metro_size`. Currently ~111k properties / ~20.6M units across 7,188
+  publishable ZIPs.
+
+These measure different things and both are worth showing: coverage is breadth,
+observations are depth of history.
+
+Per-unit and per-property rents are deliberately **never stored** — HelloData
+aggregates before delivery, and the disclosure floor exists to keep it that way.
+Storing asset-level rows would be redistributing the vendor's product rather than
+publishing derived market intelligence.
+
+Two things to settle before this ships:
+
+1. **Attribution / licence.** The unit count describes HelloData's coverage, not
+   ours. Confirm in writing that summary coverage figures may be displayed, and
+   attribute them.
+2. **Derive, never hardcode.** Coverage refreshes monthly. Compute from
+   `hd_region_coverage` / `hd_metro_size` inside `platform_stats()` so the figure
+   cannot drift — the hardcoded-invariant failure mode that inflated `zip_count`
+   from 9,092 to 12,770 on 2026-08-01.
+   And test any new `platform_stats` query **with the anon key**, not just the
+   admin connection: the ZIP-count fix passed on admin and timed out for
+   visitors, blanking the home page until an index was added.
