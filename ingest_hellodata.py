@@ -53,6 +53,41 @@ COVERAGE = [
     ("hd_unit_count",     "units",      "coincident", True),
 ]
 
+# HelloData's geography is not clean: the national pull returned 75 ZIP strings
+# that are not real ZCTAs, including one (85288) with 15 properties and 5,167
+# units that would have cleared the disclosure floor and published. Joining
+# against `regions` does not catch these, because regions is not an authoritative
+# ZIP list. Validate against the Census ZCTA gazetteer instead.
+ZCTA_URL = ("https://www2.census.gov/geo/docs/maps-data/data/gazetteer/"
+            "2024_Gazetteer/2024_Gaz_zcta_national.zip")
+_zcta_cache = None
+
+def valid_zctas():
+    global _zcta_cache
+    if _zcta_cache is None:
+        import zipfile
+        r = requests.get(ZCTA_URL, timeout=300); r.raise_for_status()
+        z = zipfile.ZipFile(io.BytesIO(r.content))
+        name = [n for n in z.namelist() if n.endswith(".txt")][0]
+        out = set()
+        for i, line in enumerate(z.open(name).read().decode("latin-1").splitlines()):
+            if i == 0:
+                continue
+            c = line.split("\t")[0].strip()
+            if c.isdigit():
+                out.add(c.zfill(5))
+        _zcta_cache = out
+        print(f"  loaded {len(out):,} authoritative ZCTAs for validation")
+    return _zcta_cache
+
+def drop_invalid_zips(df, col="_code"):
+    good = valid_zctas()
+    bad = sorted(set(df.loc[~df[col].isin(good), col]))
+    if bad:
+        print(f"  REJECTED {len(bad)} invalid ZIP(s) not in the Census ZCTA list: "
+              f"{bad[:10]}{' …' if len(bad) > 10 else ''}")
+    return df[df[col].isin(good)].copy()
+
 def norm(s):
     s = str(s).lower().strip()
     s = re.sub(r"[-\s]+", " ", s)
@@ -141,6 +176,7 @@ def main():
                 if mode == "zip":
                     df = df[df["zip_code"].notna()].copy()
                     df["_code"] = df["zip_code"].astype(str).str.split(".").str[0].str.zfill(5)
+                    df = drop_invalid_zips(df)
                     upsert_zip_regions(cur, sorted(df["_code"].unique()))
                     print(f"  upserted {df['_code'].nunique():,} zip regions")
                 else:
@@ -195,6 +231,7 @@ def main():
                 df.columns = ["zip_code", "properties", "units", "max_units"] + cols[4:]
                 df = df[df["zip_code"].notna()].copy()
                 df["_code"] = df["zip_code"].astype(str).str.split(".").str[0].str.zfill(5)
+                df = drop_invalid_zips(df)
                 upsert_zip_regions(cur, sorted(df["_code"].unique()))
                 rows = []
                 for c, p, u, mx in df[["_code", "properties", "units", "max_units"]].itertuples(index=False):
