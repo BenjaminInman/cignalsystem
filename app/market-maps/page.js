@@ -562,6 +562,24 @@ function ZipLookup() {
     return () => { active = false; };
   }, [supabase]);
 
+  // Saving is keyed to the ZIP the user searched, not to whichever data source
+  // happens to be rendering it — so it lives wherever the featured read is.
+  const SaveZipControl = () => (
+    userId === null ? (
+      <Link href="/login" className="mono flex items-center gap-2 rounded-md border border-[var(--line-strong)] px-3 py-2 text-[11px] tracking-[0.04em] text-muted hover:text-ink">
+        <Bookmark size={13} /> Sign in to save
+      </Link>
+    ) : savedZips.has(data?.query) ? (
+      <span className="mono flex items-center gap-2 rounded-md border border-up/40 bg-up/10 px-3 py-2 text-[11px] tracking-[0.04em] text-up">
+        <Check size={13} /> Saved to My Zip Codes
+      </span>
+    ) : (
+      <button onClick={() => saveZip(data.query)} disabled={saving || userId === undefined} className="mono flex items-center gap-2 rounded-md border border-signal/40 bg-signal/10 px-3 py-2 text-[11px] tracking-[0.04em] text-signal hover:bg-signal/20 disabled:opacity-50">
+        {saving ? <Loader2 size={13} className="animate-spin" /> : <Bookmark size={13} />} Save to My Zip Codes
+      </button>
+    )
+  );
+
   const saveZip = async (zip) => {
     if (!userId || savedZips.has(zip)) return;
     setSaving(true);
@@ -601,7 +619,7 @@ function ZipLookup() {
       (async () => {
         const get = (qs) => fetch(`/api/hellodata?${qs}`).then((r) => r.json()).catch(() => null);
         let h = isZip ? await get(`zip=${v}`) : null;
-        const mc = signalRes?.metroCode || signalRes?.code || zr.d?.metroCode || zr.d?.code;
+        const mc = signalRes?.cbsa || signalRes?.metroCode || zr.d?.cbsa || zr.d?.code;
         if ((!h || (!h.gated && !h.asOf)) && mc) {
           const m = await get(`metro=${encodeURIComponent(mc)}`);
           if (m?.asOf || m?.gated) h = m;
@@ -678,6 +696,8 @@ function ZipLookup() {
 
       {hdHero && (
         <div className="mt-5 rounded-xl border border-signal/30 bg-bg2/60 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
           <p className="mono flex flex-wrap items-center gap-2 text-[11px] tracking-[0.12em] text-muted">
             <span className="rounded bg-signal/15 px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-signal">
               {hd.regionType === "zip" ? `ZIP ${hd.regionCode}` : "METRO"}
@@ -703,6 +723,18 @@ function ZipLookup() {
               <span>days on market <span className="text-ink">{Math.round(hdLast("hd_dom"))}</span></span>
             )}
           </div>
+          </div>
+            <div className="flex flex-col items-end gap-3">
+              {(() => {
+                const eff = hd.series?.hd_effective_rent;
+                if (!Array.isArray(eff) || eff.length < 2) return null;
+                const t = eff.slice(-24).map((x) => x.value);
+                return <Sparkline series={t} color={t[t.length - 1] >= t[0] ? "#5FB97C" : "#E5634D"} w={170} h={46} />;
+              })()}
+              {/^\d{5}$/.test(String(data?.query || "")) && <SaveZipControl />}
+            </div>
+          </div>
+
           <p className="mono mt-3 text-[10px] leading-relaxed tracking-[0.08em] text-muted">
             {hd.regionType === "zip"
               ? "This ZIP only — neighbouring ZIPs carry their own rent levels and are not averaged in."
@@ -745,7 +777,7 @@ function ZipLookup() {
       )}
 
       {data?.found && (
-        <div className={`mt-5 rounded-xl border border-[var(--line)] bg-bg2/60 ${hdHero ? "p-4" : "p-5"}`}>
+        <div className={`rounded-xl border border-[var(--line)] bg-bg2/40 ${hdHero ? "mt-3 p-4 opacity-90" : "mt-5 bg-bg2/60 p-5"}`}>
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="mono flex flex-wrap items-center gap-2 text-[11px] tracking-[0.12em] text-muted">
@@ -760,7 +792,7 @@ function ZipLookup() {
                 )}
               </p>
               <p className={`mt-1.5 font-semibold text-ink ${hdHero ? "text-xl" : "text-3xl"}`}>${data.rent.toLocaleString()}<span className="ml-1 text-sm text-muted">/mo</span></p>
-              <p className="mt-1 text-sm">
+              <p className={hdHero ? "mt-1 text-[13px]" : "mt-1 text-sm"}>
                 {data.yoyPct == null ? (
                   <span className="text-muted">Not enough history for a year-over-year read yet.</span>
                 ) : (
@@ -821,23 +853,9 @@ function ZipLookup() {
             </div>
             <div className="flex flex-col items-end gap-3">
               {data.trend?.length > 1 && (
-                <Sparkline series={data.trend} color={up ? "#5FB97C" : "#E5634D"} w={170} h={46} />
+                <Sparkline series={data.trend} color={up ? "#5FB97C" : "#E5634D"} w={hdHero ? 120 : 170} h={hdHero ? 34 : 46} />
               )}
-              {/^\d{5}$/.test(String(data.query || "")) && (
-                userId === null ? (
-                  <Link href="/login" className="mono flex items-center gap-2 rounded-md border border-[var(--line-strong)] px-3 py-2 text-[11px] tracking-[0.04em] text-muted hover:text-ink">
-                    <Bookmark size={13} /> Sign in to save
-                  </Link>
-                ) : savedZips.has(data.query) ? (
-                  <span className="mono flex items-center gap-2 rounded-md border border-up/40 bg-up/10 px-3 py-2 text-[11px] tracking-[0.04em] text-up">
-                    <Check size={13} /> Saved to My Zip Codes
-                  </span>
-                ) : (
-                  <button onClick={() => saveZip(data.query)} disabled={saving || userId === undefined} className="mono flex items-center gap-2 rounded-md border border-signal/40 bg-signal/10 px-3 py-2 text-[11px] tracking-[0.04em] text-signal hover:bg-signal/20 disabled:opacity-50">
-                    {saving ? <Loader2 size={13} className="animate-spin" /> : <Bookmark size={13} />} Save to My Zip Codes
-                  </button>
-                )
-              )}
+              {!hdHero && /^\d{5}$/.test(String(data.query || "")) && <SaveZipControl />}
             </div>
           </div>
 
