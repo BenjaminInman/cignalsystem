@@ -59,3 +59,10 @@ jobs:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           HD_DRAIN_LIMIT: ${{ github.event.inputs.drain_limit || '50' }}
         run: python drain_hellodata.py
+      # Invariant checks run after every drain. These are STATE invariants, not
+      # code errors - a build passes while the warehouse quietly drifts - so they
+      # have to run against the live DB. Failing the job is the point.
+      - name: integrity checks
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: python check_integrity.py
