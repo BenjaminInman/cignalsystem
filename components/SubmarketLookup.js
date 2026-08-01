@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Lock } from "lucide-react";
 import IndicatorRow from "@/components/IndicatorRow";
 import { buildRows, GRAIN } from "@/lib/submarket-rows";
 
@@ -11,11 +11,12 @@ export default function SubmarketLookup({ onCount }) {
   const [msg, setMsg] = useState("");
   const [place, setPlace] = useState(null);
   const [rows, setRows] = useState(null);
+  const [hdLocked, setHdLocked] = useState(false);
 
   const search = async () => {
     const v = q.trim();
     if (!v) { setStatus("error"); setMsg("Enter a ZIP code or City, State."); return; }
-    setStatus("loading"); setMsg(""); setPlace(null); setRows(null);
+    setStatus("loading"); setMsg(""); setPlace(null); setRows(null); setHdLocked(false);
     const isZip = /^\d{5}$/.test(v);
     try {
       const [zr, sr] = await Promise.all([
@@ -29,7 +30,20 @@ export default function SubmarketLookup({ onCount }) {
         signalRes = await fetch(`/api/metro-signals?metro=${encodeURIComponent(zr.d.code)}`).then((r) => r.json()).catch(() => null);
       }
 
-      const built = buildRows(v, signalRes?.found ? signalRes : null, zr.d?.found ? zr.d : null);
+      // Licensed HelloData (Pro+). Returns {gated:true} for free users, in which
+      // case no rows are built and the locked strip below explains why.
+      // Try the ZIP first; if this submarket has no HelloData coverage, fall back
+      // to the metro rather than showing nothing — the rows self-label their grain.
+      const hdGet = (qs) => fetch(`/api/hellodata?${qs}`).then((r) => r.json()).catch(() => null);
+      let hd = isZip ? await hdGet(`zip=${v}`) : null;
+      const metroCode = signalRes?.metroCode || signalRes?.code || zr.d?.metroCode;
+      if ((!hd || (!hd.gated && !hd.asOf)) && metroCode) {
+        const m = await hdGet(`metro=${encodeURIComponent(metroCode)}`);
+        if (m?.asOf || m?.gated) hd = m;
+      }
+      setHdLocked(!!hd?.gated);
+
+      const built = buildRows(v, signalRes?.found ? signalRes : null, zr.d?.found ? zr.d : null, hd);
       if (!built.length) {
         setStatus("idle");
         setPlace(zr.d?.found ? zr.d : null);
@@ -84,6 +98,19 @@ export default function SubmarketLookup({ onCount }) {
           <span className="rounded bg-signal/15 px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-signal">{GRAIN[place.grain] || "LOCAL"}</span>
           {place.label} · SUBMARKET SIGNALS
         </p>
+      )}
+
+      {hdLocked && rows && rows.length > 0 && (
+        <a
+          href="/upgrade"
+          className="mono mt-4 flex items-center gap-2 rounded-md border border-signal/25 bg-signal/[0.06] px-4 py-3 text-[11px] tracking-[0.08em] text-muted transition-colors hover:border-signal/50"
+        >
+          <Lock size={12} className="text-signal" />
+          <span>
+            <span className="text-signal">EFFECTIVE RENT · CONCESSION LOAD · DAYS ON MARKET</span>
+            {" "}— licensed multifamily data, Pro and above
+          </span>
+        </a>
       )}
 
       {rows && rows.length > 0 && (
