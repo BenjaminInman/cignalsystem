@@ -122,6 +122,41 @@ def main():
             fail += 1
             print(f"    ERROR: {msg}")
 
+    # ---- HelloData is latest-wins (deliberate exception) --------------------
+    # Everywhere else in this warehouse revision-0 first prints are permanent,
+    # because for FRED/Census/BEA the first print is what the market actually
+    # knew at the time - the revision is itself an event worth studying.
+    #
+    # HelloData is not that kind of source. It is a continuously re-scraped
+    # listings aggregate with no publication calendar, so the "first print" for a
+    # backfilled 2023 month is not what anyone knew in 2023 - it is just whichever
+    # export happened to run first. Preserving it canonises an artifact of our
+    # ingestion order.
+    #
+    # Observed: ZIP 48167 first printed flat at $1,799 for five consecutive
+    # months (a cell built on very few listings); the later export moved
+    # $1,655 -> $1,648 -> $1,623 -> $1,569, which is what a real rent series does.
+    #
+    # Decision (Benjamin, 2026-08-01): treat the newest HelloData value as true.
+    # Scope is HelloData ONLY - every other source keeps first-print-wins.
+    with conn.cursor() as cur:
+        cur.execute("""
+            DELETE FROM observations o USING indicators i
+             WHERE i.id = o.indicator_id AND i.source = 'HelloData' AND o.revision = 0
+               AND EXISTS (SELECT 1 FROM observations o2
+                            WHERE o2.indicator_id = o.indicator_id
+                              AND o2.region_id = o.region_id
+                              AND o2.obs_date = o.obs_date
+                              AND o2.revision > 0)""")
+        superseded = cur.rowcount
+        cur.execute("""
+            UPDATE observations o SET revision = 0 FROM indicators i
+             WHERE i.id = o.indicator_id AND i.source = 'HelloData' AND o.revision > 0""")
+        promoted = cur.rowcount
+    if promoted:
+        print(f"latest-wins: promoted {promoted:,} restated value(s), "
+              f"dropped {superseded:,} superseded")
+
     # One refresh for the whole batch. Refreshing per-file would serialise ~400
     # concurrent refreshes of a half-million-row view and take all night.
     if ok and do_refresh:

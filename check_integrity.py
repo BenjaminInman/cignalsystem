@@ -43,9 +43,10 @@ CHECKS = [
              JOIN indicators i ON i.id = o.indicator_id
             WHERE i.source = 'HelloData' AND o.revision > 0""",
         0,
-        "a re-ingest wrote revisions; mv_indicator_analytics reads revision 0 "
-        "only, so the site is serving the OLD basis. Run the basis-migration "
-        "SQL in docs/HELLODATA_STATE.md",
+        "HelloData is latest-wins (see drain_hellodata.py) and the drain promotes "
+        "restatements at the end of every batch. Rows left above revision 0 mean "
+        "that promotion did not run, so mv_indicator_analytics - which reads "
+        "revision 0 only - is serving a superseded value",
     ),
     (
         "every published ZIP clears the disclosure floor",

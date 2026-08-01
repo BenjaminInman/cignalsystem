@@ -332,3 +332,28 @@ Two things to settle before this ships:
    And test any new `platform_stats` query **with the anon key**, not just the
    admin connection: the ZIP-count fix passed on admin and timed out for
    visitors, blanking the home page until an index was added.
+
+## Revision policy — HelloData is latest-wins (exception)
+
+**Decision: Benjamin, 2026-08-01.**
+
+The warehouse rule is that revision-0 first prints are permanent. That is correct
+for FRED, Census, BEA and the GSEs: the first print is what the market knew at
+the time, and the revision is itself an event worth studying.
+
+HelloData is a different kind of source — a continuously re-scraped listings
+aggregate with no publication calendar. The "first print" of a backfilled 2023
+month is not what anyone knew in 2023; it is whichever export ran first. Treating
+it as canonical preserves an artifact of ingestion order.
+
+Evidence that forced the question: ZIP 48167 (Northville, MI) first printed flat
+at $1,799 for five consecutive months — the signature of a cell built on very few
+listings. A later export gave $1,655 / $1,648 / $1,623 / $1,569, which is what a
+real rent series looks like. The site was serving the flat line.
+
+`drain_hellodata.py` therefore promotes restated values to revision 0 at the end
+of every batch and drops the superseded rows. **Scope is `source = 'HelloData'`
+only** — every other source keeps first-print-wins, unchanged.
+
+The integrity check "no HelloData observation above revision 0" now means "the
+promotion ran", not "no restatement happened".
