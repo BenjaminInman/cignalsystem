@@ -201,3 +201,62 @@ pricing columns, so it runs nationally in one job.
 
 National scale (unfiltered first pass): 11,611 ZIPs, 143,669 properties,
 26.4M units — well above the ~90k properties commonly cited for 50+ unit stock.
+
+## Delivery queue — 2026-08-01
+
+The national pull is ~400 exports arriving asynchronously over hours, so the
+webhook is now a **queue**, not a logger.
+
+| Piece | What it does |
+|---|---|
+| `app/api/hellodata/webhook/route.js` | HMAC-verifies, then records to `hd_deliveries` via `hd_record_delivery()` |
+| `hd_deliveries` | pending / done / failed / skipped / expired, with `attempts` |
+| `drain_hellodata.py` | ingests pending deliveries, one MV refresh per batch |
+| `fire_hellodata.py` | fires exports one MSA at a time, largest markets first |
+| `.github/workflows/hellodata-pipeline.yml` | `fire` (manual) + `drain` (hourly cron) |
+
+**Auth path.** The app carries only the anon key, so the receiver cannot write
+directly. `hd_record_delivery()` is SECURITY DEFINER and callable by `anon`; the
+token — sha256 of `HELLODATA_API_KEY`, which exists only server-side — is what
+authorises the insert. It also rejects any URL that is not a HelloData signed GCS
+URL, so a leaked token cannot queue an arbitrary fetch for the drain job.
+
+**Routing is by export name**, so names must match:
+`cignal_zip_*`, `cignal_metro_*`, `cignal_coverage_*`. Anything else is marked
+`skipped` rather than guessed at.
+
+### The export-size ceiling (why MSA-by-MSA)
+HelloData silently fails on large pricing exports: 201 + queryUUID, then no file,
+no error, and there is no poll endpoint — a dead job is indistinguishable from a
+slow one. Measured 2026-08-01:
+
+| Export | Result |
+|---|---|
+| Nashville MSA, 38mo (1,931 rows) | delivered ~3 min |
+| national coverage, 10,879 rows, **no pricing columns** | delivered ~7 min |
+| `state in ["TN"]`, pricing, limit 5 | delivered ~4 min |
+| `state = "TX"`, pricing, full history | **never arrived** |
+| 10-state chunks, pricing, full history | **never arrived** (10 jobs, twice) |
+
+The ceiling is specific to pricing-column queries and sits below one state's ZIP
+history. One MSA is the largest unit proven reliable. Coverage has no pricing
+columns and still runs nationally in one job.
+
+### Basis migration (recurring hazard)
+Re-ingesting a market after a universe change does **not** overwrite — insert-if-
+changed writes revision 1, and the MV reads revision 0 only, so the site keeps
+serving the superseded basis while the DB quietly holds both. After any basis
+change, promote:
+
+```sql
+delete from observations o using indicators i
+ where i.id=o.indicator_id and i.source='HelloData' and o.revision=0
+   and exists (select 1 from observations o2 where o2.indicator_id=o.indicator_id
+               and o2.region_id=o.region_id and o2.obs_date=o.obs_date and o2.revision=1);
+update observations o set revision=0 from indicators i
+ where i.id=o.indicator_id and i.source='HelloData' and o.revision=1;
+```
+
+These are not revisions of one measurement — they are a different measurement, so
+they are removed rather than kept as history. Nashville was migrated to the
+MF50 + non-affordable basis this way on 2026-08-01.
