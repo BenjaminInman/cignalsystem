@@ -155,3 +155,49 @@ prefix). These were dropped only because the ingester joins against existing
 `regions` rows and neither exists. **At national scale that join will not save
 you** — a bad ZIP that is a real ZIP elsewhere would land in the wrong market.
 Add an explicit validation step before the national run.
+
+## The universe — locked 2026-08-01
+
+Every HelloData export uses **both** filters. Changing either creates a
+methodology seam at the month it changed.
+
+```json
+{"column":"number_units","filter":{"greaterThanOrEqualTo":50}}
+{"column":"is_affordable","filter":{"equals":false}}
+```
+
+`is_affordable` takes a **boolean via `equals`** — not the `flag` operator the
+schema implies. `{"flag":true}`, `{"flag":"true"}` and `{"equals":"false"}` are
+all rejected.
+
+**Why exclude affordable, given it barely moves the level.** Measured on
+Nashville: 119 of 989 properties (12%) drop out, and asking moves $1,729 → $1,734
+— five dollars. The case for excluding is not the level, it is the *movement*.
+LIHTC and subsidised rents are set by AMI formulas on an annual HUD schedule;
+they do not respond to concessions, lease-up pressure or demand shocks. A 12%
+slug of policy-priced stock systematically damps the volatility of the exact
+series used to detect cycle turns.
+
+Caveat: this is HelloData's own classification and cannot be audited from here.
+It is likely LIHTC-weighted and will not reliably catch project-based Section 8
+or HUD-assisted stock that does not advertise as such. Deep-subsidy units are
+largely invisible to a listings-scraped dataset anyway — which is also why the
+delta is so small.
+
+**Coverage counts must use this same universe.** Counting properties that are
+excluded from the rent average would leave the disclosure floor measuring a
+different population than the data it protects.
+
+## National export shape
+
+There is **no single national pricing export** — HelloData rejects any query with
+pricing columns unless it is filtered by at least one market column:
+
+> "Queries that include Pricing Columns must be filtered by at least one Market Column."
+
+A multi-state `in` filter satisfies this, so the country goes out as **5 state
+chunks × (ZIP + metro) + 1 national coverage pull = 11 exports**. Coverage has no
+pricing columns, so it runs nationally in one job.
+
+National scale (unfiltered first pass): 11,611 ZIPs, 143,669 properties,
+26.4M units — well above the ~90k properties commonly cited for 50+ unit stock.

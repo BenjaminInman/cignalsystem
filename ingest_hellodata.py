@@ -37,6 +37,28 @@ import requests, pandas as pd, psycopg2
 from psycopg2.extras import execute_values
 
 SOURCE = "HelloData"
+
+# ---------------------------------------------------------------------------
+# THE UNIVERSE. Every HelloData export must use exactly these filters, or the
+# series carries a methodology seam at whichever month the basis changed.
+#
+#   number_units >= 50      conventional multifamily, not scattered small stock
+#   is_affordable == false  LIHTC / subsidised units price off AMI formulas and
+#                           HUD schedules, not off the market. In Nashville they
+#                           were 12% of properties but moved the average only $5
+#                           - the reason to exclude them is not the level, it is
+#                           that policy-set rents do not respond to concessions,
+#                           lease-up pressure or demand shocks, so they damp the
+#                           volatility of the exact series used to detect turns.
+#
+# NOTE: is_affordable takes a BOOLEAN via `equals`, not the `flag` operator the
+# schema implies:  {"column":"is_affordable","filter":{"equals":false}}
+#
+# Coverage counts MUST be pulled on this same universe. Counting properties that
+# are excluded from the rent average would mean the disclosure floor is measuring
+# a different population than the data it protects.
+# ---------------------------------------------------------------------------
+UNIVERSE = "mf50_nonaffordable"
 # Disclosure control for ZIP cells. Both must hold to publish.
 MIN_PROPERTIES = 3        # statistical stability
 MAX_DOMINANCE_PCT = 50.0  # re-identification guard
@@ -202,7 +224,7 @@ def main():
                         print(f"  skip {slug}: column {col} absent"); continue
                     ind = ensure_indicator(cur, slug,
                         f"HelloData {slug.replace('hd_','').replace('_',' ').title()} (multifamily)",
-                        f"querybuilder:{col}:mf50", units, cls, hib)
+                        f"querybuilder:{col}:{UNIVERSE}", units, cls, hib)
                     sub = df[["_code", "_date", col]].dropna(subset=[col])
                     rows = [(c, d, float(v) * scale)
                             for c, d, v in sub.itertuples(index=False)]
