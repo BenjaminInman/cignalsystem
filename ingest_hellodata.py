@@ -176,126 +176,142 @@ def load(cur, indicator_id, region_type, rows, release):
     """, {"ind": indicator_id, "rt": region_type, "rel": release})
     return cur.rowcount
 
+def run_one(conn, mode, url, obs_date=None, release=None, refresh=True):
+    """Process a single export into an existing connection.
+
+    Split out from main() so the drain worker can reuse it across a queue of
+    deliveries and refresh the materialized view once for the whole batch
+    instead of once per file.
+    """
+    obs_date = obs_date or dt.date.today().replace(day=1).isoformat()
+    release = release or dt.date.today()
+    df = download(url) if mode in ("zip", "metro", "roster", "coverage") else None
+    if df is not None:
+        print(f"  downloaded {len(df):,} rows; cols={list(df.columns)}")
+
+    with conn.cursor() as cur:
+        if mode in ("zip", "metro"):
+            region_type = "zip" if mode == "zip" else "metro"
+            if mode == "zip":
+                df = df[df["zip_code"].notna()].copy()
+                df["_code"] = df["zip_code"].astype(str).str.split(".").str[0].str.zfill(5)
+                df = drop_invalid_zips(df)
+                upsert_zip_regions(cur, sorted(df["_code"].unique()))
+                print(f"  upserted {df['_code'].nunique():,} zip regions")
+            else:
+                cmap = metro_code_map(cur)
+                df["_code"] = df["msa"].map(lambda m: cmap.get(norm(m)))
+                miss = df[df["_code"].isna()]["msa"].unique()
+                if len(miss):
+                    print(f"  WARN {len(miss)} metros unmatched (e.g. {list(miss)[:3]})")
+                df = df[df["_code"].notna()].copy()
+
+            if "as_of_month" in df.columns:
+                df["_date"] = df["as_of_month"].map(month_start)
+                print(f"  history: {df['_date'].nunique()} months "
+                      f"({df['_date'].min()} -> {df['_date'].max()})")
+            else:
+                df["_date"] = obs_date
+                print(f"  snapshot: single date {obs_date}")
+
+            for slug, col, units, cls, hib, scale in METRICS:
+                if col not in df.columns:
+                    print(f"  skip {slug}: column {col} absent"); continue
+                ind = ensure_indicator(cur, slug,
+                    f"HelloData {slug.replace('hd_','').replace('_',' ').title()} (multifamily)",
+                    f"querybuilder:{col}:{UNIVERSE}", units, cls, hib)
+                sub = df[["_code", "_date", col]].dropna(subset=[col])
+                rows = [(c, d, float(v) * scale) for c, d, v in sub.itertuples(index=False)]
+                n = load(cur, ind, region_type, rows, release)
+                print(f"  {slug}: {len(rows):,} cells -> {n:,} written")
+
+        elif mode == "coverage":
+            cols = list(df.columns)
+            df.columns = ["zip_code", "properties", "units", "max_units"] + cols[4:]
+            df = df[df["zip_code"].notna()].copy()
+            df["_code"] = df["zip_code"].astype(str).str.split(".").str[0].str.zfill(5)
+            df = drop_invalid_zips(df)
+            upsert_zip_regions(cur, sorted(df["_code"].unique()))
+            rows = []
+            for c, p, u, mx in df[["_code", "properties", "units", "max_units"]].itertuples(index=False):
+                p, u, mx = int(p), int(u), int(mx)
+                share = (100.0 * mx / u) if u else 100.0
+                rows.append((c, p, u, mx, bool(p >= MIN_PROPERTIES and share <= MAX_DOMINANCE_PCT)))
+            cur.execute("DROP TABLE IF EXISTS _hd_cov;")
+            cur.execute("CREATE TEMP TABLE _hd_cov (code text, p int, u bigint, mx int, pub boolean);")
+            buf = io.StringIO()
+            for c, p, u, mx, pub in rows:
+                buf.write(f"{c},{p},{u},{mx},{'t' if pub else 'f'}\n")
+            buf.seek(0)
+            cur.copy_expert("COPY _hd_cov (code, p, u, mx, pub) FROM STDIN WITH CSV", buf)
+            cur.execute("""
+                INSERT INTO hd_region_coverage
+                    (region_id, properties, units, max_property_units, publishable, as_of)
+                SELECT r.id, s.p, s.u, s.mx, s.pub, %(d)s
+                FROM _hd_cov s JOIN regions r ON r.region_type='zip' AND r.code=s.code
+                ON CONFLICT (region_id) DO UPDATE SET
+                    properties=excluded.properties, units=excluded.units,
+                    max_property_units=excluded.max_property_units,
+                    publishable=excluded.publishable, as_of=excluded.as_of,
+                    updated_at=now();
+            """, {"d": obs_date})
+            npub = sum(1 for r in rows if r[4])
+            print(f"  coverage: {len(rows):,} zips -> {npub:,} publishable, "
+                  f"{len(rows)-npub:,} suppressed (floor {MIN_PROPERTIES} props / "
+                  f"{MAX_DOMINANCE_PCT}% dominance)")
+
+        elif mode == "roster":
+            cmap = metro_code_map(cur)
+            df = df[df["number_units"].notna()].copy()
+            df["_code"] = df["msa"].map(lambda m: cmap.get(norm(m)))
+            df = df[df["_code"].notna()]
+            agg = df.groupby("_code").agg(properties=("property_id", "nunique"),
+                                          units=("number_units", "sum")).reset_index()
+            print(f"  roster: {len(agg):,} metros")
+            for slug, field, cls, hib in COVERAGE:
+                ind = ensure_indicator(cur, slug,
+                    f"HelloData MF {field.title()} Tracked", f"querybuilder:coverage:{field}",
+                    field, cls, hib)
+                rows = [(c, obs_date, float(v)) for c, v in
+                        agg[["_code", field]].itertuples(index=False)]
+                n = load(cur, ind, "metro", rows, release)
+                print(f"  {slug}: {len(rows):,} metros -> {n:,} written")
+
+        elif mode == "cleanup":
+            cur.execute("SELECT id FROM indicators WHERE slug=%s", (url,))
+            row = cur.fetchone()
+            if not row:
+                print(f"  nothing to clean: {url} absent")
+            else:
+                iid = row[0]
+                cur.execute("DELETE FROM observations WHERE indicator_id=%s", (iid,))
+                print(f"  deleted {cur.rowcount} observations for {url}")
+                cur.execute("DELETE FROM indicators WHERE id=%s", (iid,))
+                print(f"  deleted indicator {url}")
+        else:
+            raise ValueError(f"unknown HD_MODE {mode}")
+
+    if refresh:
+        prev = conn.autocommit
+        conn.autocommit = True
+        with conn.cursor() as cur:
+            cur.execute("SET statement_timeout = 0")
+            cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_indicator_analytics;")
+        print("Refreshed mv_indicator_analytics.")
+        conn.autocommit = prev
+
+
 def main():
     db = os.environ.get("SUPABASE_DB_URL")
     mode = os.environ.get("HD_MODE")
     url = os.environ.get("HD_URL")
     if not (db and mode and url):
         sys.exit("ERROR: need SUPABASE_DB_URL, HD_MODE, HD_URL")
-    obs_date = os.environ.get("HD_OBS_DATE") or dt.date.today().replace(day=1).isoformat()
-    release = dt.date.today()
-    print(f"HelloData ingestion - mode={mode} obs_date={obs_date}")
-    df = None
-    if mode in ("zip", "metro", "roster", "coverage"):
-        df = download(url)
-        print(f"  downloaded {len(df):,} rows; cols={list(df.columns)}")
-
+    obs_date = os.environ.get("HD_OBS_DATE") or None
+    print(f"HelloData ingestion - mode={mode}")
     conn = psycopg2.connect(db); conn.autocommit = False
     try:
-        with conn.cursor() as cur:
-            if mode in ("zip", "metro"):
-                region_type = "zip" if mode == "zip" else "metro"
-                if mode == "zip":
-                    df = df[df["zip_code"].notna()].copy()
-                    df["_code"] = df["zip_code"].astype(str).str.split(".").str[0].str.zfill(5)
-                    df = drop_invalid_zips(df)
-                    upsert_zip_regions(cur, sorted(df["_code"].unique()))
-                    print(f"  upserted {df['_code'].nunique():,} zip regions")
-                else:
-                    cmap = metro_code_map(cur)
-                    df["_code"] = df["msa"].map(lambda m: cmap.get(norm(m)))
-                    miss = df[df["_code"].isna()]["msa"].unique()
-                    if len(miss):
-                        print(f"  WARN {len(miss)} metros unmatched (e.g. {list(miss)[:3]})")
-                    df = df[df["_code"].notna()].copy()
-                # History: if the export carries as_of_month, every row is dated by
-                # its own month, giving a real time series (and therefore YoY/z-score).
-                # Without it we fall back to a single snapshot date.
-                if "as_of_month" in df.columns:
-                    df["_date"] = df["as_of_month"].map(month_start)
-                    print(f"  history: {df['_date'].nunique()} months "
-                          f"({df['_date'].min()} -> {df['_date'].max()})")
-                else:
-                    df["_date"] = obs_date
-                    print(f"  snapshot: single date {obs_date}")
-
-                for slug, col, units, cls, hib, scale in METRICS:
-                    if col not in df.columns:
-                        print(f"  skip {slug}: column {col} absent"); continue
-                    ind = ensure_indicator(cur, slug,
-                        f"HelloData {slug.replace('hd_','').replace('_',' ').title()} (multifamily)",
-                        f"querybuilder:{col}:{UNIVERSE}", units, cls, hib)
-                    sub = df[["_code", "_date", col]].dropna(subset=[col])
-                    rows = [(c, d, float(v) * scale)
-                            for c, d, v in sub.itertuples(index=False)]
-                    n = load(cur, ind, region_type, rows, release)
-                    print(f"  {slug}: {len(rows):,} cells -> {n:,} written")
-            elif mode == "roster":
-                cmap = metro_code_map(cur)
-                df = df[df["number_units"].notna()].copy()
-                df["_code"] = df["msa"].map(lambda m: cmap.get(norm(m)))
-                df = df[df["_code"].notna()]
-                agg = df.groupby("_code").agg(properties=("property_id", "nunique"),
-                                              units=("number_units", "sum")).reset_index()
-                print(f"  roster: {len(agg):,} metros")
-                for slug, field, cls, hib in COVERAGE:
-                    ind = ensure_indicator(cur, slug,
-                        f"HelloData MF {field.title()} Tracked", f"querybuilder:coverage:{field}",
-                        field, cls, hib)
-                    rows = [(c, obs_date, float(v)) for c, v in
-                            agg[["_code", field]].itertuples(index=False)]
-                    n = load(cur, ind, "metro", rows, release)
-                    print(f"  {slug}: {len(rows):,} metros -> {n:,} written")
-            elif mode == "coverage":
-                # HelloData emits duplicate `number_units` headers (Sum and Max),
-                # so read positionally rather than by name.
-                cols = list(df.columns)
-                df.columns = ["zip_code", "properties", "units", "max_units"] + cols[4:]
-                df = df[df["zip_code"].notna()].copy()
-                df["_code"] = df["zip_code"].astype(str).str.split(".").str[0].str.zfill(5)
-                df = drop_invalid_zips(df)
-                upsert_zip_regions(cur, sorted(df["_code"].unique()))
-                rows = []
-                for c, p, u, mx in df[["_code", "properties", "units", "max_units"]].itertuples(index=False):
-                    p, u, mx = int(p), int(u), int(mx)
-                    share = (100.0 * mx / u) if u else 100.0
-                    rows.append((c, p, u, mx, bool(p >= MIN_PROPERTIES and share <= MAX_DOMINANCE_PCT)))
-                cur.execute("DROP TABLE IF EXISTS _hd_cov;")
-                cur.execute("CREATE TEMP TABLE _hd_cov (code text, p int, u bigint, mx int, pub boolean);")
-                buf = io.StringIO()
-                for c, p, u, mx, pub in rows:
-                    buf.write(f"{c},{p},{u},{mx},{'t' if pub else 'f'}\n")
-                buf.seek(0)
-                cur.copy_expert("COPY _hd_cov (code, p, u, mx, pub) FROM STDIN WITH CSV", buf)
-                cur.execute("""
-                    INSERT INTO hd_region_coverage
-                        (region_id, properties, units, max_property_units, publishable, as_of)
-                    SELECT r.id, s.p, s.u, s.mx, s.pub, %(d)s
-                    FROM _hd_cov s JOIN regions r ON r.region_type='zip' AND r.code=s.code
-                    ON CONFLICT (region_id) DO UPDATE SET
-                        properties=excluded.properties, units=excluded.units,
-                        max_property_units=excluded.max_property_units,
-                        publishable=excluded.publishable, as_of=excluded.as_of,
-                        updated_at=now();
-                """, {"d": obs_date})
-                npub = sum(1 for r in rows if r[4])
-                print(f"  coverage: {len(rows):,} zips -> {npub:,} publishable, "
-                      f"{len(rows)-npub:,} suppressed (floor {MIN_PROPERTIES} props / "
-                      f"{MAX_DOMINANCE_PCT}% dominance)")
-            elif mode == "cleanup":
-                # HD_URL carries the slug to remove (indicator + its observations).
-                cur.execute("SELECT id FROM indicators WHERE slug=%s", (url,))
-                row = cur.fetchone()
-                if not row:
-                    print(f"  nothing to clean: {url} absent")
-                else:
-                    iid = row[0]
-                    cur.execute("DELETE FROM observations WHERE indicator_id=%s", (iid,))
-                    print(f"  deleted {cur.rowcount} observations for {url}")
-                    cur.execute("DELETE FROM indicators WHERE id=%s", (iid,))
-                    print(f"  deleted indicator {url}")
-            else:
-                sys.exit(f"ERROR: unknown HD_MODE {mode}")
+        run_one(conn, mode, url, obs_date=obs_date, refresh=False)
         conn.commit(); print("Committed.")
         conn.autocommit = True
         with conn.cursor() as cur:
@@ -306,6 +322,7 @@ def main():
         conn.rollback(); print("Rolled back - no partial writes."); raise
     finally:
         conn.close()
+
 
 if __name__ == "__main__":
     main()

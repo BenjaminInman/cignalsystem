@@ -1,0 +1,61 @@
+name: HelloData pipeline
+
+# Two jobs, run independently:
+#   fire  - queue Dataset Exports, one MSA at a time (HelloData silently fails
+#           on anything larger; see fire_hellodata.py for the measurements)
+#   drain - ingest whatever the webhook has queued in hd_deliveries
+#
+# They are deliberately decoupled: exports arrive asynchronously over hours, so
+# firing and ingesting must not block on each other.
+on:
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "fire | drain | both"
+        required: true
+        default: "drain"
+      fire_limit:
+        description: "metros to fire (fire only)"
+        required: false
+        default: "25"
+      fire_mode:
+        description: "zip | metro | both (fire only)"
+        required: false
+        default: "both"
+      drain_limit:
+        description: "deliveries to ingest (drain only)"
+        required: false
+        default: "50"
+  schedule:
+    # Drain hourly: exports trickle in and signed URLs live 30 days, so there is
+    # no urgency, only the need to not require a human.
+    - cron: "17 * * * *"
+
+jobs:
+  fire:
+    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'fire' || github.event.inputs.job == 'both')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install requests psycopg2-binary
+      - env:
+          HELLODATA_API_KEY: ${{ secrets.HELLODATA_API_KEY }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          HD_FIRE_LIMIT: ${{ github.event.inputs.fire_limit }}
+          HD_FIRE_MODE: ${{ github.event.inputs.fire_mode }}
+        run: python fire_hellodata.py
+
+  drain:
+    if: github.event_name == 'schedule' || github.event.inputs.job == 'drain' || github.event.inputs.job == 'both'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pandas requests psycopg2-binary
+      - env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          HD_DRAIN_LIMIT: ${{ github.event.inputs.drain_limit || '50' }}
+        run: python drain_hellodata.py
