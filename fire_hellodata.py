@@ -73,6 +73,15 @@ def pending_metros(cur, mode, limit):
                   WHERE i.source = 'HelloData'
                     AND i.slug = 'hd_effective_rent'
                     AND o.region_id = r.id)
+           -- Also exclude anything fired recently. "Has no data yet" is NOT the
+           -- same as "not yet requested": an export takes minutes to arrive and
+           -- the drain runs hourly, so without this every batch re-fires the
+           -- previous batch. Observed 2026-08-01 - run 9 duplicated all 25
+           -- metros from run 8, burning export quota for zero new rows.
+           AND NOT EXISTS (
+                 SELECT 1 FROM hd_fired f
+                  WHERE f.region_id = r.id
+                    AND f.fired_at > now() - interval '20 hours')
          ORDER BY COALESCE(s.units, -1) DESC, r.name
          LIMIT %s
         """,
@@ -108,10 +117,10 @@ def main():
     nap = float(os.environ.get("HD_FIRE_SLEEP", "3"))
     which = os.environ.get("HD_FIRE_MODE", "both")
 
-    conn = psycopg2.connect(db)
-    with conn.cursor() as cur:
+    conn2 = psycopg2.connect(db)
+    conn2.autocommit = True
+    with conn2.cursor() as cur:
         metros = pending_metros(cur, which, limit)
-    conn.close()
 
     if not metros:
         print("nothing pending — every covered metro already has HelloData pricing")
@@ -135,10 +144,20 @@ def main():
             print(f"  {jname:26} {label[:44]:46} {st} {uid or j}")
             if uid:
                 fired += 1
+                with conn2.cursor() as c2:
+                    c2.execute(
+                        """INSERT INTO hd_fired (region_id, mode)
+                           SELECT id, %s FROM regions
+                            WHERE region_type='metro' AND code=%s
+                           ON CONFLICT (region_id, mode)
+                             DO UPDATE SET fired_at = now()""",
+                        (jname.split("_")[1], code),
+                    )
             # Deliberate pacing: a burst of 400 exports is how the large-query
             # failures started. Slow is fine — the queue is asynchronous anyway.
             time.sleep(nap)
 
+    conn2.close()
     print(f"fired {fired} export(s). They will arrive at the webhook and be "
           f"queued in hd_deliveries; run the drain job to ingest.")
 
