@@ -60,6 +60,14 @@ export async function GET(req) {
     const regionType = zip ? "zip" : "metro";
     const regionCode = zip || metro;
 
+    // Coverage basis for the cell, so the UI can state how many properties a
+    // ZIP average rests on. Suppression itself happens inside hd_analytics.
+    let coverage = null;
+    if (regionType === "zip") {
+      const { data: cov } = await supabase.rpc("hd_coverage", { p_zip: regionCode });
+      if (cov && cov.length) coverage = cov[0];
+    }
+
     // Called with the user's session so auth.uid() resolves inside the function.
     const { data, error } = await supabase.rpc("hd_analytics", {
       p_slugs: SLUGS,
@@ -110,6 +118,7 @@ export async function GET(req) {
       regionType,
       regionCode,
       asOf,
+      coverage,
       series,
       concessionLoad: load,
     });

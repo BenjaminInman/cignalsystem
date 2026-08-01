@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "zip | metro | roster"
+        description: "zip | metro | roster | coverage"
         required: true
         default: "metro"
       url:

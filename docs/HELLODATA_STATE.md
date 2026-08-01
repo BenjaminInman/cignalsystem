@@ -116,3 +116,42 @@ from restricted data, so the paying-tier route cannot read HelloData with the an
 key. Next step is a `SECURITY DEFINER` function granted to `authenticated`, with
 the tier check done server-side in the route before calling it. That avoids adding
 a service-role key to the app.
+
+## Disclosure control — 2026-08-01
+
+`hd_region_coverage` (region_id, properties, units, max_property_units,
+max_share, publishable). A ZIP publishes only when **both** hold:
+
+- **>= 3 distinct properties** — statistical stability
+- **no single property > 50% of units** — re-identification guard
+
+The dominance rule is the one that is easy to skip and shouldn't be. Nashville
+37189 has two properties and the larger is 66% of units: an operator who knows
+that building's rents can derive the other's from the published average. Two
+competing buildings is a real market dynamic *and* a re-identifiable pair at the
+same time — the count rule alone does not catch it.
+
+Enforced inside `hd_analytics()`, not in the API route, so it cannot be bypassed
+by calling the RPC directly over PostgREST.
+
+**Suppressed cells fall back to metro, never to a neighbouring ZIP.** Adjacent
+ZIPs are different submarkets (37027 Brentwood borders 37211 and their rents are
+nothing alike), so a neighbour blend would describe neither and would silently
+break ZIP independence.
+
+Nashville: **47 publishable, 5 suppressed** (of 52 loaded).
+
+`hd_coverage(p_zip)` returns the basis (properties/units) to authenticated Pro+
+callers so the UI can state what a ZIP average rests on.
+
+Run via `HD_MODE=coverage` with a ZIP-grain export of
+`zip_code, CountDistinct(property_id), Sum(number_units), Max(number_units)`.
+Note HelloData emits **duplicate `number_units` headers** for Sum and Max — read
+positionally, not by name, or the two collapse.
+
+### Vendor geography is not clean
+The Nashville MSA filter returned `11111` (a placeholder) and `30766` (a Georgia
+prefix). These were dropped only because the ingester joins against existing
+`regions` rows and neither exists. **At national scale that join will not save
+you** — a bad ZIP that is a real ZIP elsewhere would land in the wrong market.
+Add an explicit validation step before the national run.

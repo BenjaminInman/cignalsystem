@@ -737,7 +737,11 @@ function ZipLookup() {
 
           <p className="mono mt-3 text-[10px] leading-relaxed tracking-[0.08em] text-muted">
             {hd.regionType === "zip"
-              ? "This ZIP only — neighbouring ZIPs carry their own rent levels and are not averaged in."
+              ? `This ZIP only — neighbouring ZIPs carry their own rent levels and are not averaged in.${
+                  hd.coverage?.properties
+                    ? ` Based on ${hd.coverage.properties} properties · ${Number(hd.coverage.units).toLocaleString()} units.`
+                    : ""
+                }`
               : "No ZIP-level coverage for this search — this is the whole metro, which spans every submarket in the CBSA."}
             {" "}Observed listings, HelloData.
           </p>

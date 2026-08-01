@@ -17,6 +17,14 @@ Modes (HD_MODE):
   metro  - CSV grouped by msa (full CBSA name); name normalized -> CBSA code.
   roster - CSV of property_id + msa + number_units; rolls up to per-metro
            property count + unit total (coverage indicators).
+  coverage - CSV of zip_code + CountDistinct(property_id) + Sum(number_units)
+           + Max(number_units). Writes hd_region_coverage, which drives
+           disclosure control: a ZIP publishes only with >=3 properties AND no
+           single property above 50% of units. The count rule guards statistical
+           stability; the dominance rule guards re-identification (two buildings,
+           one at 66% of units, lets an operator who knows one derive the other).
+           Suppressed ZIPs fall back to metro - never to a neighbouring ZIP,
+           which is a different submarket and would describe neither.
 
 If the export includes as_of_month, rows are dated per-month (history backfill).
 Otherwise HD_OBS_DATE (default: first of the current month) is used for all rows.
@@ -29,6 +37,9 @@ import requests, pandas as pd, psycopg2
 from psycopg2.extras import execute_values
 
 SOURCE = "HelloData"
+# Disclosure control for ZIP cells. Both must hold to publish.
+MIN_PROPERTIES = 3        # statistical stability
+MAX_DOMINANCE_PCT = 50.0  # re-identification guard
 # slug, csv column, units, classification, higher_is_better, scale
 METRICS = [
     ("hd_asking_rent",    "asking_rent",       "USD",  "coincident", True,  1.0),
@@ -118,7 +129,7 @@ def main():
     release = dt.date.today()
     print(f"HelloData ingestion - mode={mode} obs_date={obs_date}")
     df = None
-    if mode in ("zip", "metro", "roster"):
+    if mode in ("zip", "metro", "roster", "coverage"):
         df = download(url)
         print(f"  downloaded {len(df):,} rows; cols={list(df.columns)}")
 
@@ -177,6 +188,41 @@ def main():
                             agg[["_code", field]].itertuples(index=False)]
                     n = load(cur, ind, "metro", rows, release)
                     print(f"  {slug}: {len(rows):,} metros -> {n:,} written")
+            elif mode == "coverage":
+                # HelloData emits duplicate `number_units` headers (Sum and Max),
+                # so read positionally rather than by name.
+                cols = list(df.columns)
+                df.columns = ["zip_code", "properties", "units", "max_units"] + cols[4:]
+                df = df[df["zip_code"].notna()].copy()
+                df["_code"] = df["zip_code"].astype(str).str.split(".").str[0].str.zfill(5)
+                upsert_zip_regions(cur, sorted(df["_code"].unique()))
+                rows = []
+                for c, p, u, mx in df[["_code", "properties", "units", "max_units"]].itertuples(index=False):
+                    p, u, mx = int(p), int(u), int(mx)
+                    share = (100.0 * mx / u) if u else 100.0
+                    rows.append((c, p, u, mx, bool(p >= MIN_PROPERTIES and share <= MAX_DOMINANCE_PCT)))
+                cur.execute("DROP TABLE IF EXISTS _hd_cov;")
+                cur.execute("CREATE TEMP TABLE _hd_cov (code text, p int, u bigint, mx int, pub boolean);")
+                buf = io.StringIO()
+                for c, p, u, mx, pub in rows:
+                    buf.write(f"{c},{p},{u},{mx},{'t' if pub else 'f'}\n")
+                buf.seek(0)
+                cur.copy_expert("COPY _hd_cov (code, p, u, mx, pub) FROM STDIN WITH CSV", buf)
+                cur.execute("""
+                    INSERT INTO hd_region_coverage
+                        (region_id, properties, units, max_property_units, publishable, as_of)
+                    SELECT r.id, s.p, s.u, s.mx, s.pub, %(d)s
+                    FROM _hd_cov s JOIN regions r ON r.region_type='zip' AND r.code=s.code
+                    ON CONFLICT (region_id) DO UPDATE SET
+                        properties=excluded.properties, units=excluded.units,
+                        max_property_units=excluded.max_property_units,
+                        publishable=excluded.publishable, as_of=excluded.as_of,
+                        updated_at=now();
+                """, {"d": obs_date})
+                npub = sum(1 for r in rows if r[4])
+                print(f"  coverage: {len(rows):,} zips -> {npub:,} publishable, "
+                      f"{len(rows)-npub:,} suppressed (floor {MIN_PROPERTIES} props / "
+                      f"{MAX_DOMINANCE_PCT}% dominance)")
             elif mode == "cleanup":
                 # HD_URL carries the slug to remove (indicator + its observations).
                 cur.execute("SELECT id FROM indicators WHERE slug=%s", (url,))
