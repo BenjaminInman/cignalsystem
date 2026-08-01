@@ -68,6 +68,14 @@ CHECKS = [
         "be evaluated for it",
     ),
     (
+        "platform_stats answers within the anon statement timeout",
+        """SELECT CASE WHEN (SELECT count(*) FROM (SELECT platform_stats()) t) = 1
+                       THEN 0 ELSE 1 END""",
+        0,
+        "the home-page stats query is failing; visitors see blank MSA/ZIP/data "
+        "point counters (see the 2026-08-01 index fix)",
+    ),
+    (
         "restricted indicators are invisible to the public wrapper view",
         """SELECT count(*) FROM v_indicator_analytics v
              JOIN indicators i ON i.slug = v.slug

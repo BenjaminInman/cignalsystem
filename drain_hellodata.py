@@ -98,6 +98,21 @@ def main():
             ok += 1
         except Exception as e:  # keep draining; one bad file must not stall the queue
             msg = str(e)[:500]
+            # An export whose market filter matched nothing returns a 0-byte CSV.
+            # That is a permanent outcome, not a transient failure - retrying it
+            # three times wastes runs and buries real errors. Usual cause: the
+            # MSA label sent to HelloData did not match theirs exactly (regions
+            # holds "Dayton  OH" where HelloData has "Dayton, OH"), so the export
+            # succeeds and returns nothing.
+            if "No columns to parse" in msg or "EmptyData" in type(e).__name__:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "UPDATE hd_deliveries SET status='empty', processed_at=now(), "
+                        "note='export returned an empty file - check the MSA label' "
+                        "WHERE id=%s", (jid,))
+                skip += 1
+                print("    EMPTY (no rows matched the filter) - not retrying")
+                continue
             with conn.cursor() as cur:
                 cur.execute(
                     "UPDATE hd_deliveries SET status=CASE WHEN attempts>=%s THEN 'failed' "
