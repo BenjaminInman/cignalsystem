@@ -84,6 +84,61 @@ function classifyPhase(rentDir, vacDir, concDir) {
   return "Recovery";
 }
 
+// Anchored scenario cone: real measured history + a modeled bull/base/bear fan,
+// rebased to the last real value so the forecast grows out of the data instead of
+// floating free. Only metrics with genuine history qualify (rent growth, vacancy);
+// cap rate (1 obs) and NOI (unmeasured) are intentionally excluded until real.
+async function buildProjections(sbFn) {
+  const pct = (value, yoy) => { const p = value - yoy; return p ? (yoy / p) * 100 : null; };
+  const r2 = (n) => Math.round(n * 100) / 100;
+  const FRAC = [0, 0.45, 0.78, 1.0, 0.95]; // year0 = real anchor; ramps to target by yr3, slight reversion yr4
+  const coneFrom = (a, t) => {
+    const mk = (target) => FRAC.map((f) => r2(a + (target - a) * f));
+    return { base: mk(t.base), bull: mk(t.bull), bear: mk(t.bear) };
+  };
+  const yearLabels = (lastDate) => {
+    const y = new Date(lastDate + "T00:00:00Z").getUTCFullYear();
+    return ["Now", `${y + 1}`, `${y + 2}`, `${y + 3}`, `${y + 4}`];
+  };
+
+  const out = { asOf: null, metrics: [] };
+
+  // Rent Growth — ZORI multifamily national, YoY %
+  const rentRows = (await sbFn(`v_indicator_analytics?slug=eq.zori_national_mf&region_type=eq.national&select=obs_date,value,yoy_change&order=obs_date.desc&limit=66`)) || [];
+  const rentHist = rentRows
+    .filter((r) => r.yoy_change != null)
+    .map((r) => ({ t: r.obs_date, v: pct(Number(r.value), Number(r.yoy_change)) }))
+    .filter((r) => r.v != null)
+    .reverse()
+    .slice(-60);
+  if (rentHist.length) {
+    const a = rentHist[rentHist.length - 1].v;
+    out.metrics.push({
+      key: "Rent Growth", unit: "%",
+      history: rentHist.map((p) => ({ t: p.t, v: r2(p.v) })),
+      years: yearLabels(rentHist[rentHist.length - 1].t),
+      cone: coneFrom(a, { base: 3.0, bull: 5.3, bear: -0.5 }),
+    });
+    out.asOf = rentHist[rentHist.length - 1].t;
+  }
+
+  // Vacancy — national rental vacancy level %
+  const vacRows = (await sbFn(`v_indicator_analytics?slug=eq.rental_vacancy&region_type=eq.national&select=obs_date,value&order=obs_date.desc&limit=24`)) || [];
+  const vacHist = vacRows.map((r) => ({ t: r.obs_date, v: Number(r.value) })).reverse();
+  if (vacHist.length) {
+    const a = vacHist[vacHist.length - 1].v;
+    out.metrics.push({
+      key: "Vacancy", unit: "%",
+      history: vacHist.map((p) => ({ t: p.t, v: r2(p.v) })),
+      years: yearLabels(vacHist[vacHist.length - 1].t),
+      cone: coneFrom(a, { base: 6.2, bull: 5.1, bear: 8.4 }),
+    });
+    if (!out.asOf) out.asOf = vacHist[vacHist.length - 1].t;
+  }
+
+  return out;
+}
+
 export async function GET() {
   try {
     const cutoff = new Date(Date.now() - 400 * 86400000).toISOString().slice(0, 10);
@@ -188,7 +243,9 @@ export async function GET() {
       }).sort((a, b) => (b.rentYoY ?? -99) - (a.rentYoY ?? -99));
     }
 
-    return Response.json({ ok: true, cycle, supply, drivers, markets });
+    const projections = await buildProjections(sb);
+
+    return Response.json({ ok: true, cycle, supply, drivers, markets, projections });
   } catch {
     return Response.json({ ok: false }, { status: 200 });
   }

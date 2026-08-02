@@ -9,19 +9,8 @@ import ComingSoonInline from "@/components/ComingSoonInline";
 import AskCanary from "@/components/AskCanary";
 
 const SCENARIOS = ["Base Case", "Bull Case", "Bear Case"];
-const DEFAULT_METRICS = ["Rent Growth", "Vacancy", "Cap Rate", "NOI Growth"];
-const YEARS = [2025, 2026, 2027, 2028, 2029];
-
-const FORECAST_SERIES = {
-  "Rent Growth": { unit: "%", mean: 3.5, "Base Case": [3.8, 4.2, 4.5, 4.3, 4.1], "Bull Case": [3.8, 4.8, 5.6, 5.9, 6.1], "Bear Case": [3.8, 3.1, 2.4, 2.1, 2.3] },
-  Vacancy: { unit: "%", mean: 6.5, "Base Case": [6.8, 6.5, 6.2, 6.0, 5.9], "Bull Case": [6.8, 6.2, 5.5, 5.1, 4.8], "Bear Case": [6.8, 7.4, 8.1, 8.4, 8.2] },
-  "Cap Rate": { unit: "%", mean: 5.4, "Base Case": [5.4, 5.5, 5.5, 5.4, 5.3], "Bull Case": [5.4, 5.3, 5.1, 5.0, 4.9], "Bear Case": [5.4, 5.8, 6.3, 6.5, 6.4] },
-  "NOI Growth": { unit: "%", mean: 3.4, "Base Case": [3.2, 3.8, 4.1, 4.0, 3.9], "Bull Case": [3.2, 4.5, 5.4, 5.8, 6.0], "Bear Case": [3.2, 2.1, 1.2, 0.9, 1.4] },
-};
-function seriesFor(metric, scenario) {
-  const m = FORECAST_SERIES[metric] || Object.values(FORECAST_SERIES)[0];
-  return { data: m[scenario] || m["Base Case"], unit: m.unit, mean: m.mean };
-}
+const SCEN_KEY = { "Base Case": "base", "Bull Case": "bull", "Bear Case": "bear" };
+const FALLBACK_METRICS = ["Rent Growth", "Vacancy"];
 
 // Four-phase cycle (When-first framework) with behavioral archetypes.
 const PHASES = [
@@ -35,55 +24,94 @@ function fmtMonth(d) {
   if (!d) return "";
   return new Date(d + "T00:00:00Z").toLocaleString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
 }
+function fmtYr(d) {
+  if (!d) return "";
+  return String(new Date(d + "T00:00:00Z").getUTCFullYear());
+}
 
-function LineChart({ data, unit, mean, metric, scenario }) {
-  const [hi, setHi] = useState(null);
-  const w = 1100, h = 320, pad = 40;
-  const max = 8, min = 0;
-  const stepX = (w - pad * 2) / (data.length - 1);
-  const y = (v) => pad + ((max - v) / (max - min)) * (h - pad * 2);
-  const xOf = (i) => pad + i * stepX;
-  const pts = data.map((v, i) => `${xOf(i)},${y(v)}`).join(" ");
-  const area = `${pad},${h - pad} ${pts} ${xOf(data.length - 1)},${h - pad}`;
-  const tipW = 200, tipH = 96;
-  const tipX = hi == null ? 0 : Math.min(Math.max(xOf(hi) - tipW / 2, 6), w - tipW - 6);
-  const tipY = hi == null ? 0 : Math.max(y(data[hi]) - tipH - 16, 6);
-  const yoy = hi != null && hi > 0 ? data[hi] - data[hi - 1] : null;
+// Anchored scenario cone — real measured history (solid) up to Now, then a modeled
+// bull/base/bear fan (rebased to the last real value). History is real data; the
+// forward cone is an illustrative model. The two are visually separated by the Now line.
+function ConeChart({ history = [], cone, years = [], unit, metric, scenario }) {
+  const [hi, setHi] = useState(null); // { seg: "h" | "c", i }
+  const w = 1100, h = 340, padL = 48, padR = 20, padT = 22, padB = 34;
+  const sel = SCEN_KEY[scenario] || "base";
+  const base = cone?.base || [], bull = cone?.bull || [], bear = cone?.bear || [];
+  const nH = history.length, nC = base.length;
+  if (!nH || !nC) return <p className="mono py-10 text-center text-[12px] text-muted">Loading projection…</p>;
+
+  const midFrac = 0.56;
+  const xMid = padL + (w - padL - padR) * midFrac;
+  const xH = (i) => padL + (nH === 1 ? 0 : (xMid - padL) * (i / (nH - 1)));
+  const xC = (i) => xMid + (nC === 1 ? 0 : (w - padR - xMid) * (i / (nC - 1)));
+
+  const all = [...history.map((p) => p.v), ...base, ...bull, ...bear];
+  let lo = Math.min(...all), hiV = Math.max(...all);
+  const padY = (hiV - lo) * 0.12 || 1;
+  lo -= padY; hiV += padY;
+  const y = (v) => padT + ((hiV - v) / (hiV - lo)) * (h - padT - padB);
+
+  const ticks = 4;
+  const gridVals = Array.from({ length: ticks + 1 }, (_, k) => lo + ((hiV - lo) * k) / ticks);
+  const histPts = history.map((p, i) => `${xH(i)},${y(p.v)}`).join(" ");
+  const linePts = (arr) => arr.map((v, i) => `${xC(i)},${y(v)}`).join(" ");
+  const fan = `${bull.map((v, i) => `${xC(i)},${y(v)}`).join(" ")} ${bear.map((v, i) => `${xC(i)},${y(v)}`).reverse().join(" ")}`;
+  const selArr = sel === "bull" ? bull : sel === "bear" ? bear : base;
+  const selColor = sel === "bull" ? "#5FB97C" : sel === "bear" ? "#E5634D" : "#F5B544";
+
+  let hv = null, hx = null, hy = null, hlab = null, htag = null;
+  if (hi) {
+    if (hi.seg === "h") { const p = history[hi.i]; hv = p.v; hx = xH(hi.i); hy = y(p.v); hlab = fmtMonth(p.t); htag = "MEASURED"; }
+    else { hv = selArr[hi.i]; hx = xC(hi.i); hy = y(hv); hlab = years[hi.i] || `+${hi.i}`; htag = hi.i === 0 ? "NOW" : "MODELED"; }
+  }
+  const tipW = 188, tipH = 82;
+  const tipX = hx == null ? 0 : Math.min(Math.max(hx - tipW / 2, 6), w - tipW - 6);
+  const tipY = hy == null ? 0 : Math.max(hy - tipH - 14, 6);
+  const slotH = (xMid - padL) / Math.max(nH - 1, 1);
 
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full" onMouseLeave={() => setHi(null)}>
-      {[2, 4, 6, 8].map((g) => (
-        <g key={g}>
-          <line x1={pad} y1={y(g)} x2={w - pad} y2={y(g)} stroke="rgba(255,255,255,0.05)" />
-          <text x={pad - 10} y={y(g) + 4} textAnchor="end" fontSize="11" fill="#797e85" fontFamily="IBM Plex Mono">{g}</text>
+      {gridVals.map((g, k) => (
+        <g key={k}>
+          <line x1={padL} y1={y(g)} x2={w - padR} y2={y(g)} stroke="rgba(255,255,255,0.05)" />
+          <text x={padL - 8} y={y(g) + 4} textAnchor="end" fontSize="11" fill="#797e85" fontFamily="IBM Plex Mono">{g.toFixed(1)}{unit}</text>
         </g>
       ))}
-      <polyline points={`${pad},${y(mean)} ${w - pad},${y(mean)}`} stroke="#797e85" strokeWidth="1" strokeDasharray="5 5" fill="none" />
-      <polygon points={area} fill="#F5B544" opacity="0.08" />
-      <polyline points={pts} fill="none" stroke="#F5B544" strokeWidth="2.4" strokeLinecap="round" />
-      {hi != null && <line x1={xOf(hi)} y1={pad} x2={xOf(hi)} y2={h - pad} stroke="#F5B544" strokeOpacity="0.25" strokeWidth="1" />}
-      {data.map((v, i) => (
-        <g key={i} onMouseEnter={() => setHi(i)} onClick={() => setHi(i)} style={{ cursor: "pointer" }}>
-          <circle cx={xOf(i)} cy={y(v)} r="16" fill="transparent" />
-          <circle cx={xOf(i)} cy={y(v)} r={hi === i ? 6 : 4} fill="#F5B544" style={{ transition: "r .15s ease" }} />
-          {hi === i && <circle cx={xOf(i)} cy={y(v)} r="9" fill="none" stroke="#F5B544" strokeOpacity="0.4" />}
+
+      <line x1={xMid} y1={padT} x2={xMid} y2={h - padB} stroke="#F5B544" strokeOpacity="0.3" strokeWidth="1" strokeDasharray="4 4" />
+      <text x={xMid} y={padT - 7} textAnchor="middle" fontSize="10" fill="#F5B544" fillOpacity="0.85" fontFamily="IBM Plex Mono">NOW</text>
+
+      <polygon points={fan} fill="#F5B544" opacity="0.09" />
+      <polyline points={linePts(bull)} fill="none" stroke="#5FB97C" strokeOpacity={sel === "bull" ? 0.95 : 0.4} strokeWidth={sel === "bull" ? 2.4 : 1.4} strokeDasharray="5 4" />
+      <polyline points={linePts(bear)} fill="none" stroke="#E5634D" strokeOpacity={sel === "bear" ? 0.95 : 0.4} strokeWidth={sel === "bear" ? 2.4 : 1.4} strokeDasharray="5 4" />
+      <polyline points={linePts(base)} fill="none" stroke="#F5B544" strokeOpacity={sel === "base" ? 0.95 : 0.5} strokeWidth={sel === "base" ? 2.4 : 1.6} strokeDasharray="5 4" />
+
+      <polyline points={histPts} fill="none" stroke="#F5B544" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+
+      {history.map((p, i) => (
+        <rect key={"h" + i} x={xH(i) - slotH / 2} y={padT} width={slotH} height={h - padT - padB} fill="transparent"
+          onMouseEnter={() => setHi({ seg: "h", i })} onClick={() => setHi({ seg: "h", i })} style={{ cursor: "pointer" }} />
+      ))}
+      {selArr.map((v, i) => (
+        <g key={"c" + i} onMouseEnter={() => setHi({ seg: "c", i })} onClick={() => setHi({ seg: "c", i })} style={{ cursor: "pointer" }}>
+          <circle cx={xC(i)} cy={y(v)} r="14" fill="transparent" />
+          <circle cx={xC(i)} cy={y(v)} r={hi && hi.seg === "c" && hi.i === i ? 5 : 3} fill={selColor} />
         </g>
       ))}
-      {YEARS.map((yr, i) => (
-        <text key={yr} x={xOf(i)} y={h - pad + 22} textAnchor="middle" fontSize="11" fill={hi === i ? "#F5B544" : "#797e85"} fontFamily="IBM Plex Mono">{yr}</text>
+
+      {years.map((yr, i) => (
+        <text key={yr + i} x={xC(i)} y={h - padB + 20} textAnchor="middle" fontSize="10" fill={hi && hi.seg === "c" && hi.i === i ? "#F5B544" : "#797e85"} fontFamily="IBM Plex Mono">{yr}</text>
       ))}
-      {hi != null && (
+      {nH > 0 && <text x={padL} y={h - padB + 20} textAnchor="start" fontSize="10" fill="#797e85" fontFamily="IBM Plex Mono">{fmtYr(history[0].t)}</text>}
+
+      {hi && hv != null && (
         <g style={{ pointerEvents: "none" }}>
+          <line x1={hx} y1={padT} x2={hx} y2={h - padB} stroke="#F5B544" strokeOpacity="0.2" strokeWidth="1" />
           <rect x={tipX} y={tipY} width={tipW} height={tipH} rx="8" fill="#12141a" stroke="rgba(245,181,68,0.35)" />
-          <text x={tipX + 14} y={tipY + 24} fontSize="13" fontWeight="700" fill="#e9eaec" fontFamily="Archivo">{YEARS[hi]}</text>
-          <text x={tipX + tipW - 14} y={tipY + 24} textAnchor="end" fontSize="10" fill="#797e85" fontFamily="IBM Plex Mono">{scenario.replace(" Case", "").toUpperCase()}</text>
-          <text x={tipX + 14} y={tipY + 52} fontSize="22" fontWeight="700" fill="#F5B544" fontFamily="Archivo">{data[hi].toFixed(1)}{unit}</text>
-          <text x={tipX + 14} y={tipY + 72} fontSize="11" fill="#9aa0a6" fontFamily="IBM Plex Mono">{metric}</text>
-          {yoy != null && (
-            <text x={tipX + 14} y={tipY + 88} fontSize="11" fontFamily="IBM Plex Mono" fill={yoy >= 0 ? "#5FB97C" : "#E5634D"}>
-              {yoy >= 0 ? "▲ +" : "▼ "}{yoy.toFixed(1)}{unit} vs {YEARS[hi - 1]}
-            </text>
-          )}
+          <text x={tipX + 14} y={tipY + 22} fontSize="12" fontWeight="700" fill="#e9eaec" fontFamily="Archivo">{hlab}</text>
+          <text x={tipX + tipW - 14} y={tipY + 22} textAnchor="end" fontSize="9" fill={htag === "MEASURED" ? "#5FB97C" : htag === "NOW" ? "#F5B544" : "#9aa0a6"} fontFamily="IBM Plex Mono">{htag}</text>
+          <text x={tipX + 14} y={tipY + 50} fontSize="22" fontWeight="700" fill="#F5B544" fontFamily="Archivo">{hv.toFixed(1)}{unit}</text>
+          <text x={tipX + 14} y={tipY + 70} fontSize="10" fill="#9aa0a6" fontFamily="IBM Plex Mono">{metric}{htag === "MODELED" ? ` · ${scenario.replace(" Case", "")}` : ""}</text>
         </g>
       )}
     </svg>
@@ -248,14 +276,17 @@ function TheBrief({ brief }) {
 
 function ForecastsInner() {
   const { COPY = {} } = useContent();
-  const metrics = COPY.fcMetrics || DEFAULT_METRICS;
   const colLabel = COPY.fcColLabel || "RENT";
   const [sc, setSc] = useState("Base Case");
-  const [metric, setMetric] = useState(metrics[0]);
+  const [metric, setMetric] = useState("Rent Growth");
   const [fc, setFc] = useState(null);
   const [brief, setBrief] = useState(null);
-  const conf = sc === "Base Case" ? 78 : sc === "Bull Case" ? 64 : 71;
-  const series = seriesFor(metric, sc);
+
+  const proj = fc?.projections;
+  const projMetrics = proj?.metrics || [];
+  const metricList = projMetrics.length ? projMetrics.map((m) => m.key) : FALLBACK_METRICS;
+  const activeMetric = metricList.includes(metric) ? metric : metricList[0];
+  const pm = projMetrics.find((m) => m.key === activeMetric);
 
   useEffect(() => {
     let alive = true;
@@ -290,8 +321,8 @@ function ForecastsInner() {
         <div className="flex items-center gap-3">
           <span className="kicker">Metric</span>
           <div className="inline-flex flex-wrap rounded-md border border-[var(--line)] p-1">
-            {metrics.map((m) => (
-              <button key={m} onClick={() => setMetric(m)} className={`mono rounded px-3 py-1.5 text-[12px] ${metric === m ? "bg-signal/15 text-signal" : "text-muted hover:text-ink"}`}>{m}</button>
+            {metricList.map((m) => (
+              <button key={m} onClick={() => setMetric(m)} className={`mono rounded px-3 py-1.5 text-[12px] ${activeMetric === m ? "bg-signal/15 text-signal" : "text-muted hover:text-ink"}`}>{m}</button>
             ))}
           </div>
         </div>
@@ -300,13 +331,17 @@ function ForecastsInner() {
       <div className="card mt-6 p-6">
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <h2 className="font-semibold text-ink">{sc} — 5 Year Forecast</h2>
-            <p className="mono text-[12px] text-muted">{metric} · {sc} projection</p>
+            <h2 className="font-semibold text-ink">{activeMetric} — measured history &amp; 5-year outlook</h2>
+            <p className="mono text-[12px] text-muted">Real data through {proj?.asOf ? fmtMonth(proj.asOf) : "—"} · {sc.replace(" Case", "")} scenario highlighted in the forward cone</p>
           </div>
-          <span className="mono rounded-sm border border-neutral/40 bg-neutral/10 px-2.5 py-1 text-[11px] text-neutral">{conf}% conf</span>
+          <span className="mono rounded-sm border border-signal/30 bg-signal/10 px-2.5 py-1 text-[11px] text-signal">MODELED FORECAST</span>
         </div>
-        <LineChart data={series.data} unit={series.unit} mean={series.mean} metric={metric} scenario={sc} />
-        <p className="mono mt-2 text-center text-[11px] text-muted">Hover or tap a year to inspect the projection · dashed line = historical mean reference.</p>
+        {pm ? (
+          <ConeChart history={pm.history} cone={pm.cone} years={pm.years} unit={pm.unit} metric={activeMetric} scenario={sc} />
+        ) : (
+          <p className="mono py-10 text-center text-[12px] text-muted">Loading live projection…</p>
+        )}
+        <p className="mono mt-2 text-center text-[11px] text-muted">Solid line = measured history from the Cignal data layer · dashed fan = illustrative model, rebased to the current value · hover to inspect.</p>
       </div>
 
       {/* Supply pipeline forecast (live) */}
