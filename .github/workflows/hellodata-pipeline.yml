@@ -27,9 +27,17 @@ on:
         required: false
         default: "50"
   schedule:
-    # Drain hourly: exports trickle in and signed URLs live 30 days, so there is
-    # no urgency, only the need to not require a human.
-    - cron: "17 * * * *"
+    # Every 15 min. HelloData's cap is 10 CONCURRENT exports, not 10 per period,
+    # and each takes ~3-8 min, so the real ceiling is ~80-120/hour. Firing 5
+    # metros (10 exports) per quarter hour sits right at the cap.
+    - cron: "*/15 * * * *"
+
+# Only one run at a time. Two drains overlapping would collide on
+# REFRESH MATERIALIZED VIEW CONCURRENTLY (which serialises anyway) and pile up
+# queued runs. Waiting rather than cancelling means no delivery is skipped.
+concurrency:
+  group: hellodata-pipeline
+  cancel-in-progress: false
 
 jobs:
   # Fires a SMALL batch every 30 minutes. HelloData caps concurrent exports at
@@ -46,7 +54,7 @@ jobs:
       - env:
           HELLODATA_API_KEY: ${{ secrets.HELLODATA_API_KEY }}
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-          HD_FIRE_LIMIT: ${{ github.event.inputs.fire_limit || '4' }}
+          HD_FIRE_LIMIT: ${{ github.event.inputs.fire_limit || '5' }}
           HD_FIRE_MODE: ${{ github.event.inputs.fire_mode }}
         run: python fire_hellodata.py
 
