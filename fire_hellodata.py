@@ -121,14 +121,21 @@ def main():
                              "https://multifamily.cignalsystem.com/api/hellodata/webhook")
     if not (key and db):
         sys.exit("ERROR: need HELLODATA_API_KEY and SUPABASE_DB_URL")
-    limit = int(os.environ.get("HD_FIRE_LIMIT", "25"))
-    nap = float(os.environ.get("HD_FIRE_SLEEP", "3"))
-    which = os.environ.get("HD_FIRE_MODE", "both")
+    limit = int(os.environ.get("HD_FIRE_LIMIT") or "25")
+    nap = float(os.environ.get("HD_FIRE_SLEEP") or "3")
+    # NOTE: on scheduled runs GitHub sets input-backed env vars to the EMPTY
+    # STRING, not unset - so a dict default never fires. Every scheduled run
+    # between 2026-08-01 and 2026-08-03 reported success while firing nothing.
+    # Coerce empty to the default explicitly.
+    which = os.environ.get("HD_FIRE_MODE") or "both"
 
     conn2 = psycopg2.connect(db)
     conn2.autocommit = True
     with conn2.cursor() as cur:
         metros = pending_metros(cur, which, limit)
+
+    if which not in ("zip", "metro", "both"):
+        sys.exit(f"ERROR: HD_FIRE_MODE={which!r} is not zip|metro|both")
 
     if not metros:
         print("nothing pending — every covered metro already has HelloData pricing")

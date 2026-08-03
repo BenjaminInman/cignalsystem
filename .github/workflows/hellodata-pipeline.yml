@@ -54,8 +54,8 @@ jobs:
       - env:
           HELLODATA_API_KEY: ${{ secrets.HELLODATA_API_KEY }}
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-          HD_FIRE_LIMIT: ${{ github.event.inputs.fire_limit || '5' }}
-          HD_FIRE_MODE: ${{ github.event.inputs.fire_mode }}
+          HD_FIRE_LIMIT: ${{ github.event.inputs.fire_limit || '20' }}
+          HD_FIRE_MODE: ${{ github.event.inputs.fire_mode || 'both' }}
         run: python fire_hellodata.py
 
   drain:

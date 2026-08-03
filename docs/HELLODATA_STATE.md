@@ -357,3 +357,26 @@ only** — every other source keeps first-print-wins, unchanged.
 
 The integrity check "no HelloData observation above revision 0" now means "the
 promotion ran", not "no restatement happened".
+
+## Silent no-op — 2026-08-03
+
+Scheduled runs reported **success while firing zero exports** for 33 hours.
+
+Cause: `HD_FIRE_MODE: ${{ github.event.inputs.fire_mode }}` resolves to the
+**empty string** on `schedule` events (there are no inputs), and
+`os.environ.get("HD_FIRE_MODE", "both")` only falls back when a variable is
+*unset*, not when it is set to `""`. `which` became `""`, matched neither branch,
+the job list came out empty, and the script exited 0.
+
+Fixes:
+- `os.environ.get(...) or "default"` for every input-backed var in both scripts
+- `|| 'both'` / `|| '20'` defaults in the workflow
+- `fire_hellodata.py` now **exits non-zero** on an unrecognised mode instead of
+  quietly firing nothing
+- new invariant: metros still unfired *and* no delivery in 6h ⇒ fail
+
+Also observed: GitHub coalesces high-frequency crons under load. Despite
+`*/15 * * * *` the workflow ran roughly hourly, with one 3.7h gap. The schedule
+is best-effort, not guaranteed — so each run now fires a full hour's worth (20
+metros / 40 exports) and lets the 429 backoff pace it against the 10-concurrent
+cap, rather than assuming the cadence holds.

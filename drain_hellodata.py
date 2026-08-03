@@ -41,7 +41,7 @@ def main():
     db = os.environ.get("SUPABASE_DB_URL")
     if not db:
         sys.exit("ERROR: SUPABASE_DB_URL required")
-    limit = int(os.environ.get("HD_DRAIN_LIMIT", "50"))
+    limit = int(os.environ.get("HD_DRAIN_LIMIT") or "50")
     do_refresh = os.environ.get("HD_REFRESH", "1") != "0"
 
     conn = psycopg2.connect(db)

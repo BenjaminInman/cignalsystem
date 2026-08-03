@@ -77,6 +77,28 @@ CHECKS = [
         "point counters (see the 2026-08-01 index fix)",
     ),
     (
+        "the backfill is still progressing (a delivery within 6h, or nothing left)",
+        """SELECT CASE
+                 WHEN NOT EXISTS (
+                        SELECT 1 FROM regions r
+                         WHERE r.region_type='metro' AND r.code ~ '^[0-9]{5}$'
+                           AND EXISTS (SELECT 1 FROM hd_metro_size s WHERE s.region_id=r.id)
+                           AND NOT EXISTS (
+                                 SELECT 1 FROM observations o
+                                   JOIN indicators i ON i.id=o.indicator_id
+                                  WHERE i.source='HelloData' AND i.slug='hd_effective_rent'
+                                    AND o.region_id=r.id))
+                   THEN 0                       -- national backfill complete
+                 WHEN (SELECT max(received_at) FROM hd_deliveries) > now() - interval '6 hours'
+                   THEN 0                       -- still receiving
+                 ELSE 1 END""",
+        0,
+        "metros remain unfired but no delivery has arrived in 6h - the fire job "
+        "is reporting success while doing nothing (this is exactly how the empty "
+        "HD_FIRE_MODE bug hid for 33h: GitHub sets input-backed env vars to '' on "
+        "scheduled runs, so a Python default never applies)",
+    ),
+    (
         "restricted indicators are invisible to the public wrapper view",
         """SELECT count(*) FROM v_indicator_analytics v
              JOIN indicators i ON i.slug = v.slug
