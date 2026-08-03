@@ -81,6 +81,16 @@ def pending_metros(cur, mode, limit):
                   WHERE i.source = 'HelloData'
                     AND i.slug = 'hd_effective_rent'
                     AND o.region_id = r.id)
+           -- Self-heal: if every delivery we have for this metro came back
+           -- EMPTY, the market filter matched nothing (historically a label
+           -- mismatch, e.g. regions held "Dayton  OH" vs HelloData's
+           -- "Dayton, OH"). Those must become eligible again immediately rather
+           -- than waiting out the re-fire window, or they look like permanent
+           -- holes in national coverage.
+           AND NOT EXISTS (
+                 SELECT 1 FROM hd_deliveries d
+                  WHERE d.name = 'cignal_zip_' || r.code
+                    AND d.status = 'done')
            -- Also exclude anything fired recently. "Has no data yet" is NOT the
            -- same as "not yet requested": an export takes minutes to arrive and
            -- the drain runs hourly, so without this every batch re-fires the
@@ -89,7 +99,13 @@ def pending_metros(cur, mode, limit):
            AND NOT EXISTS (
                  SELECT 1 FROM hd_fired f
                   WHERE f.region_id = r.id
-                    AND f.fired_at > now() - interval '20 hours')
+                    AND f.fired_at > now() - interval '20 hours'
+                    -- but not if all we ever got back was empty files
+                    AND NOT EXISTS (
+                          SELECT 1 FROM hd_deliveries d
+                           WHERE d.name LIKE 'cignal\\_%\\_' || r.code
+                             AND d.status = 'empty'
+                             AND d.received_at > f.fired_at))
          ORDER BY COALESCE(s.units, -1) DESC, r.name
          LIMIT %s
         """,

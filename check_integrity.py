@@ -101,6 +101,23 @@ CHECKS = [
         "scheduled runs, so a Python default never applies)",
     ),
     (
+        "no metro is stuck with only empty exports",
+        """SELECT count(*) FROM regions r
+            WHERE r.region_type='metro' AND r.code ~ '^[0-9]{5}$'
+              AND EXISTS (SELECT 1 FROM hd_metro_size s WHERE s.region_id=r.id)
+              AND EXISTS (SELECT 1 FROM hd_deliveries d
+                           WHERE d.name = 'cignal_zip_' || r.code AND d.status='empty'
+                             AND d.received_at < now() - interval '6 hours')
+              AND NOT EXISTS (SELECT 1 FROM observations o
+                                JOIN indicators i ON i.id=o.indicator_id
+                               WHERE i.source='HelloData' AND i.slug='hd_effective_rent'
+                                 AND o.region_id=r.id)""",
+        0,
+        "a metro's exports keep returning empty files and it has no data - the "
+        "MSA label sent to HelloData does not match theirs, so it will look like "
+        "a permanent hole in national coverage",
+    ),
+    (
         "restricted indicators are invisible to the public wrapper view",
         """SELECT count(*) FROM v_indicator_analytics v
              JOIN indicators i ON i.slug = v.slug
