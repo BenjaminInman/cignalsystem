@@ -101,9 +101,15 @@ def pending_metros(cur, mode, limit):
                   WHERE f.region_id = r.id
                     AND f.fired_at > now() - interval '20 hours'
                     -- but not if all we ever got back was empty files
+                    -- NB: no LIKE here. psycopg2 treats % as a parameter
+                    -- placeholder, so a LIKE pattern containing % raises
+                    -- "IndexError: tuple index out of range" and kills every
+                    -- fire run. That crashed the backfill silently for 18h on
+                    -- 2026-08-03. Explicit names avoid the whole problem.
                     AND NOT EXISTS (
                           SELECT 1 FROM hd_deliveries d
-                           WHERE d.name LIKE 'cignal\\_%\\_' || r.code
+                           WHERE d.name IN ('cignal_zip_' || r.code,
+                                            'cignal_metro_' || r.code)
                              AND d.status = 'empty'
                              AND d.received_at > f.fired_at))
          ORDER BY COALESCE(s.units, -1) DESC, r.name
