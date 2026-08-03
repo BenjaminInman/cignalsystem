@@ -310,8 +310,25 @@ ${ctx}`;
       }),
     });
     const d = await r.json();
-    if (!r.ok || !Array.isArray(d.content))
-      return Response.json({ error: "The research engine hit an error. Please try again." }, { status: 502 });
+    if (!r.ok || !Array.isArray(d.content)) {
+      // Surface the real upstream reason in the server logs so this is
+      // diagnosable (auth, credit, rate-limit, bad model) instead of opaque.
+      console.error("[canary] anthropic call failed", {
+        status: r.status,
+        type: d?.error?.type,
+        message: d?.error?.message,
+      });
+      const t = d?.error?.type;
+      const msg =
+        t === "authentication_error"
+          ? "The research desk isn't authenticated. Please try again shortly."
+          : t === "rate_limit_error"
+          ? "The research desk is busy right now. Give it a moment and try again."
+          : t === "billing_error" || r.status === 402
+          ? "The research desk is temporarily unavailable. Please try again shortly."
+          : "The research engine hit an error. Please try again.";
+      return Response.json({ error: msg }, { status: 502 });
+    }
     answer = d.content
       .filter((b) => b.type === "text")
       .map((b) => b.text)
