@@ -88,13 +88,23 @@ export async function GET(req) {
 
   try {
     const sections = await Promise.all(keys.map((k) => factorSection(k)));
-    const pops = sections.map((s) => Object.values(s.map));
+
+    // Eligible universe: metros with a meaningful multifamily base. Excludes
+    // micro-metros (e.g. zero-development markets that authorize no new 5+ units)
+    // which would otherwise tie at the top of supply-side factors and distort
+    // every factor's percentile. Percentiles are computed against this set so
+    // real markets rank against real markets.
+    const MIN_MF_STOCK = 20000;
+    const stock = await crossSection("acs_mf_units_5plus");
+    const eligible = new Set(Object.keys(stock.map).filter((c) => stock.map[c] >= MIN_MF_STOCK));
+
+    const pops = sections.map((s) => Object.entries(s.map).filter(([c]) => eligible.has(c)).map(([, v]) => v));
 
     let candidates;
     if (mode === "watchlist") {
       candidates = wlCbsas;
     } else {
-      candidates = Object.keys(sections[0].map).filter((c) => sections.every((s) => s.map[c] !== undefined));
+      candidates = Object.keys(sections[0].map).filter((c) => eligible.has(c) && sections.every((s) => s.map[c] !== undefined));
     }
 
     const scored = candidates.map((c) => {
