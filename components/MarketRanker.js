@@ -22,6 +22,7 @@ function fmtVal(f) {
   if (f.yoy) return `${f.value >= 0 ? "+" : ""}${f.value}%`;
   if (f.key === "vacancy" || f.key === "unemployment") return `${f.value}%`;
   if (f.key === "rent_growth") return `${f.value >= 0 ? "+" : ""}${f.value}%`;
+  if (f.key === "supply_pressure") return `${f.value}/1k units`;
   return `${f.value}`;
 }
 function pctLabel(p) {
