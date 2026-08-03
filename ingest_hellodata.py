@@ -111,10 +111,23 @@ def drop_invalid_zips(df, col="_code"):
     return df[df[col].isin(good)].copy()
 
 def norm(s):
-    s = str(s).lower().strip()
-    s = re.sub(r"[-\s]+", " ", s)
-    s = re.sub(r"\s*,\s*", ", ", s)
-    return s
+    """Normalise an MSA label for matching. Strips ALL non-alphanumerics.
+
+    The previous version collapsed hyphens and whitespace but PRESERVED commas,
+    which silently broke every metro whose regions.name has lost its comma:
+
+        HelloData  "Cleveland-Elyria, OH" -> "cleveland elyria, oh"
+        regions    "Cleveland-Elyria  OH" -> "cleveland elyria oh"
+
+    No match, so metro_code_map returned nothing, every row was dropped, and the
+    drain reported success having written zero rows. Cleveland and Dayton each
+    delivered 38 good rows on 2026-08-01 that went nowhere. Affects Ocean City NJ
+    and East Stroudsburg PA too - anywhere the comma is missing.
+
+    Stripping everything also matches how hd_metro_size.msa_label was populated,
+    so the two lookups can no longer disagree.
+    """
+    return re.sub(r"[^a-z0-9]", "", str(s).lower())
 
 def month_start(x):
     """HelloData as_of_month -> first-of-month date string. Monthly series MUST be
@@ -217,10 +230,19 @@ def run_one(conn, mode, url, obs_date=None, release=None, refresh=True):
             else:
                 cmap = metro_code_map(cur)
                 df["_code"] = df["msa"].map(lambda m: cmap.get(norm(m)))
-                miss = df[df["_code"].isna()]["msa"].unique()
-                if len(miss):
-                    print(f"  WARN {len(miss)} metros unmatched (e.g. {list(miss)[:3]})")
+                miss = sorted(df[df["_code"].isna()]["msa"].dropna().unique())
+                if miss:
+                    print(f"  WARN {len(miss)} metro label(s) unmatched: {miss[:5]}")
                 df = df[df["_code"].notna()].copy()
+                # A metro export that maps to NOTHING must fail, not succeed
+                # quietly. Cleveland and Dayton each delivered 38 valid rows on
+                # 2026-08-01 that were dropped by a normalisation mismatch; the
+                # drain marked both "done" and moved on, and the gap only
+                # surfaced days later during a manual reconciliation.
+                if df.empty:
+                    raise ValueError(
+                        f"metro export matched no region in `regions` "
+                        f"(labels seen: {miss[:5]}) - refusing to record success")
 
             if "as_of_month" in df.columns:
                 df["_date"] = df["as_of_month"].map(month_start)
