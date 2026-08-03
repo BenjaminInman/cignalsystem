@@ -67,6 +67,14 @@ def pending_metros(cur, mode, limit):
 
     Ordered by tracked units so a partial run covers the markets people actually
     search. Metros with no size on file sort last rather than being dropped.
+
+    DO NOT put a percent sign anywhere in this SQL except a real placeholder -
+    not in a LIKE pattern, and NOT IN A SQL COMMENT. psycopg2 scans the whole
+    string for parameter placeholders and does not exempt comments, so a stray
+    percent raises "IndexError: tuple index out of range" and kills every fire
+    run. That is exactly what happened twice on 2026-08-03: first a LIKE pattern
+    (18h of dead scheduled runs), then the comment written to explain the LIKE
+    fix. Explanations belong in this docstring.
     """
     cur.execute(
         """
@@ -101,11 +109,7 @@ def pending_metros(cur, mode, limit):
                   WHERE f.region_id = r.id
                     AND f.fired_at > now() - interval '20 hours'
                     -- but not if all we ever got back was empty files
-                    -- NB: no LIKE here. psycopg2 treats % as a parameter
-                    -- placeholder, so a LIKE pattern containing % raises
-                    -- "IndexError: tuple index out of range" and kills every
-                    -- fire run. That crashed the backfill silently for 18h on
-                    -- 2026-08-03. Explicit names avoid the whole problem.
+                    -- NB: explicit names, no LIKE. See note above pending_metros.
                     AND NOT EXISTS (
                           SELECT 1 FROM hd_deliveries d
                            WHERE d.name IN ('cignal_zip_' || r.code,
