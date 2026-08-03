@@ -131,7 +131,7 @@ const GOOD_UP = {
   "CRE Loan Delinquency Rate": false,
   // submarket
   "Observed Rent (ZORI)": true, "Local Job Growth": true, "Real GDP (County)": true,
-  "Unemployment Rate": false, "Apartment Vacancy": false, "Rental Days on Market": false,
+  "Unemployment Rate": false, "Apartment Vacancy": false, "Days On Market (All Rentals)": false,
   "Rent CPI": true, "Affluence Trend": true,
 };
 

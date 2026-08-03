@@ -664,6 +664,22 @@ function ZipLookup() {
   const GRAIN = { zip: "ZIP", city: "CITY", county: "COUNTY", metro: "METRO" };
   const up = data?.found && (data.yoyPct == null || data.yoyPct >= 0);
 
+  // Regroup rows on Market Maps only (the shared builders stay intact so the
+  // Onion submarket lookup on the Indicators tab is untouched):
+  //  - HelloData lease rows (Effective Rent, Concession Load, MF DOM) stay put.
+  //  - The All-Rentals DOM, Apartment Vacancy and Rent Price Level reads move up
+  //    into Lease Economics. All-Rentals DOM leads so it sits beside MF DOM.
+  // The moved rows are free (Apartment List / BEA), so the section renders for
+  // everyone; the HelloData rows above them stay Pro+-gated.
+  const hdLeaseRows = hd && !hd.gated ? hellodataRows(hd) : [];
+  const LEASE_MOVE_ORDER = ["Days On Market (All Rentals)", "Apartment Vacancy", "Rent Price Level"];
+  const metroRowsAll = signals ? metroSignalRows(signals) : [];
+  const leaseFreeRows = LEASE_MOVE_ORDER
+    .map((n) => metroRowsAll.find((r) => r.name === n))
+    .filter(Boolean);
+  const metroMacroRows = metroRowsAll.filter((r) => !LEASE_MOVE_ORDER.includes(r.name));
+  const hasLeaseSection = hdLeaseRows.length > 0 || leaseFreeRows.length > 0 || hd?.gated;
+
   return (
     <section className="relative mt-8 overflow-hidden rounded-2xl border border-signal/30 bg-gradient-to-br from-signal/[0.07] via-bg2/40 to-bg/20 p-6 md:p-7">
       <p className="kicker mb-2 flex items-center gap-2"><Search size={13} className="text-signal" /> Market Lookup</p>
@@ -1090,38 +1106,49 @@ function ZipLookup() {
             </div>
           )}
 
-          {hd && !hd.gated && hellodataRows(hd).length > 0 && (
+          {hasLeaseSection && (
             <div className="mt-4 border-t border-[var(--line)] pt-4">
               <p className="mono text-[12px] tracking-[0.1em] text-muted">
-                LEASE ECONOMICS{hd.regionType === "zip" ? ` · ZIP ${hd.regionCode}` : " · METRO"}
+                LEASE ECONOMICS{hdLeaseRows.length > 0 && hd?.regionType === "zip" ? ` · ZIP ${hd.regionCode}` : " · METRO"}
               </p>
               <div className="mt-3 space-y-3">
-                {hellodataRows(hd).map((row) => (
+                {hdLeaseRows.map((row) => (
+                  <IndicatorRow key={row.name} row={row} />
+                ))}
+                {hd?.gated && (
+                  <a href="/upgrade" className="mono flex items-center gap-2 rounded-md border border-signal/25 bg-signal/[0.06] px-4 py-3 text-[11px] tracking-[0.08em] text-muted transition-colors hover:border-signal/50">
+                    <span className="text-signal">EFFECTIVE RENT · CONCESSION LOAD · DAYS ON MARKET (MF)</span>
+                    <span>— licensed multifamily data, Pro and above</span>
+                  </a>
+                )}
+                {leaseFreeRows.map((row) => (
                   <IndicatorRow key={row.name} row={row} />
                 ))}
               </div>
-              <p className="mono mt-3 text-[10px] tracking-[0.08em] text-muted">{hd.attribution}</p>
+              {hdLeaseRows.length > 0 && (
+                <p className="mono mt-3 text-[10px] tracking-[0.08em] text-muted">{hd.attribution}</p>
+              )}
+              {leaseFreeRows.length > 0 && (
+                <p className="mono mt-2 text-[10px] tracking-[0.08em] text-muted">Supply &amp; price reads · metro level · Apartment List (all-rentals days-on-market, vacancy) · BEA regional price parity (rent price level)</p>
+              )}
             </div>
-          )}
-
-          {hd?.gated && (
-            <a href="/upgrade" className="mono mt-4 flex items-center gap-2 rounded-md border border-signal/25 bg-signal/[0.06] px-4 py-3 text-[11px] tracking-[0.08em] text-muted transition-colors hover:border-signal/50">
-              <span className="text-signal">EFFECTIVE RENT · CONCESSION LOAD · DAYS ON MARKET</span>
-              <span>— licensed multifamily data, Pro and above</span>
-            </a>
           )}
 
           {signals && (
             <div className="mt-4 border-t border-[var(--line)] pt-4">
-              <p className="mono text-[12px] tracking-[0.1em] text-muted">
-                METRO SIGNALS{signals.metroName ? ` · ${signals.metroName.replace(/ \(Metropolitan.*\)$/, "")}` : ""}
-              </p>
-              <div className="mt-3 space-y-3">
-                {metroSignalRows(signals).map((row) => (
-                  <IndicatorRow key={row.name} row={row} />
-                ))}
-              </div>
-              <p className="mono mt-3 text-[10px] tracking-[0.08em] text-muted">Metro level (CBSA) · BLS jobs &amp; unemployment, BEA rent price parity, Apartment List vacancy &amp; days-on-market{signals.signals?.countyGdp ? ` · real GDP is county-level (BEA CAGDP9${signals.countyName ? `, ${signals.countyName}` : ""})` : ""}</p>
+              {metroMacroRows.length > 0 && (
+                <>
+                  <p className="mono text-[12px] tracking-[0.1em] text-muted">
+                    METRO SIGNALS{signals.metroName ? ` · ${signals.metroName.replace(/ \(Metropolitan.*\)$/, "")}` : ""}
+                  </p>
+                  <div className="mt-3 space-y-3">
+                    {metroMacroRows.map((row) => (
+                      <IndicatorRow key={row.name} row={row} />
+                    ))}
+                  </div>
+                  <p className="mono mt-3 text-[10px] tracking-[0.08em] text-muted">Metro level (CBSA) · BLS jobs, wages &amp; unemployment · Zillow renter demand · BLS rent CPI{signals.signals?.countyGdp ? ` · real GDP is county-level (BEA CAGDP9${signals.countyName ? `, ${signals.countyName}` : ""})` : ""}</p>
+                </>
+              )}
 
               {signals.migration && (
                 <div className="mt-4 border-t border-[var(--line)] pt-4">
