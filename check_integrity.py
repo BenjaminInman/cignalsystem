@@ -91,6 +91,8 @@ CHECKS = [
                    THEN 0                       -- national backfill complete
                  WHEN (SELECT max(received_at) FROM hd_deliveries) > now() - interval '6 hours'
                    THEN 0                       -- still receiving
+                 WHEN (SELECT max(fired_at) FROM hd_fired) > now() - interval '90 minutes'
+                   THEN 0                       -- just fired; deliveries still in flight
                  ELSE 1 END""",
         0,
         "metros remain unfired but no delivery has arrived in 6h - the fire job "
