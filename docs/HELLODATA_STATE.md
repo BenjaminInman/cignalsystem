@@ -380,3 +380,31 @@ Also observed: GitHub coalesces high-frequency crons under load. Despite
 is best-effort, not guaranteed — so each run now fires a full hour's worth (20
 metros / 40 exports) and lets the 429 backoff pace it against the 10-concurrent
 cap, rather than assuming the cadence holds.
+
+## Metro name matching — solved once, 2026-08-04
+
+Five separate bugs, all the same failure surface: matching `regions.name` to
+HelloData's MSA label. Each was fixed in isolation, so the next mode surfaced
+days later as silently-empty exports.
+
+| # | Mismatch mode | Example |
+|---|---|---|
+| 1 | two metro families sharing names | CBSA `10420` vs name-coded `Akron, OH` |
+| 2 | lost comma in regions.name | `Dayton  OH` vs `Dayton, OH` |
+| 3 | `norm()` preserved commas | `cleveland elyria oh` vs `cleveland elyria, oh` |
+| 4 | renamed suffix cities | `Houston-Pasadena-The Woodlands` vs `Houston-The Woodlands-Sugar Land` |
+| 5 | added state in the label | `Chicago…, IL-IN` vs `…, IL-IN-WI` |
+
+**The fix is a stored crosswalk, not a derivation.** `hd_metro_size.msa_label`
+holds HelloData's own string, matched on **first city token + first state token**,
+which absorbs all five modes. 379 of 408 CBSA metros matched, 0 ambiguous. The 29
+unmatched are genuinely absent from HelloData (Puerto Rico, a few micro areas).
+
+`fire_hellodata.py` now **refuses to fire a metro without a verified label**
+(`JOIN … AND s.msa_label IS NOT NULL`) instead of falling back to `regions.name`.
+That fallback was the bug generator: a wrong label yields an empty file, and the
+empty-export self-heal then re-fires it forever. Austin burned 4 export cycles
+this way.
+
+Re-run the crosswalk whenever HelloData refreshes its market list; never derive
+a label from `regions.name` again.

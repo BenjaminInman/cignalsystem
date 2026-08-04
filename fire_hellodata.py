@@ -78,9 +78,9 @@ def pending_metros(cur, mode, limit):
     """
     cur.execute(
         """
-        SELECT r.code, COALESCE(s.msa_label, r.name)
+        SELECT r.code, s.msa_label
           FROM regions r
-          LEFT JOIN hd_metro_size s ON s.region_id = r.id
+          JOIN hd_metro_size s ON s.region_id = r.id AND s.msa_label IS NOT NULL
          WHERE r.region_type = 'metro'
            AND r.code ~ '^[0-9]{5}$'
            AND NOT EXISTS (
