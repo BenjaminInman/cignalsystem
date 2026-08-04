@@ -68,7 +68,7 @@ jobs:
       - run: pip install pandas requests psycopg2-binary
       - env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-          HD_DRAIN_LIMIT: ${{ github.event.inputs.drain_limit || '50' }}
+          HD_DRAIN_LIMIT: ${{ github.event.inputs.drain_limit || '200' }}
         run: python drain_hellodata.py
       # Invariant checks run after every drain. These are STATE invariants, not
       # code errors - a build passes while the warehouse quietly drifts - so they
