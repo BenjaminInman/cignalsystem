@@ -19,10 +19,26 @@ export async function GET() {
 
     const { data: prof } = await supabase
       .from("profiles")
-      .select("is_admin")
+      .select("is_admin, tier, email")
       .eq("id", user.id)
       .maybeSingle();
-    if (!prof?.is_admin) return Response.json({ error: "forbidden" }, { status: 403 });
+
+    // Operational progress, not licensed data - admin or any paying tier may see
+    // it. The `seen_as` field is echoed back because a bare "forbidden" gave no
+    // way to tell WHICH of several signed-in accounts the browser was using.
+    const allowed = !!prof?.is_admin || ["pro", "cignal_plus"].includes(prof?.tier);
+    if (!allowed) {
+      return Response.json(
+        {
+          error: "forbidden",
+          seen_as: prof?.email || user.email || "(no profile row)",
+          tier: prof?.tier ?? null,
+          is_admin: prof?.is_admin ?? null,
+          hint: "signed in, but this account is not admin or a paying tier",
+        },
+        { status: 403 }
+      );
+    }
 
     const { data, error } = await supabase.rpc("hd_pipeline_status");
     if (error) return Response.json({ error: error.message }, { status: 500 });
@@ -37,6 +53,7 @@ export async function GET() {
       pct_zips: pctZips,
       pct_metros: pctMetros,
       health: data.stalled ? "STALLED" : "running",
+      seen_as: prof?.email || user.email,
       summary:
         `${data.zips_done.toLocaleString()}/${data.zips_publishable.toLocaleString()} ZIPs (${pctZips}%) · ` +
         `${data.metros_done}/${data.metros_total} metros (${pctMetros}%) · ` +
