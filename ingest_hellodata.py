@@ -156,24 +156,38 @@ def ensure_indicator(cur, slug, name, series, units, cls, hib):
     return nid
 
 def metro_code_map(cur):
-    """Map a HelloData MSA label to a region code.
+    """HelloData MSA label -> region code, from the STORED crosswalk.
 
-    CRITICAL: `regions` carries TWO families of metro rows -
-      * CBSA-coded  (code '10420', 408 rows) - what /api/hellodata queries, and
-        where Nashville's HelloData already sits
-      * name-coded  (code 'Akron, OH', 929 rows) - where all 671 ZORI metros sit
-    and they SHARE NAMES ("Akron, OH" exists in both). A naive {name: code} dict
-    keeps whichever row the planner returned last, so metro observations would
-    land on an arbitrary family and the site - which looks up by CBSA - would
-    silently read nothing.
+    The crosswalk (hd_metro_size.msa_label) holds HelloData's own string, so this
+    is a lookup, not a derivation. Deriving it from regions.name has now failed
+    SIX distinct ways - two metro families sharing names, lost commas, comma-
+    sensitive normalisation, renamed suffix cities (Houston-Pasadena vs
+    Houston-Sugar Land), added states (IL-IN vs IL-IN-WI), and renamed suffix
+    cities again on the inbound side (HelloData's "Las Vegas-Henderson-Paradise"
+    vs our "Las Vegas-Henderson-North Las Vegas").
 
-    HelloData is pinned to the CBSA family. Ordering the query makes the choice
-    deterministic even if a name somehow resolves twice within a family.
+    Both directions must use the same table. Firing with the crosswalk while
+    ingesting by derivation is what produced 22 rejected deliveries carrying
+    valid data on 2026-08-04.
+
+    regions.name is kept only as a last-resort fallback for rows that predate the
+    crosswalk; it is never authoritative.
     """
+    cur.execute("""
+        SELECT s.msa_label, r.code
+          FROM hd_metro_size s
+          JOIN regions r ON r.id = s.region_id
+         WHERE s.msa_label IS NOT NULL AND r.code ~ '^[0-9]{5}$'
+    """)
+    m = {norm(lbl): code for lbl, code in cur.fetchall()}
+    # fallback: any CBSA region not present in the crosswalk
     cur.execute("""SELECT code, name FROM regions
                     WHERE region_type='metro' AND code ~ '^[0-9]{5}$'
                     ORDER BY code""")
-    return {norm(n): c for c, n in cur.fetchall()}
+    for code, name in cur.fetchall():
+        m.setdefault(norm(name), code)
+    return m
+
 
 def upsert_zip_regions(cur, zips):
     execute_values(cur,
