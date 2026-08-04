@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
-import { ArrowUp, ArrowUpRight, Lock, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { ArrowUp, ArrowUpRight, Lock, TrendingUp, TrendingDown, Minus, ChevronDown } from "lucide-react";
 import { useVertical } from "@/components/VerticalProvider";
 import { isPageReady } from "@/lib/verticals";
 import ComingSoonInline from "@/components/ComingSoonInline";
@@ -73,6 +73,7 @@ function ResearchInner() {
   }, [thread.length]);
 
   const [radar, setRadar] = useState(null);
+  const [radarOpen, setRadarOpen] = useState(false); // collapsed by default; opens on click
   useEffect(() => {
     let on = true;
     fetch("/api/release-radar").then((r) => r.json()).then((d) => { if (on) setRadar(d?.items || []); }).catch(() => { if (on) setRadar([]); });
@@ -282,19 +283,34 @@ function ResearchInner() {
 
       {/* Release Radar — inline */}
       <div className="mt-4 overflow-hidden rounded-2xl border border-signal/30 bg-gradient-to-r from-signal/[0.10] via-signal/[0.04] to-transparent p-6 md:p-7">
-        <div className="flex items-start gap-4">
+        <button
+          type="button"
+          onClick={() => setRadarOpen((v) => !v)}
+          aria-expanded={radarOpen}
+          className="flex w-full items-start gap-4 text-left"
+        >
           <span className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-signal/40 bg-signal/[0.08]">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#F5B544" strokeWidth="1.6">
               <circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4" /><path d="M12 3 v3 M12 18 v3 M3 12 h3 M18 12 h3" />
             </svg>
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="headline text-2xl text-ink md:text-3xl">Release Radar</h2>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="headline text-2xl text-ink md:text-3xl">Release Radar</h2>
+              <ChevronDown
+                size={20}
+                className={`shrink-0 text-signal transition-transform duration-200 ${radarOpen ? "rotate-180" : ""}`}
+              />
+            </div>
             <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted md:max-w-2xl">
               The cycle-moving data, freshest first &mdash; latest read, direction, and when the next print is due.
             </p>
+          </div>
+        </button>
 
-            <div className="mt-5 grid gap-2 sm:grid-cols-2">
+        {radarOpen && (
+          <div className="mt-5 pl-0 md:pl-[3.75rem]">
+            <div className="grid gap-2 sm:grid-cols-2">
               {radar === null ? (
                 <p className="mono text-[11px] text-muted">Loading releases…</p>
               ) : radar.length === 0 ? (
@@ -327,7 +343,7 @@ function ResearchInner() {
               &ldquo;Next&rdquo; dates are estimated from each series&apos; release cadence. Values are first-print reads; some revise.
             </p>
           </div>
-        </div>
+        )}
       </div>
 
       <p className="mono mt-10 flex items-center justify-center gap-1.5 text-[11px] tracking-[0.06em] text-muted">
