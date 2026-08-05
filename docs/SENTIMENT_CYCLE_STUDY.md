@@ -77,3 +77,80 @@ Present as a **regime state with its historical base rate**, NOT a false-precisi
    Expectations sub-index; current evidence does not support it.
 4. Keep consumer confidence (UMich now; Conference Board if licensed) as a plain leading indicator
    regardless — its value doesn't depend on this study.
+
+---
+
+# Companion Study — The Lead-Lag Spread ("Does the cycle emerge?")
+
+**Status:** Tested. Descriptive-only; NOT a validated recession-timing signal. Ship as a current-alignment
+read, never as a forecast.
+
+## A1. The question
+If indicators are lined up left-to-right in the order they move (leading → coincident → trailing) and each
+is plotted by how far it sits from its own normal, does a market-cycle shape *emerge on its own* from the
+natural ordering — rather than being drawn/assumed? And does that shape carry timing information?
+
+## A2. Construction
+- **x-axis:** lead-lag rank (leading first, coincident middle, trailing last). The ordering is a framework
+  assumption and the shape depends partly on it.
+- **y-axis:** polarity-adjusted deviation from each indicator's own normal, in standard deviations
+  (positive = cycle-strong / above equilibrium). Normal = the same `norm` values as the Cycle Clock
+  (`lib/cycle-calibration.js`).
+- **Lead-lag spread** = mean(leading z) − mean(trailing z). Negative = leading indicators sitting below the
+  trailing confirmers = the late-cycle "tell."
+- Backtest uses expanding (past-only) standardization to avoid look-ahead bias. Days-on-market and
+  days-to-lease excluded per product call; cap_rate excluded (insufficient history). Long-history set:
+  permits, MF starts, sentiment, 10y Treasury (leading); GDP, job growth (coincident); unemployment, CPI,
+  vacancy (trailing).
+
+## A3. Snapshot today (2026-06)
+Leading avg **−1.89σ**, coincident **−0.22σ**, trailing **+0.68σ** — a clean upward slope from lead to lag.
+The leading edge is below normal while the confirmers still sit above it: the textbook late-cycle posture.
+(The 10y Treasury reads a spurious −10σ because its recent volatility is tiny — a low-vol artifact, clamped
+to −3σ for display and flagged, not hidden.)
+
+## A4. The 60-year test — the honest result (1965–2026, 8 recessions)
+
+| | Lead-lag spread |
+|---|---|
+| Mean, 12 mo BEFORE recessions | **−0.16** |
+| Mean, normal expansion | **+0.26** |
+| Difference | **−0.42** (right direction) |
+
+On average the spread does go negative before recessions. But per-cycle it is unreliable:
+
+| Recession | Spread, 6 mo before onset | |
+|---|---|---|
+| 1969 | −1.63 | ✓ |
+| 1973 | −0.55 | ✓ |
+| 1980 | −0.15 | ~ weak |
+| 1981 | −0.19 | ~ weak |
+| 1990 | **+0.67** | ✗ wrong direction |
+| 2001 | **+0.65** | ✗ wrong direction |
+| 2007 | **+0.54** | ✗ wrong direction (the big one) |
+| 2020 | −0.60 | ✓ (but COVID was exogenous) |
+
+**Verdict:** the shape is real on average but fails per-cycle — it pointed the *wrong way* before 1990, 2001,
+and 2008. It works when the cycle turns for ordinary cyclical reasons and misses when the turn is driven by
+an external shock (oil, dot-com, financial system). It is a legitimate description of how indicators are
+currently aligned; it is NOT a dependable countdown.
+
+## A5. The 5-year window (2021–2026)
+The spread has been **below zero every month for five straight years** (66/66). It bottomed near **−1.57σ**
+in 2022–23 (rate shock), eased to ~**−0.5σ** in 2024, and sits at **−1.16σ** today. The economy's leading
+edge has flashed softness the lagging data never confirmed for the entire post-2021 period — the same
+sustained late-cycle posture the sentiment regime study also flags.
+
+## A6. Recommendation
+1. **Ship as a descriptive view** — "here is how leading / coincident / trailing indicators are aligned
+   against their normals right now," a read of the present, alongside the Cycle Clock and the linear wave.
+2. **Never frame it as predictive.** The backtest failed on 2008; presenting the slope as "where we're
+   headed" is the pretty-chart trap.
+3. If a richer MF-specific version is wanted (folding in rent growth, real PCE, MF series with only recent
+   history), it is a *different* spread and needs its own backtest before earning the same trust.
+
+## A7. What both studies share (the through-line)
+Both the sentiment-regime work and this lead-lag work land in the same place: a robust *descriptive* read of
+cycle position, and an honest refusal to dress it as a forecast. The signals that survive testing describe
+*where we are* (context, alignment, regime); none reliably predicts *when it turns*. That distinction — read
+of the present vs. forecast of the future — is the defensible line for the platform.
