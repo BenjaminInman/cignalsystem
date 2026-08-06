@@ -30,7 +30,9 @@ on:
     # Every 15 min. HelloData's cap is 10 CONCURRENT exports, not 10 per period,
     # and each takes ~3-8 min, so the real ceiling is ~80-120/hour. Firing 5
     # metros (10 exports) per quarter hour sits right at the cap.
-    - cron: "*/15 * * * *"
+    # Drain only, hourly. Nothing is being fired on a schedule; this just picks
+    # up any late delivery and runs the integrity checks against the warehouse.
+    - cron: "17 * * * *"
 
 # Only one run at a time. Two drains overlapping would collide on
 # REFRESH MATERIALIZED VIEW CONCURRENTLY (which serialises anyway) and pile up
@@ -43,8 +45,12 @@ jobs:
   # Fires a SMALL batch every 30 minutes. HelloData caps concurrent exports at
   # 10, so a big one-shot run mostly 429s. Small paced batches let the national
   # backfill complete unattended over a day or so.
+  # National backfill completed 2026-08-05. Firing is now MANUAL ONLY - there is
+  # no monthly auto-refresh yet by decision, and leaving it on the schedule would
+  # re-fire any metro that looks "missing" every 20h. Re-enable by adding
+  # `github.event_name == 'schedule' ||` when the monthly refresh is approved.
   fire:
-    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'fire' || github.event.inputs.job == 'both'))
+    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'fire' || github.event.inputs.job == 'both')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
