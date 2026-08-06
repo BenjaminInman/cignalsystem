@@ -17,17 +17,6 @@ jobs:
           python-version: "3.12"
       - name: Install deps
         run: pip install psycopg2-binary requests
-      # Idempotent no-op once the rows exist. Lives here so the labor-slack
-      # indicators register themselves on the next successful run rather than
-      # waiting on a manual dispatch — the one-off workflow was dispatched into
-      # the 2026-08-06 Actions outage and never got a runner. Registration must
-      # precede ingestion in the same run: ingest_fred.py selects its work by
-      # source='FRED', so a row that appears after the SELECT waits a full day.
-      # Safe to delete once the four rows are confirmed in the catalog.
-      - name: Register labor indicators (idempotent)
-        env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: python register_labor_indicators.py
       - name: Run ingestion
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
