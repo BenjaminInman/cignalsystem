@@ -1,0 +1,23 @@
+name: register-labor-indicators
+
+# One-off: register participation + underemployment (U-6) in the indicator
+# catalog. Idempotent — safe to re-run; existing rows are left untouched.
+# After this succeeds, run "Ingest FRED" to backfill their history.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: pip install psycopg2-binary
+      - name: Register indicators
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: python register_labor_indicators.py

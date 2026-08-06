@@ -84,6 +84,11 @@ def fetch_release_dates(series_id, key):
 # (target, left, right) -> target = left - right
 DERIVED = [
     ("baa_aaa_spread", "baa_yield", "aaa_yield"),
+    # U-6 minus U-3. Both legs are CPS measures on the same base and the same
+    # seasonal adjustment, so the difference isolates underemployment — hours
+    # cut and workers sidelined — from outright joblessness. U-6 starts 1994
+    # and U-3 starts 1948; the join on obs_date takes care of the overlap.
+    ("u6_gap", "u6_rate", "unemployment"),
 ]
 
 
