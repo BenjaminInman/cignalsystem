@@ -1,7 +1,13 @@
 name: Ingest BLS (metro employment + unemployment + rent CPI + national real wages)
 on:
   schedule:
+    # Metro CES (State & Area) lands mid-to-late month, roughly three weeks
+    # after the national print. A single monthly shot means that if BLS slips
+    # past the 22nd, the metro read waits a FULL month. The 26th is a retry on
+    # the same insert-if-changed logic, so it no-ops when the 22nd succeeded --
+    # same belt-and-braces pattern already used for ZORI (16th + 23rd).
     - cron: '0 17 22 * *'   # monthly; CES metro release lands mid-to-late month
+    - cron: '0 17 26 * *'   # retry, in case the release slipped past the 22nd
   workflow_dispatch: {}
 jobs:
   ingest:

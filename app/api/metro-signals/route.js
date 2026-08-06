@@ -82,7 +82,12 @@ async function metroSignal(slug, cbsa, { annual = false, points = 26, goodUp = t
     const t = trajectory(yoySeries, { goodUp });
     if (t) traj = { ...t, tone: trajTone(t) };
   }
-  return { value: v, yoyPct, delta, asOf: rows[0].obs_date, trend, periods, traj };
+  // yoyAbs is the 12-month change in the series' own units (payrolls are in
+  // thousands). Returned alongside yoyPct because a percentage and a count
+  // answer different questions: 2% growth is ~48,000 jobs in Phoenix and ~5,000
+  // in Chattanooga, and it's the count that tells you how many units a market
+  // can absorb.
+  return { value: v, yoyPct, yoyAbs: yoyAbs != null ? Number(yoyAbs) : null, delta, asOf: rows[0].obs_date, trend, periods, traj };
 }
 
 // County real GDP (BEA CAGDP9), keyed by the Zillow-style county label that the

@@ -4,7 +4,14 @@ name: Ingest FRED
 # slow series (CPI, starts, vacancy) simply no-op on days they haven't updated.
 on:
   schedule:
-    - cron: "0 12 * * *"   # daily, 12:00 UTC
+    # Twice daily. 12:00 UTC is 08:00 ET in summer and 07:00 ET in winter --
+    # BOTH of which land BEFORE the 08:30 ET BLS/BEA release window, so the
+    # single daily run could never pick up a jobs, CPI or GDP print on its own
+    # release day; it always caught it ~24h late. 14:00 UTC (10:00 EDT /
+    # 09:00 EST) clears the window year-round. The run is insert-if-changed,
+    # so the second pass is a cheap no-op on days nothing published.
+    - cron: "0 12 * * *"   # 12:00 UTC — catches overnight/international revisions
+    - cron: "0 14 * * *"   # 14:00 UTC — after the 08:30 ET US release window
   workflow_dispatch: {}    # manual trigger from the Actions tab
 
 jobs:
