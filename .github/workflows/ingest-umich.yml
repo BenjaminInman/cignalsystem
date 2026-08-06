@@ -1,0 +1,30 @@
+name: Ingest UMich Sentiment
+
+# The Surveys of Consumers publish a preliminary reading around the middle of
+# the month and a final reading on the last Friday. We only want finals, so the
+# primary run is on the 1st (safely past any month-end final), with a retry on
+# the 4th in case a release slipped. The script re-reads full history every run
+# and writes only what changed, so an extra run is harmless.
+on:
+  schedule:
+    - cron: "0 14 1 * *"
+    - cron: "0 14 4 * *"
+  workflow_dispatch: {}
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install pandas psycopg2-binary requests
+
+      - name: Run ingestion
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: python ingest_umich.py

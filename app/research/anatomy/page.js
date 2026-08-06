@@ -110,9 +110,22 @@ function Card({ card }) {
                 <ClassDot cls={c.cls} size={7} />
                 <p className="mono text-[9px] uppercase tracking-[0.06em] text-muted">{c.label}</p>
               </div>
-              <p className="mt-1.5 text-xl font-semibold" style={{ color: c.yoyPct != null ? "var(--ink)" : "var(--muted)" }}>
-                {c.yoyPct != null ? fmtPct(c.yoyPct) : "—"}
-              </p>
+              {/* Index-level families (sentiment) lead with the reading itself,
+                  because the gap BETWEEN the legs is the signal and two percent
+                  changes hide it. Percent-only families (inflation) are
+                  unaffected — their components carry no level. */}
+              {c.level != null ? (
+                <>
+                  <p className="mt-1.5 text-xl font-semibold text-ink">{c.level.toFixed(1)}</p>
+                  <p className="mono mt-0.5 text-[9.5px]" style={{ color: c.yoyPct != null ? "var(--muted)" : "var(--muted)" }}>
+                    {c.yoyPct != null ? `${fmtPct(c.yoyPct)} YoY` : "—"}
+                  </p>
+                </>
+              ) : (
+                <p className="mt-1.5 text-xl font-semibold" style={{ color: c.yoyPct != null ? "var(--ink)" : "var(--muted)" }}>
+                  {c.yoyPct != null ? fmtPct(c.yoyPct) : "—"}
+                </p>
+              )}
               <p className="mono mt-0.5 text-[9px] leading-tight text-muted/80">{c.role}</p>
             </div>
           ))}
@@ -249,6 +262,15 @@ function Card({ card }) {
         <p className="mono text-[9px] leading-relaxed text-muted">
           {card.weightsAsOf ? `Weights ${card.weightsAsOf} · ${card.weightSource} · ` : ""}
           live values from Cignal · US national
+          {/* Licensed sources require their attribution string verbatim and in
+              full. Rendered here, once, rather than on the chart or the axis —
+              short forms are fine in prose and labels, never in the citation. */}
+          {card.citation && (
+            <>
+              <br />
+              Source: {card.citation}
+            </>
+          )}
         </p>
         <Link
           href={`/research?ask=${encodeURIComponent(`What's driving ${card.name} right now, and which of its components is moving it?`)}`}
@@ -310,6 +332,7 @@ function AnatomyInner() {
           { label: "Prices & Inflation", note: "the same pressure, measured different ways", slugs: ["cpi", "ppi", "pce_price", "inflation"] },
           { label: "Growth, Jobs & Income", note: "what the economy is actually producing and earning", slugs: ["gdp", "real_pce", "payrolls", "wage_growth_real"] },
           { label: "Rates & Credit", note: "the market's live read on risk", slugs: ["yield_spread", "baa_spread"] },
+          { label: "Sentiment & Expectations", note: "what households believe — the leg that moves before the data does", slugs: ["consumer_sentiment_anatomy"] },
           { label: "Housing & Households", note: "where the cycle meets the renter", slugs: ["debt_service_ratio", "rent_burden", "aimi"] },
         ];
         const bySlug = Object.fromEntries(view.map((c) => [c.slug, c]));

@@ -161,6 +161,10 @@ async function build(entry) {
     teach: entry.teach,
     weightsAsOf: entry.weightsAsOf || null,
     weightSource: entry.weightSource || null,
+    // Licensed series carry a required attribution string that must render with
+    // the card. Passed through verbatim — never abbreviated, never merged with
+    // the FRED citation used elsewhere on the platform.
+    citation: entry.citation || null,
     headline,
     components,
     residual,
