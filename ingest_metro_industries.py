@@ -111,7 +111,7 @@ def main():
                 ids[ss] = row[0]
 
             # SM area codes ARE CBSA codes, which is how metro regions are keyed.
-            cur.execute("SELECT code, id FROM regions WHERE region_type='metro'")
+            cur.execute("SELECT code, id FROM regions WHERE region_type='metro' AND retired_at IS NULL")
             region = dict(cur.fetchall())
 
             cur.execute(

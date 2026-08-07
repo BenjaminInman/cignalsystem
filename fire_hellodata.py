@@ -82,6 +82,7 @@ def pending_metros(cur, mode, limit):
           FROM regions r
           JOIN hd_metro_size s ON s.region_id = r.id AND s.msa_label IS NOT NULL
          WHERE r.region_type = 'metro'
+           AND r.retired_at IS NULL
            AND r.code ~ '^[0-9]{5}$'
            AND NOT EXISTS (
                  SELECT 1 FROM observations o
@@ -202,7 +203,7 @@ def main():
                     c2.execute(
                         """INSERT INTO hd_fired (region_id, mode)
                            SELECT id, %s FROM regions
-                            WHERE region_type='metro' AND code=%s
+                            WHERE region_type='metro' AND code=%s AND retired_at IS NULL
                            ON CONFLICT (region_id, mode)
                              DO UPDATE SET fired_at = now()""",
                         (jname.split("_")[1], code),

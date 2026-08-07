@@ -96,6 +96,7 @@ def main():
               FROM regions r
               JOIN hd_metro_size s ON s.region_id = r.id
              WHERE s.msa_label IS NOT NULL
+               AND r.retired_at IS NULL
                AND NOT EXISTS (SELECT 1 FROM observations o
                                  JOIN indicators i ON i.id = o.indicator_id
                                 WHERE i.source = 'HelloData'

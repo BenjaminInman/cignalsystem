@@ -156,7 +156,7 @@ def main():
                 county_rid.setdefault(f, i)
 
             # Metro key = CBSA code, the same key BLS CES/LAUS metro series use.
-            cur.execute("SELECT code, id FROM regions WHERE region_type='metro'")
+            cur.execute("SELECT code, id FROM regions WHERE region_type='metro' AND retired_at IS NULL")
             metro_rid = {c: i for c, i in cur.fetchall()}
 
             c_rev0, c_maxrev = _existing(cur, county_id)

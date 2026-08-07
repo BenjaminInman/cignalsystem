@@ -244,7 +244,7 @@ def main():
     conn = psycopg2.connect(db); conn.autocommit = False
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT code, id FROM regions WHERE region_type='metro' AND code ~ '^[0-9]{5}$'")
+            cur.execute("SELECT code, id FROM regions WHERE region_type='metro' AND code ~ '^[0-9]{5}$' AND retired_at IS NULL")
             rmap = {c: i for c, i in cur.fetchall()}
             cur.execute("SELECT slug, id FROM indicators WHERE slug IN "
                         "('bls_metro_employment','bls_metro_unemployment','bls_metro_cpi_rent')")

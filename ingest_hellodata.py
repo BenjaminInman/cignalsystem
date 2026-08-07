@@ -183,6 +183,7 @@ def metro_code_map(cur):
     # fallback: any CBSA region not present in the crosswalk
     cur.execute("""SELECT code, name FROM regions
                     WHERE region_type='metro' AND code ~ '^[0-9]{5}$'
+                      AND retired_at IS NULL
                     ORDER BY code""")
     for code, name in cur.fetchall():
         m.setdefault(norm(name), code)

@@ -71,7 +71,7 @@ def main():
     try:
         with conn.cursor() as cur:
             # metro key = 5-digit CBSA code; county key = 5-digit FIPS
-            cur.execute("SELECT code, id FROM regions WHERE region_type='metro' AND code ~ '^[0-9]{5}$'")
+            cur.execute("SELECT code, id FROM regions WHERE region_type='metro' AND code ~ '^[0-9]{5}$' AND retired_at IS NULL")
             metro_rid = {c: i for c, i in cur.fetchall()}
             cur.execute("SELECT fips, id FROM regions WHERE region_type='county' AND fips IS NOT NULL")
             county_rid = {f: i for f, i in cur.fetchall()}

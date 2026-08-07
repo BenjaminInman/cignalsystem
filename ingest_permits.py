@@ -99,7 +99,7 @@ def main():
                 SELECT %(ind)s, r.id, s.obs_date, s.value,
                        COALESCE(latest.revision + 1, 0), %(release)s
                 FROM _stage s
-                JOIN regions r ON r.region_type = 'metro' AND r.code = s.code
+                JOIN regions r ON r.region_type = 'metro' AND r.code = s.code AND r.retired_at IS NULL
                 LEFT JOIN LATERAL (
                     SELECT o.value, o.revision FROM observations o
                     WHERE o.indicator_id = %(ind)s AND o.region_id = r.id AND o.obs_date = s.obs_date

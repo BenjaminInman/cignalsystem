@@ -82,6 +82,7 @@ CHECKS = [
                  WHEN NOT EXISTS (
                         SELECT 1 FROM regions r
                          WHERE r.region_type='metro' AND r.code ~ '^[0-9]{5}$'
+                           AND r.retired_at IS NULL
                            AND EXISTS (SELECT 1 FROM hd_metro_size s WHERE s.region_id=r.id)
                            AND NOT EXISTS (
                                  SELECT 1 FROM observations o
@@ -104,6 +105,7 @@ CHECKS = [
         "no metro is stuck with only empty exports",
         """SELECT count(*) FROM regions r
             WHERE r.region_type='metro' AND r.code ~ '^[0-9]{5}$'
+                           AND r.retired_at IS NULL
               AND EXISTS (SELECT 1 FROM hd_metro_size s WHERE s.region_id=r.id)
               AND EXISTS (SELECT 1 FROM hd_deliveries d
                            WHERE d.name = 'cignal_zip_' || r.code AND d.status='empty'

@@ -51,7 +51,7 @@ def county_to_cbsa():
 
 def cbsa_to_metro(cur, title):
     """Map CBSA title (long) -> Zillow metro region (id, short code) via prefix + first-state."""
-    cur.execute("SELECT id, zillow_id, code FROM regions WHERE region_type='metro'")
+    cur.execute("SELECT id, zillow_id, code FROM regions WHERE region_type='metro' AND retired_at IS NULL")
     metros = []
     for rid, zid, code in cur.fetchall():
         if ", " not in code: continue

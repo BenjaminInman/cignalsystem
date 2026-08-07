@@ -156,7 +156,7 @@ def ensure_indicators(cur):
 
 def metro_region_ids(cur):
     """CBSA-coded metro regions only — the same keying the BLS metro series use."""
-    cur.execute("SELECT code, id FROM regions WHERE region_type='metro' AND code ~ '^[0-9]{5}$'")
+    cur.execute("SELECT code, id FROM regions WHERE region_type='metro' AND code ~ '^[0-9]{5}$' AND retired_at IS NULL")
     return {c: i for c, i in cur.fetchall()}
 
 

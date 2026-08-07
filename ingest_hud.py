@@ -81,7 +81,7 @@ def main():
                   AND r.code = ranked.metro_label""")
 
             # ---- 3. Fair Market Rents (metro-complete only) ----
-            cur.execute("SELECT code, id FROM regions WHERE region_type='metro' AND code ~ '^[0-9]+$'")
+            cur.execute("SELECT code, id FROM regions WHERE region_type='metro' AND code ~ '^[0-9]+$' AND retired_at IS NULL")
             cbsa_rid = {c: i for c, i in cur.fetchall()}
             cur.execute("SELECT slug, id FROM indicators WHERE source='HUD FMR'")
             fmr_ind = {s: i for s, i in cur.fetchall()}
