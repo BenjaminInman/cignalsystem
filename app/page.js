@@ -71,11 +71,13 @@ export default function Home() {
   const [liveInd, setLiveInd] = useState({});
   const [composite, setComposite] = useState(COMPOSITE);
   const [stats, setStats] = useState(DASH_STATS);
-  // Drives the "N INDICATORS" subtitle. Seeded from the editorial array length
-  // (correct on first render, no flash) and overwritten with the live
-  // indicator_count from /api/stats so it always matches the INDICATORS TRACKED
-  // stat card exactly.
-  const [indicatorCount, setIndicatorCount] = useState(INDICATORS.length || 0);
+  // Drives both the "N INDICATORS" subtitle and the INDICATORS TRACKED stat
+  // card, and it is deliberately NOT a database number. The claim a visitor can
+  // check is the length of the Indicators tab, so the count has to be the length
+  // of the array that renders it -- and that array is per-vertical, which the
+  // warehouse has no way to know. platform_stats() previously answered this with
+  // a hard-coded 68 that silently went stale the moment the tab grew.
+  const indicatorCount = INDICATORS.length || 0;
   const cards = (tab === "leading" ? LEADING_CARDS : TRAILING_CARDS).map((c) => mergeLiveCard(c, liveInd));
   const compColor = toneColor(composite.tone);
 
@@ -139,9 +141,8 @@ export default function Home() {
       .then((d) => {
         const s = d?.stats;
         if (!s) return;
-        setIndicatorCount(s.indicator_count ?? INDICATORS.length);
         setStats([
-          { label: "INDICATORS TRACKED", value: String(s.indicator_count ?? 0), unit: "live", tone: "signal" },
+          { label: "INDICATORS TRACKED", value: String(INDICATORS.length || 0), unit: "live", tone: "signal" },
           { label: "MULTIFAMILY MARKETS", value: String(s.mf_metro_count ?? 0), unit: "metros", tone: "ink" },
           { label: "ZIP CODES", value: fmtK(s.zip_count ?? 0), unit: "tracked", tone: "ink" },
           { label: "DATA POINTS", value: fmtK(s.obs_count ?? 0), unit: "live", tone: "signal" },
