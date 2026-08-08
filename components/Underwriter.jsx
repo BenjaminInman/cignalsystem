@@ -13,6 +13,8 @@ const DEFAULT_DEAL = {
   closingPct: 0.02, expenseGrowth: 0.025, holdYear: 5,
   refiYear: 3, refiLTV: 0.70, refiRate: 0.055, refiCost: 0.01, sellYear: 7,
   saleCost: 0.02,
+  lpEquityShare: 0.90, prefRate: 0.08, hurdle2: 0.10, hurdle3: 0.12,
+  lpShare1: 0.90, lpShare2: 0.75, lpShare3: 0.70, lpShare4: 0.65,
 };
 
 export default function Underwriter({ cbsa, marketName, userTier = "free" }) {
@@ -48,7 +50,13 @@ export default function Underwriter({ cbsa, marketName, userTier = "free" }) {
   const out = useMemo(() => {
     if (!fa || !mr?.signals) return null;
     const p = buildProForma(deal, fa);
-    const dd = { ...deal, exitCapB: ov.exitCapB ?? fa.exitCapRate, refiCap: deal.goingInCap };
+    const tiers = [
+      { rate: deal.prefRate, lpShare: deal.lpShare1 },
+      { rate: deal.hurdle2, lpShare: deal.lpShare2 },
+      { rate: deal.hurdle3, lpShare: deal.lpShare3 },
+      { rate: Infinity, lpShare: deal.lpShare4 },
+    ];
+    const dd = { ...deal, exitCapB: ov.exitCapB ?? fa.exitCapRate, refiCap: deal.goingInCap, tiers, lpEquityShare: deal.lpEquityShare };
     const es = exitStrategy(p, dd, fa, mr.signals);
     return { p, es };
   }, [deal, fa, mr, ov]);
@@ -95,6 +103,12 @@ export default function Underwriter({ cbsa, marketName, userTier = "free" }) {
           <Row label="Sell year (Path B)" v={deal.sellYear} on={set("sellYear")} />
           <Row label="Refi LTV" v={deal.refiLTV} on={set("refiLTV")} step="0.01" pct />
           <Row label="Refi rate (IO)" v={deal.refiRate} on={set("refiRate")} step="0.0005" pct />
+          <h4>Promote (LP / GP split)</h4>
+          <Row label="LP equity share" v={deal.lpEquityShare} on={set("lpEquityShare")} step="0.05" pct />
+          <Row label="Preferred return" v={deal.prefRate} on={set("prefRate")} step="0.005" pct />
+          <Row label="Hurdle 2 / LP share" v={deal.hurdle2} on={set("hurdle2")} step="0.005" pct hint2 v2={deal.lpShare2} on2={set("lpShare2")} />
+          <Row label="Hurdle 3 / LP share" v={deal.hurdle3} on={set("hurdle3")} step="0.005" pct hint2 v2={deal.lpShare3} on2={set("lpShare3")} />
+          <Row label="Above H3 · LP share" v={deal.lpShare4} on={set("lpShare4")} step="0.05" pct />
         </div>
 
         {/* RIGHT — results */}
@@ -162,12 +176,15 @@ export default function Underwriter({ cbsa, marketName, userTier = "free" }) {
 }
 
 function num(v) { const n = parseFloat(v); return isNaN(n) ? 0 : n; }
-function Row({ label, v, on, step = "1", pct, auto, hint }) {
+function Row({ label, v, on, step = "1", pct, auto, hint, hint2, v2, on2 }) {
   const display = pct && typeof v === "number" ? +(v * 100).toFixed(3) : v;
+  const disp2 = typeof v2 === "number" ? +(v2 * 100).toFixed(1) : v2;
   const onChange = (e) => on(pct ? { target: { value: e.target.value === "" ? "" : String(parseFloat(e.target.value) / 100) } } : e);
+  const onChange2 = (e) => on2({ target: { value: e.target.value === "" ? "" : String(parseFloat(e.target.value) / 100) } });
   return (
     <label className="row">
       <span>{label}{hint ? <em> · {hint}</em> : null}</span>
+      {hint2 && <input type="number" step={0.5} value={disp2} onChange={onChange2} style={{ width: 60, marginRight: 6 }} title="LP share %" />}
       <input type="number" step={pct ? 0.1 : step} value={display} onChange={onChange} data-auto={auto ? "1" : undefined} />
       <style jsx>{`
         .row { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:5px 0; font-size:12.5px; color:#334155; }
@@ -193,6 +210,16 @@ function Path({ title, r, gated, extra }) {
         <span>Profit {r ? "$" + Math.round(r.profit).toLocaleString() : "—"}</span>
       </div>
       {extra && <div style={{ fontSize:11, color:"#94a3b8", marginTop:3 }}>{extra}</div>}
+      {r?.split && (
+        <div style={{ marginTop:8, paddingTop:8, borderTop:"1px solid #eef2f7", fontSize:11.5, color:"#475569" }}>
+          <div style={{ display:"flex", justifyContent:"space-between" }}>
+            <span>LP</span><b>{r.split.lp.irr==null?"—":(r.split.lp.irr*100).toFixed(1)+"%"} · {r.split.lp.em.toFixed(2)}x</b>
+          </div>
+          <div style={{ display:"flex", justifyContent:"space-between" }}>
+            <span>GP</span><b>{r.split.gp.irr==null?"—":(r.split.gp.irr*100).toFixed(1)+"%"} · {r.split.gp.em.toFixed(2)}x</b>
+          </div>
+        </div>
+      )}
     </div></div>);
 }
 function BigStat({ k, v }) {
