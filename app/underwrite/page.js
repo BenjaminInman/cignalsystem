@@ -16,7 +16,9 @@ export default function UnderwritePage() {
   const [saved, setSaved] = useState([]);
   const [injected, setInjected] = useState(null);
   const [loadKey, setLoadKey] = useState(0);
+  const [floatTop, setFloatTop] = useState(140);
   const box = useRef(null);
+  const headerRef = useRef(null);
 
   const loadSaved = useCallback(() => {
     const sb = createClient();
@@ -37,14 +39,12 @@ export default function UnderwritePage() {
     loadSaved();
   }, [loadSaved]);
 
-  // fetch the market read whenever market or scenario changes
   useEffect(() => {
     if (!cbsa) return;
     fetch(`/api/underwriting/market-read?cbsa=${cbsa}&scenario=${scenario}`)
       .then((r) => r.json()).then((d) => setMr(d.error ? null : d)).catch(() => setMr(null));
   }, [cbsa, scenario]);
 
-  // typeahead resolve (debounced)
   useEffect(() => {
     if (q.trim().length < 2) { setResults([]); return; }
     const t = setTimeout(() => {
@@ -59,6 +59,21 @@ export default function UnderwritePage() {
     document.addEventListener("mousedown", h); return () => document.removeEventListener("mousedown", h);
   }, []);
 
+  // floating panel: tuck under the header, then pin near the top as you scroll
+  useEffect(() => {
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      const b = headerRef.current ? headerRef.current.getBoundingClientRect().bottom : 120;
+      setFloatTop(Math.max(16, b + 12));
+    };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(update); };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => { window.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onScroll); if (raf) cancelAnimationFrame(raf); };
+  }, []);
+
   function pick(m) { setCbsa(m.cbsa); setMarketName(m.name); setQ(""); setResults([]); }
   function reopen(id) {
     const row = saved.find((r) => r.id === id); if (!row?.underwriting) return;
@@ -69,9 +84,9 @@ export default function UnderwritePage() {
 
   return (
     <div className="pg">
-      <div className="pg__head">
+      <div className="pg__head" ref={headerRef}>
         <h1>Underwriter</h1>
-        <p>Type a market or ZIP; the read on the right updates live and auto-fills the model’s forward assumptions.</p>
+        <p>Type a market or ZIP; the floating read on the left updates live and auto-fills the model’s forward assumptions.</p>
         <div className="pg__controls">
           <div className="pg__search" ref={box}>
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Market name or ZIP (e.g. Nashville or 37203)" />
@@ -90,8 +105,8 @@ export default function UnderwritePage() {
         </div>
       </div>
 
-      <div className="pg__grid">
-        <div className="pg__aside">
+      <div className="pg__body">
+        <div className="pg__float" style={{ top: floatTop }}>
           <MarketReadCard mr={mr} scenario={scenario} setScenario={setScenario} marketName={marketName} goingInCap={0.0674} />
         </div>
         <div className="pg__main">
@@ -108,7 +123,7 @@ export default function UnderwritePage() {
         .pg__search { position:relative; width:360px; max-width:100%; }
         .pg__search input { width:100%; padding:11px 13px; border:1px solid #2a2c2f; border-radius:9px; font-size:14px;
                             background:#0E0F11; color:#ECEDEF; color-scheme:dark; font-family:'IBM Plex Mono',monospace; }
-        .pg__results { position:absolute; z-index:20; left:0; right:0; margin:4px 0 0; padding:4px; list-style:none;
+        .pg__results { position:absolute; z-index:30; left:0; right:0; margin:4px 0 0; padding:4px; list-style:none;
                        background:#0E0F11; border:1px solid #2a2c2f; border-radius:9px; max-height:260px; overflow:auto; }
         .pg__results li { display:flex; justify-content:space-between; gap:10px; padding:9px 10px; border-radius:6px; cursor:pointer;
                           font-size:13px; font-family:'IBM Plex Mono',monospace; color:#ECEDEF; }
@@ -116,8 +131,15 @@ export default function UnderwritePage() {
         .pg__results li span { color:#5b5f66; font-size:11px; }
         .pg__saved { padding:11px 13px; border:1px solid #2a2c2f; border-radius:9px; background:#0E0F11; color:#ECEDEF;
                      color-scheme:dark; font-size:13.5px; font-family:'IBM Plex Mono',monospace; }
-        .pg__grid { display:grid; grid-template-columns:300px minmax(0,1fr); gap:16px; margin-top:18px; align-items:start; }
-        @media (max-width:900px){ .pg__grid { grid-template-columns:1fr; } }
+
+        .pg__body { position:relative; margin-top:18px; }
+        .pg__main { margin-left:332px; min-width:0; }
+        .pg__float { position:fixed; left:max(16px, calc((100vw - 1240px)/2 + 16px)); width:300px; z-index:15; }
+
+        @media (max-width:900px){
+          .pg__main { margin-left:0; }
+          .pg__float { position:static; left:auto; width:auto; top:auto !important; margin-bottom:16px; }
+        }
       `}</style>
     </div>
   );

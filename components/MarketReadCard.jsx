@@ -85,7 +85,7 @@ export default function MarketReadCard({ mr, scenario, setScenario, marketName, 
 
       <style jsx>{`
         .mrc { background:#0E0F11; border:1px solid #1e2126; border-radius:12px; padding:16px; color:#ECEDEF;
-               font-family:'IBM Plex Mono',ui-monospace,monospace; position:sticky; top:20px; max-height:calc(100vh - 40px); overflow:auto; }
+               font-family:'IBM Plex Mono',ui-monospace,monospace; max-height:calc(100vh - 160px); overflow:auto; box-shadow:0 12px 34px rgba(0,0,0,.55); }
         .mrc__top { display:flex; justify-content:space-between; align-items:center; }
         .mrc__kick { font-size:10px; letter-spacing:.28em; color:#797E85; }
         .mrc__scn { display:flex; gap:2px; }
