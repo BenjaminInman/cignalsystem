@@ -15,7 +15,6 @@ export async function GET(req) {
     cache: "no-store",
   });
   if (!r.ok) return NextResponse.json({ results: [] }, { status: 200 });
-  let d = await r.json();
-  if (Array.isArray(d)) d = d[0] ?? [];
-  return NextResponse.json({ results: Array.isArray(d) ? d : [] });
+  const d = await r.json(); // resolve_market returns a jsonb array directly
+  return NextResponse.json({ results: Array.isArray(d) ? d : (d?.results || []) });
 }
