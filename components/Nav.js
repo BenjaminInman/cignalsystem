@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
-import { Home, Newspaper, Radio, Info, Gauge, LayoutDashboard, Activity, BarChart3, LineChart, TrendingUp, BookOpen, Briefcase, Users, Bell, ChevronDown, Terminal, LogOut, ShieldCheck, Lock, CreditCard, Compass, Calculator, Building2 } from "lucide-react";
+import { Home, Newspaper, Radio, Info, Gauge, LayoutDashboard, Activity, BarChart3, LineChart, TrendingUp, BookOpen, Briefcase, Users, Bell, ChevronDown, Terminal, LogOut, ShieldCheck, Lock, CreditCard, Compass, Calculator, Building2, Wrench } from "lucide-react";
 import { useVertical } from "@/components/VerticalProvider";
 import { createClient } from "@/lib/supabase/client";
 import { FREE_PAGES } from "@/lib/access";
@@ -24,6 +24,7 @@ const SUITE = [
   { label: "Signals", href: "/signals", icon: Radio },
   { label: "Cycle Clock", href: "/where-are-we", icon: Compass },
   { label: "Underwriter", href: "/underwrite", icon: Building2, tier: "pro" },
+  { label: "Tools", href: "/tools", icon: Wrench, tier: "pro" },
   { label: "Indicators", href: "/indicators", icon: Activity, tier: "pro" },
   // `tier` marks what a row REQUIRES; absent = pro. Rows whose slug is in
   // FREE_PAGES open on a free account despite the pro default. Market Maps and
