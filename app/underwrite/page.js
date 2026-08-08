@@ -91,12 +91,12 @@ export default function UnderwritePage() {
       </div>
 
       <div className="pg__grid">
+        <div className="pg__aside">
+          <MarketReadCard mr={mr} scenario={scenario} setScenario={setScenario} marketName={marketName} goingInCap={0.0674} />
+        </div>
         <div className="pg__main">
           <Underwriter mr={mr} scenario={scenario} marketName={marketName} userTier={tier}
             injected={injected} loadKey={loadKey} onSaved={loadSaved} />
-        </div>
-        <div className="pg__aside">
-          <MarketReadCard mr={mr} scenario={scenario} setScenario={setScenario} marketName={marketName} goingInCap={0.0674} />
         </div>
       </div>
 
@@ -116,8 +116,8 @@ export default function UnderwritePage() {
         .pg__results li span { color:#5b5f66; font-size:11px; }
         .pg__saved { padding:11px 13px; border:1px solid #2a2c2f; border-radius:9px; background:#0E0F11; color:#ECEDEF;
                      color-scheme:dark; font-size:13.5px; font-family:'IBM Plex Mono',monospace; }
-        .pg__grid { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:16px; margin-top:18px; align-items:start; }
-        @media (max-width:900px){ .pg__grid { grid-template-columns:1fr; } .pg__aside { order:-1; } }
+        .pg__grid { display:grid; grid-template-columns:300px minmax(0,1fr); gap:16px; margin-top:18px; align-items:start; }
+        @media (max-width:900px){ .pg__grid { grid-template-columns:1fr; } }
       `}</style>
     </div>
   );
