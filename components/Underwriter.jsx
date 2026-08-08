@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import { hasTier } from "@/lib/tiers";
+import { createClient } from "@/lib/supabase/client";
 import { runMarketRead } from "@/lib/underwriting/engine";
 import { buildProForma, exitStrategy } from "@/lib/underwriting/proforma";
 
@@ -17,13 +18,19 @@ const DEFAULT_DEAL = {
   lpShare1: 0.90, lpShare2: 0.75, lpShare3: 0.70, lpShare4: 0.65,
 };
 
-export default function Underwriter({ cbsa, marketName, userTier = "free" }) {
+export default function Underwriter({ cbsa, marketName, userTier = "free", injected, loadKey, onSaved }) {
   const gated = !hasTier(userTier, "pro");
   const [scenario, setScenario] = useState("base");
   const [mr, setMr] = useState(null);
   const [loading, setLoading] = useState(true);
   const [deal, setDeal] = useState(DEFAULT_DEAL);
   const [ov, setOv] = useState({}); // manual overrides of the auto-filled assumptions
+  const [dealName, setDealName] = useState("");
+  const [saveStatus, setSaveStatus] = useState("");
+
+  useEffect(() => {
+    if (injected?.deal) { setDeal({ ...DEFAULT_DEAL, ...injected.deal }); setOv(injected.ov || {}); setScenario(injected.scenario || "base"); setDealName(injected.name || ""); }
+  }, [loadKey]); // eslint-disable-line
 
   useEffect(() => {
     if (!cbsa) return;
@@ -31,7 +38,6 @@ export default function Underwriter({ cbsa, marketName, userTier = "free" }) {
     fetch(`/api/underwriting/market-read?cbsa=${cbsa}&scenario=${scenario}`)
       .then((r) => r.json()).then((d) => setMr(d.error ? null : d))
       .finally(() => setLoading(false));
-    setOv({}); // clear overrides when market/scenario changes
   }, [cbsa, scenario]);
 
   // Forward assumptions: from the market read (recomputed with the deal's going-in cap), overridable.
@@ -60,6 +66,36 @@ export default function Underwriter({ cbsa, marketName, userTier = "free" }) {
     const es = exitStrategy(p, dd, fa, mr.signals);
     return { p, es };
   }, [deal, fa, mr, ov]);
+
+  async function saveDeal() {
+    if (!out) return;
+    setSaveStatus("saving");
+    try {
+      const sb = createClient();
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) { setSaveStatus("login"); return; }
+      const [city, st] = (marketName || "").split(",").map((x) => x.trim());
+      const snapshot = {
+        cbsa, marketName, scenario, deal, ov,
+        phase: mr.phase,
+        pathA: { irr: out.es.pathA.irr, em: out.es.pathA.em, profit: out.es.pathA.profit },
+        pathB: { irr: out.es.pathB.irr, em: out.es.pathB.em, profit: out.es.pathB.profit },
+        rec: out.es.rec, price: out.p.price, equity: out.p.equity, savedAt: new Date().toISOString(),
+        engineMethodVersion: mr.engineMethodVersion,
+      };
+      const { error } = await sb.from("portfolio_properties").insert({
+        user_id: user.id,
+        name: dealName || `${marketName} deal`,
+        city: city || null, state: st || null,
+        unit_count: Math.round(deal.units) || null,
+        strategy: out.es.rec,
+        underwriting: snapshot,
+      });
+      if (error) { setSaveStatus("error"); return; }
+      setSaveStatus("saved"); onSaved && onSaved();
+      setTimeout(() => setSaveStatus(""), 2500);
+    } catch { setSaveStatus("error"); }
+  }
 
   if (loading) return <div className="uw__msg">Loading market…</div>;
   if (!mr) return <div className="uw__msg uw__msg--err">Couldn’t load market data for this metro.</div>;
@@ -135,6 +171,16 @@ export default function Underwriter({ cbsa, marketName, userTier = "free" }) {
               <span className={out?.es.aligned ? "uw__ok" : "uw__warn"}>{out?.es.aligned ? "Aligned" : "Divergent — weigh conviction vs. certainty"}</span>
             </div>
           </div>
+          {!gated && (
+            <div className="uw__save">
+              <input placeholder="Deal name" value={dealName} onChange={(e) => setDealName(e.target.value)} />
+              <button onClick={saveDeal} disabled={saveStatus === "saving"}>
+                {saveStatus === "saved" ? "Saved ✓" : saveStatus === "saving" ? "Saving…" : "Save to Portfolio"}
+              </button>
+              {saveStatus === "error" && <span className="uw__saveErr">Couldn’t save.</span>}
+              {saveStatus === "login" && <span className="uw__saveErr">Log in to save.</span>}
+            </div>
+          )}
           {gated && <div className="uw__upsell">Upgrade to Pro to run live underwriting.</div>}
           <div className="uw__foot">Engine {mr.engineMethodVersion} · assumptions live from the Cignal warehouse · a decision tool, not investment advice</div>
         </div>
@@ -169,6 +215,11 @@ export default function Underwriter({ cbsa, marketName, userTier = "free" }) {
         .uw__ok { color:#86efac; } .uw__warn { color:#fca5a5; }
         .uw__upsell { margin-top:10px; padding:12px; background:#fffbeb; color:#92400e; font-size:13px; text-align:center; border-radius:8px; }
         .uw__foot { margin-top:12px; font-size:11px; color:#94a3b8; }
+        .uw__save { display:flex; gap:8px; align-items:center; margin-top:12px; }
+        .uw__save input { flex:1; padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px; }
+        .uw__save button { padding:8px 14px; border:0; border-radius:8px; background:#0B1F3A; color:#fff; font-size:13px; font-weight:600; cursor:pointer; }
+        .uw__save button:disabled { opacity:.6; }
+        .uw__saveErr { color:#b91c1c; font-size:12px; }
         .uw__msg { padding:24px; color:#64748b; } .uw__msg--err { color:#b45309; }
       `}</style>
     </div>
