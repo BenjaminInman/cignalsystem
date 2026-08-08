@@ -1,39 +1,30 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Underwriter from "@/components/Underwriter";
-
-const METROS = [
-  { cbsa: "28940", name: "Knoxville, TN" },
-  { cbsa: "34980", name: "Nashville, TN" },
-  { cbsa: "12060", name: "Atlanta, GA" },
-  { cbsa: "19100", name: "Dallas–Fort Worth, TX" },
-  { cbsa: "12420", name: "Austin, TX" },
-  { cbsa: "38060", name: "Phoenix, AZ" },
-  { cbsa: "16740", name: "Charlotte, NC" },
-  { cbsa: "39580", name: "Raleigh, NC" },
-  { cbsa: "45300", name: "Tampa, FL" },
-  { cbsa: "19740", name: "Denver, CO" },
-];
+import MarketReadCard from "@/components/MarketReadCard";
 
 export default function UnderwritePage() {
   const [tier, setTier] = useState("free");
-  const [sel, setSel] = useState(METROS[0]);
+  const [cbsa, setCbsa] = useState("28940");
+  const [marketName, setMarketName] = useState("Knoxville, TN");
+  const [scenario, setScenario] = useState("base");
+  const [mr, setMr] = useState(null);
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState([]);
   const [saved, setSaved] = useState([]);
   const [injected, setInjected] = useState(null);
   const [loadKey, setLoadKey] = useState(0);
+  const box = useRef(null);
 
   const loadSaved = useCallback(() => {
     const sb = createClient();
     sb.auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
-      sb.from("portfolio_properties")
-        .select("id,name,underwriting,created_at")
-        .eq("user_id", user.id)
-        .not("underwriting", "is", null)
-        .order("created_at", { ascending: false })
-        .then(({ data }) => setSaved(data || []));
+      sb.from("portfolio_properties").select("id,name,underwriting,created_at")
+        .eq("user_id", user.id).not("underwriting", "is", null)
+        .order("created_at", { ascending: false }).then(({ data }) => setSaved(data || []));
     });
   }, []);
 
@@ -41,53 +32,93 @@ export default function UnderwritePage() {
     const sb = createClient();
     sb.auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
-      sb.from("profiles").select("tier").eq("id", user.id).single()
-        .then(({ data }) => setTier(data?.tier || "free"));
+      sb.from("profiles").select("tier").eq("id", user.id).single().then(({ data }) => setTier(data?.tier || "free"));
     });
     loadSaved();
   }, [loadSaved]);
 
+  // fetch the market read whenever market or scenario changes
+  useEffect(() => {
+    if (!cbsa) return;
+    fetch(`/api/underwriting/market-read?cbsa=${cbsa}&scenario=${scenario}`)
+      .then((r) => r.json()).then((d) => setMr(d.error ? null : d)).catch(() => setMr(null));
+  }, [cbsa, scenario]);
+
+  // typeahead resolve (debounced)
+  useEffect(() => {
+    if (q.trim().length < 2) { setResults([]); return; }
+    const t = setTimeout(() => {
+      fetch(`/api/underwriting/resolve-market?q=${encodeURIComponent(q.trim())}`)
+        .then((r) => r.json()).then((d) => setResults(d.results || [])).catch(() => setResults([]));
+    }, 220);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  useEffect(() => {
+    const h = (e) => { if (box.current && !box.current.contains(e.target)) setResults([]); };
+    document.addEventListener("mousedown", h); return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  function pick(m) { setCbsa(m.cbsa); setMarketName(m.name); setQ(""); setResults([]); }
   function reopen(id) {
-    const row = saved.find((r) => r.id === id);
-    if (!row?.underwriting) return;
+    const row = saved.find((r) => r.id === id); if (!row?.underwriting) return;
     const u = row.underwriting;
-    const market = METROS.find((m) => m.cbsa === u.cbsa) || { cbsa: u.cbsa, name: u.marketName };
-    setSel(market);
-    setInjected({ deal: u.deal, ov: u.ov, scenario: u.scenario, name: row.name });
-    setLoadKey((k) => k + 1);
+    setCbsa(u.cbsa); setMarketName(u.marketName || ""); setScenario(u.scenario || "base");
+    setInjected({ deal: u.deal, ov: u.ov, name: row.name }); setLoadKey((k) => k + 1);
   }
 
   return (
-    <div style={{ maxWidth: 980, margin: "0 auto", padding: "28px 16px 60px" }}>
-      <h1 style={{ fontSize: 24, fontWeight: 800, color: "#0B1F3A", margin: 0 }}>Underwriter</h1>
-      <p style={{ color: "#64748b", fontSize: 14, margin: "6px 0 18px" }}>
-        A cycle-adjusted multifamily model. Enter a deal; the forward assumptions auto-fill from the market’s
-        Cignal read, and it runs the full pro forma with LP/GP returns and a live Sell-vs-Refinance recommendation.
-      </p>
-
-      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 20 }}>
-        <div>
-          <label style={{ fontSize: 12, color: "#475569", fontWeight: 600 }}>Market</label>
-          <select value={sel.cbsa}
-            onChange={(e) => setSel(METROS.find((m) => m.cbsa === e.target.value))}
-            style={{ display: "block", width: 300, marginTop: 6, padding: "9px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 14, background: "#fff", color: "#0f172a", colorScheme: "light" }}>
-            {METROS.map((m) => (<option key={m.cbsa} value={m.cbsa}>{m.name}</option>))}
-          </select>
-        </div>
-        {saved.length > 0 && (
-          <div>
-            <label style={{ fontSize: 12, color: "#475569", fontWeight: 600 }}>Reopen saved deal</label>
-            <select defaultValue="" onChange={(e) => e.target.value && reopen(e.target.value)}
-              style={{ display: "block", width: 300, marginTop: 6, padding: "9px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 14, background: "#fff", color: "#0f172a", colorScheme: "light" }}>
-              <option value="">— select a saved deal —</option>
+    <div className="pg">
+      <div className="pg__head">
+        <h1>Underwriter</h1>
+        <p>Type a market or ZIP; the read on the right updates live and auto-fills the model’s forward assumptions.</p>
+        <div className="pg__controls">
+          <div className="pg__search" ref={box}>
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Market name or ZIP (e.g. Nashville or 37203)" />
+            {results.length > 0 && (
+              <ul className="pg__results">
+                {results.map((m) => (<li key={m.cbsa + m.name} onClick={() => pick(m)}>{m.name}<span>{m.cbsa}</span></li>))}
+              </ul>
+            )}
+          </div>
+          {saved.length > 0 && (
+            <select className="pg__saved" defaultValue="" onChange={(e) => e.target.value && reopen(e.target.value)}>
+              <option value="">Reopen saved deal…</option>
               {saved.map((r) => (<option key={r.id} value={r.id}>{r.name}</option>))}
             </select>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      <Underwriter cbsa={sel.cbsa} marketName={sel.name} userTier={tier}
-        injected={injected} loadKey={loadKey} onSaved={loadSaved} />
+      <div className="pg__grid">
+        <div className="pg__main">
+          <Underwriter mr={mr} scenario={scenario} marketName={marketName} userTier={tier}
+            injected={injected} loadKey={loadKey} onSaved={loadSaved} />
+        </div>
+        <div className="pg__aside">
+          <MarketReadCard mr={mr} scenario={scenario} setScenario={setScenario} marketName={marketName} goingInCap={0.0674} />
+        </div>
+      </div>
+
+      <style jsx>{`
+        .pg { max-width:1240px; margin:0 auto; padding:26px 16px 70px; color:#ECEDEF; font-family:Archivo,sans-serif; }
+        .pg__head h1 { font-size:24px; font-weight:800; margin:0; }
+        .pg__head p { color:#797E85; font-size:13.5px; margin:6px 0 16px; font-family:'IBM Plex Mono',monospace; }
+        .pg__controls { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start; }
+        .pg__search { position:relative; width:360px; max-width:100%; }
+        .pg__search input { width:100%; padding:11px 13px; border:1px solid #2a2c2f; border-radius:9px; font-size:14px;
+                            background:#0E0F11; color:#ECEDEF; color-scheme:dark; font-family:'IBM Plex Mono',monospace; }
+        .pg__results { position:absolute; z-index:20; left:0; right:0; margin:4px 0 0; padding:4px; list-style:none;
+                       background:#0E0F11; border:1px solid #2a2c2f; border-radius:9px; max-height:260px; overflow:auto; }
+        .pg__results li { display:flex; justify-content:space-between; gap:10px; padding:9px 10px; border-radius:6px; cursor:pointer;
+                          font-size:13px; font-family:'IBM Plex Mono',monospace; color:#ECEDEF; }
+        .pg__results li:hover { background:#16181b; }
+        .pg__results li span { color:#5b5f66; font-size:11px; }
+        .pg__saved { padding:11px 13px; border:1px solid #2a2c2f; border-radius:9px; background:#0E0F11; color:#ECEDEF;
+                     color-scheme:dark; font-size:13.5px; font-family:'IBM Plex Mono',monospace; }
+        .pg__grid { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:16px; margin-top:18px; align-items:start; }
+        @media (max-width:900px){ .pg__grid { grid-template-columns:1fr; } .pg__aside { order:-1; } }
+      `}</style>
     </div>
   );
 }

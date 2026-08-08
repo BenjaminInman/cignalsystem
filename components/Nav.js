@@ -23,7 +23,6 @@ const SUITE = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Signals", href: "/signals", icon: Radio },
   { label: "Cycle Clock", href: "/where-are-we", icon: Compass },
-  { label: "Market Read", href: "/market-read", icon: Calculator, tier: "pro" },
   { label: "Underwriter", href: "/underwrite", icon: Building2, tier: "pro" },
   { label: "Indicators", href: "/indicators", icon: Activity, tier: "pro" },
   // `tier` marks what a row REQUIRES; absent = pro. Rows whose slug is in
