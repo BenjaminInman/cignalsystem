@@ -215,7 +215,7 @@ export default function Underwriter({ cbsa, marketName, userTier = "free", injec
         .uw__upsell { margin-top:10px; padding:12px; background:#fffbeb; color:#92400e; font-size:13px; text-align:center; border-radius:8px; }
         .uw__foot { margin-top:12px; font-size:11px; color:#94a3b8; }
         .uw__save { display:flex; gap:8px; align-items:center; margin-top:12px; }
-        .uw__save input { flex:1; padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px; color:#0f172a; background:#fff; }
+        .uw__save input { flex:1; padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px; color:#0f172a; background:#fff; color-scheme:light; }
         .uw__save button { padding:8px 14px; border:0; border-radius:8px; background:#0B1F3A; color:#fff; font-size:13px; font-weight:600; cursor:pointer; }
         .uw__save button:disabled { opacity:.6; }
         .uw__saveErr { color:#b91c1c; font-size:12px; }
@@ -239,7 +239,7 @@ function Row({ label, v, on, step = "1", pct, auto, hint, hint2, v2, on2 }) {
       <style jsx>{`
         .row { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:5px 0; font-size:12.5px; color:#334155; }
         .row em { color:#94a3b8; font-style:normal; }
-        .row input { width:96px; padding:5px 8px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px; text-align:right; color:#0f172a; background:#fff; }
+        .row input { width:96px; padding:5px 8px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px; text-align:right; color:#0f172a; background:#fff; color-scheme:light; }
         .row input[data-auto="1"] { border-color:#B88A2A; background:#fffdf6; }
       `}</style>
     </label>

@@ -70,7 +70,7 @@ export default function UnderwritePage() {
           <label style={{ fontSize: 12, color: "#475569", fontWeight: 600 }}>Market</label>
           <select value={sel.cbsa}
             onChange={(e) => setSel(METROS.find((m) => m.cbsa === e.target.value))}
-            style={{ display: "block", width: 300, marginTop: 6, padding: "9px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 14 }}>
+            style={{ display: "block", width: 300, marginTop: 6, padding: "9px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 14, background: "#fff", color: "#0f172a", colorScheme: "light" }}>
             {METROS.map((m) => (<option key={m.cbsa} value={m.cbsa}>{m.name}</option>))}
           </select>
         </div>
@@ -78,7 +78,7 @@ export default function UnderwritePage() {
           <div>
             <label style={{ fontSize: 12, color: "#475569", fontWeight: 600 }}>Reopen saved deal</label>
             <select defaultValue="" onChange={(e) => e.target.value && reopen(e.target.value)}
-              style={{ display: "block", width: 300, marginTop: 6, padding: "9px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 14 }}>
+              style={{ display: "block", width: 300, marginTop: 6, padding: "9px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 14, background: "#fff", color: "#0f172a", colorScheme: "light" }}>
               <option value="">— select a saved deal —</option>
               {saved.map((r) => (<option key={r.id} value={r.id}>{r.name}</option>))}
             </select>

@@ -43,7 +43,7 @@ export default function MarketReadPage() {
         value={sel.cbsa}
         onChange={(e) => setSel(METROS.find((m) => m.cbsa === e.target.value))}
         style={{ display: "block", width: "100%", maxWidth: 320, margin: "6px 0 20px", padding: "9px 12px",
-                 border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 14 }}
+                 border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 14, background: "#fff", color: "#0f172a", colorScheme: "light" }}
       >
         {METROS.map((m) => (
           <option key={m.cbsa} value={m.cbsa}>{m.name}</option>
