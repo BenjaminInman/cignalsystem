@@ -37,6 +37,7 @@ export async function GET(req) {
     scenario,
     phase: result.phase,
     forwardAssumptions: result.forwardAssumptions,
+    inputs: data.inputs,
     signals: result.signals,
     raw: data.raw,
     vintages: data.vintages,
