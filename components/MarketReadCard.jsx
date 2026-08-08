@@ -24,7 +24,12 @@ function RentIndexSVG({ fa }) {
 }
 
 export default function MarketReadCard({ mr, scenario, setScenario, marketName, goingInCap = 0.06 }) {
-  const fa = mr?.inputs ? runMarketRead({ ...mr.inputs, goingInCap }, scenario).forwardAssumptions : mr?.forwardAssumptions;
+  const read = mr?.inputs ? runMarketRead({ ...mr.inputs, goingInCap }, scenario) : null;
+  const fa = read?.forwardAssumptions || mr?.forwardAssumptions;
+  const sig = read?.signals;
+  const inp = mr?.inputs; const raw = mr?.raw;
+  const sgn = (x) => (x == null ? "" : x >= 0 ? "up" : "down");
+  const s2 = (x) => (x == null ? "—" : (x >= 0 ? "+" : "") + x.toFixed(2));
   return (
     <aside className="mrc">
       <div className="mrc__top">
@@ -45,6 +50,31 @@ export default function MarketReadCard({ mr, scenario, setScenario, marketName, 
 
       <div className="mrc__chartTitle">Rent index · cycle vs. flat 3%</div>
       <RentIndexSVG fa={fa} />
+
+      {(raw || sig) && (
+        <div className="mrc__sig">
+          <div className="mrc__kick" style={{ marginBottom: 6 }}>SIGNALS · WHY THIS READ</div>
+          {raw && (
+            <div className="mrc__rent2">
+              <div><span>Rent · YoY</span><b className={sgn(raw.rentYoY)}>{raw.rentYoY == null ? "—" : (raw.rentYoY * 100).toFixed(1) + "%"}</b></div>
+              <div><span>Rent · QoQ ann</span><b className={sgn(raw.rentQoQann)}>{raw.rentQoQann == null ? "—" : (raw.rentQoQann * 100).toFixed(1) + "%"}</b></div>
+            </div>
+          )}
+          {inp && (<>
+            <Bar k="Employment" v={inp.empSignal} />
+            <Bar k="Rent momentum" v={inp.rentMomSignal} />
+            <Bar k="Absorption" v={inp.absorptionSignal} />
+            <Bar k="Supply pressure" v={inp.supplyNearTerm} pressure />
+          </>)}
+          {sig && (
+            <div className="mrc__eng">
+              <div><span>Demand index</span><b className={sgn(sig.demand)}>{s2(sig.demand)}</b></div>
+              <div><span>Momentum · Yr 1</span><b className={sgn(sig.momY1)}>{s2(sig.momY1)}</b></div>
+              <div><span>Momentum · Yr 2</span><b className={sgn(sig.momY2)}>{s2(sig.momY2)}</b></div>
+            </div>
+          )}
+        </div>
+      )}
 
       {mr?.coverage && (
         <div className="mrc__cov">
@@ -70,6 +100,15 @@ export default function MarketReadCard({ mr, scenario, setScenario, marketName, 
         .mrc__b.is-stale { color:#E8B04B; border-color:#3a3020; }
         .mrc__b.is-missing { color:#E5634D; border-color:#3a2020; }
         .mrc__foot { font-size:10px; color:#5b5f66; margin-top:12px; }
+        .mrc__sig { margin-top:14px; padding-top:12px; border-top:1px solid #1e2126; }
+        .mrc__rent2 { display:flex; gap:10px; margin-bottom:8px; }
+        .mrc__rent2 > div { flex:1; background:#08090A; border:1px solid #1e2126; border-radius:6px; padding:6px 8px; }
+        .mrc__rent2 span { display:block; font-size:9.5px; color:#797E85; letter-spacing:.06em; }
+        .mrc__rent2 b { font-size:14px; }
+        .mrc__eng { margin-top:6px; }
+        .mrc__eng > div { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #16181b; font-size:11.5px; color:#797E85; }
+        .mrc__eng b { color:#ECEDEF; }
+        .up { color:#5FB97C; } .down { color:#E5634D; }
       `}</style>
     </aside>
   );
@@ -82,6 +121,33 @@ function Row({ k, v }) {
       <style jsx>{`
         .r { display:flex; justify-content:space-between; align-items:baseline; padding:7px 0; border-bottom:1px solid #16181b; font-size:12.5px; }
         .r span { color:#797E85; } .r b { color:#ECEDEF; font-weight:600; }
+      `}</style>
+    </div>
+  );
+}
+
+function Bar({ k, v, pressure }) {
+  const val = v == null ? 0 : Math.max(-1, Math.min(1, v));
+  const leftPct = 50 + (val / 2) * 100 * (val < 0 ? 1 : 0);
+  const widthPct = Math.abs(val) * 50;
+  const color = pressure ? "#E8B04B" : val >= 0 ? "#5FB97C" : "#E5634D";
+  return (
+    <div className="bar">
+      <div className="bar__row">
+        <span className="bar__k">{k}</span>
+        <span className="bar__v">{v == null ? "—" : (v >= 0 ? "+" : "") + v.toFixed(2)}</span>
+      </div>
+      <div className="bar__track">
+        <div className="bar__mid" />
+        <div className="bar__fill" style={{ left: `${leftPct}%`, width: `${widthPct}%`, background: color }} />
+      </div>
+      <style jsx>{`
+        .bar { margin:6px 0; }
+        .bar__row { display:flex; justify-content:space-between; font-size:11px; color:#797E85; margin-bottom:3px; }
+        .bar__v { color:#ECEDEF; font-weight:600; }
+        .bar__track { position:relative; height:5px; background:#16181b; border-radius:3px; }
+        .bar__mid { position:absolute; left:50%; top:-1px; bottom:-1px; width:1px; background:#3a3d42; }
+        .bar__fill { position:absolute; top:0; bottom:0; border-radius:3px; }
       `}</style>
     </div>
   );
