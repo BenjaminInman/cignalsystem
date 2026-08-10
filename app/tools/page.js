@@ -88,7 +88,7 @@ export default function ToolsPage() {
         .card p { font-size:12.5px; color:#9aa0a6; line-height:1.5; margin:0 0 14px; font-family:'IBM Plex Mono',monospace; flex:1; }
         .card__actions { display:flex; gap:8px; flex-wrap:wrap; }
         .btn { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:999px; font-size:12.5px; font-weight:600; cursor:pointer; text-decoration:none;
-               background:#16181b; color:#ECEDEF; border:1px solid #2a2c2f; }
+               background:#16181b; color:#ECEDEF; border:1px solid #4a4f57; }
         .btn--primary { background:#F5B544; color:#08090A; border-color:#F5B544; }
       `}</style>
     </div>
