@@ -12,6 +12,13 @@ const TOOLS = [
     href: "/underwrite",
     status: "live",
   },
+  {
+    name: "Litmus Test",
+    desc: "A 30-second go/no-go screen — cap, DSCR, cash-on-cash (and the value-add spread) against your minimum bar. Pass earns the full model; fail is dead.",
+    tags: ["Interactive"],
+    href: "/litmus",
+    status: "live",
+  },
   { name: "Market Cycle One-Pager", desc: "A branded, exportable snapshot of any market — phase, forward assumptions, and the signals behind them.", tags: ["PDF"], status: "soon" },
   { name: "Exit Strategy Analyzer", desc: "The Sell-vs-Refinance comparator as a standalone tool — two paths, one cycle-driven call.", tags: ["Interactive"], status: "soon" },
   { name: "Cap-Rate Sensitivity Grid", desc: "Value and returns across a cap-rate × rent-growth matrix, seeded from the market's read.", tags: ["Excel"], status: "soon" },
