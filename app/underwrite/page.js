@@ -39,6 +39,22 @@ export default function UnderwritePage() {
     loadSaved();
   }, [loadSaved]);
 
+  // Auto-fill from a Litmus Test handoff (?units=&avgRent=&...&cap=)
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    if (!p.get("units")) return;
+    const n = (k, d0) => { const v = parseFloat(p.get(k)); return isNaN(v) ? d0 : v; };
+    setInjected({
+      deal: {
+        units: n("units", 80), avgRent: n("avgRent", 1150), expenseRatio: n("expenseRatio", 0.45),
+        ltv: n("ltv", 0.7), rate: n("rate", 0.0625), goingInCap: n("cap", 0.0674), otherIncomePerUnit: 0,
+      },
+      ov: { stabilizedVacancy: n("vacancy", 0.06) },
+      name: "",
+    });
+    setLoadKey((k) => k + 1);
+  }, []);
+
   useEffect(() => {
     if (!cbsa) return;
     fetch(`/api/underwriting/market-read?cbsa=${cbsa}&scenario=${scenario}`)

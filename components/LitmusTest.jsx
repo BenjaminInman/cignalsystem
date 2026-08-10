@@ -91,7 +91,10 @@ export default function LitmusTest() {
           </div>
 
           {pass && (
-            <Link href="/underwrite" className="lt__run">Run the full model <ArrowUpRight size={15} strokeWidth={2} /></Link>
+            <Link href={`/underwrite?${new URLSearchParams({
+              units: d.units, avgRent: d.avgRent, expenseRatio: d.expenseRatio,
+              vacancy: d.vacancy, ltv: d.ltv, rate: d.rate, cap: out.goingInCap.toFixed(4),
+            }).toString()}`} className="lt__run">Run the full model <ArrowUpRight size={15} strokeWidth={2} /></Link>
           )}
           <div className="lt__foot">Market-agnostic quick screen · a filter, not underwriting</div>
         </div>

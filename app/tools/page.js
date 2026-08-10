@@ -15,8 +15,9 @@ const TOOLS = [
   {
     name: "Litmus Test",
     desc: "A 30-second go/no-go screen — cap, DSCR, cash-on-cash (and the value-add spread) against your minimum bar. Pass earns the full model; fail is dead.",
-    tags: ["Interactive"],
+    tags: ["Interactive", "Excel"],
     href: "/litmus",
+    download: "/downloads/Cignal_Litmus_Test.xlsx",
     status: "live",
   },
   { name: "Market Cycle One-Pager", desc: "A branded, exportable snapshot of any market — phase, forward assumptions, and the signals behind them.", tags: ["PDF"], status: "soon" },
