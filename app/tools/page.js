@@ -45,6 +45,10 @@ const TOOLS = [
   { name: "Signal Divergence — The Tell", desc: "Leading-vs-lagging divergence for your markets — the early-warning watch as a downloadable sheet.", tags: ["Excel"], status: "soon" },
 ];
 
+const BTN = { display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 999, fontSize: "12.5px", fontWeight: 600, cursor: "pointer", textDecoration: "none" };
+const BTN_PRIMARY = { ...BTN, background: "#F5B544", color: "#08090A", border: "1px solid #F5B544" };
+const BTN_SECONDARY = { ...BTN, background: "#16181b", color: "#ECEDEF", border: "1px solid #4a4f57" };
+
 export default function ToolsPage() {
   return (
     <div className="pg">
@@ -65,8 +69,8 @@ export default function ToolsPage() {
             <p>{t.desc}</p>
             {t.status === "live" && (
               <div className="card__actions">
-                {t.download && (<a href={t.download} download className="btn btn--primary"><Download size={14} strokeWidth={2} /> Download .xlsx</a>)}
-                {t.href && (<Link href={t.href} className="btn"><ArrowUpRight size={14} strokeWidth={2} /> Open interactive</Link>)}
+                {t.download && (<a href={t.download} download style={BTN_PRIMARY}><Download size={14} strokeWidth={2} /> Download .xlsx</a>)}
+                {t.href && (<Link href={t.href} style={BTN_SECONDARY}><ArrowUpRight size={14} strokeWidth={2} /> Open interactive</Link>)}
               </div>
             )}
           </div>
@@ -87,9 +91,6 @@ export default function ToolsPage() {
         .card h3 { font-size:16px; font-weight:700; margin:0 0 6px; }
         .card p { font-size:12.5px; color:#9aa0a6; line-height:1.5; margin:0 0 14px; font-family:'IBM Plex Mono',monospace; flex:1; }
         .card__actions { display:flex; gap:8px; flex-wrap:wrap; }
-        .btn { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:999px; font-size:12.5px; font-weight:600; cursor:pointer; text-decoration:none;
-               background:#16181b; color:#ECEDEF; border:1px solid #4a4f57; }
-        .btn--primary { background:#F5B544; color:#08090A; border-color:#F5B544; }
       `}</style>
     </div>
   );
