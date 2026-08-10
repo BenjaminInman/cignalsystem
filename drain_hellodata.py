@@ -122,6 +122,23 @@ def main():
             fail += 1
             print(f"    ERROR: {msg}")
 
+    # ---- Disclosure control: purge ZIP pricing with no coverage row ---------
+    # A chunked metro export can return a ZIP that was not in the last national
+    # coverage pull (new stock since). With no coverage row the 3-property /
+    # 50%-dominance rule cannot be evaluated, so the data must not be retained -
+    # hd_analytics already refuses to serve it, and keeping it only trips the
+    # integrity check on every subsequent run. Small and self-correcting: the
+    # next coverage refresh will bring the ZIP back legitimately.
+    with conn.cursor() as cur:
+        cur.execute("""
+            DELETE FROM observations o USING indicators i, regions r
+             WHERE i.id = o.indicator_id AND r.id = o.region_id
+               AND i.source = 'HelloData' AND r.region_type = 'zip'
+               AND NOT EXISTS (SELECT 1 FROM hd_region_coverage c
+                                WHERE c.region_id = r.id)""")
+        if cur.rowcount:
+            print(f"disclosure: purged {cur.rowcount} row(s) for ZIPs with no coverage row")
+
     # ---- HelloData is latest-wins (deliberate exception) --------------------
     # Everywhere else in this warehouse revision-0 first prints are permanent,
     # because for FRED/Census/BEA the first print is what the market actually
