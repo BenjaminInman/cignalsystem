@@ -19,24 +19,28 @@ const PRIMARY = [
 // Signals moved out of PRIMARY and into the Terminal suite: it is a
 // sign-up-gated tab now, not a public page, so it belongs with the other
 // gated tabs rather than beside Home/About/News.
-const SUITE = [
+// Terminal menu, top group -- read the market (Community closes it).
+// `tier` marks what a row REQUIRES; absent = pro. Rows whose slug is in
+// FREE_PAGES open on a free account despite the pro default. Market Maps and
+// Community are the two pages the top tier alone unlocks (Cignal+ "+" chip).
+const SUITE_TOP = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Signals", href: "/signals", icon: Radio },
   { label: "Cycle Clock", href: "/where-are-we", icon: Compass },
-  { label: "Underwriter", href: "/underwrite", icon: Building2, tier: "pro" },
-  { label: "Tools", href: "/tools", icon: Wrench, tier: "pro" },
   { label: "Indicators", href: "/indicators", icon: Activity, tier: "pro" },
-  // `tier` marks what a row REQUIRES; absent = pro. Rows whose slug is in
-  // FREE_PAGES open on a free account despite the pro default. Market Maps and
-  // Community are the two pages the top tier alone unlocks, so they carry the
-  // Cignal+ marker and its "+" chip.
   { label: "Market Maps", href: "/market-maps", icon: BarChart3, tier: "cignal_plus" },
   { label: "Forecasts", href: "/forecasts", icon: LineChart, tier: "pro" },
   { label: "Indices", href: "/indices", icon: TrendingUp, tier: "pro" },
   { label: "Research", href: "/research", icon: BookOpen, tier: "pro" },
-  { label: "Portfolio", href: "/portfolio", icon: Briefcase, tier: "pro" },
   { label: "Community", href: "/community", icon: Users, tier: "cignal_plus" },
 ];
+// Terminal menu, bottom group (below a divider) -- the workbench tools.
+const SUITE_BOTTOM = [
+  { label: "Underwriter", href: "/underwrite", icon: Building2, tier: "pro" },
+  { label: "Tools", href: "/tools", icon: Wrench, tier: "pro" },
+  { label: "Portfolio", href: "/portfolio", icon: Briefcase, tier: "pro" },
+];
+const SUITE = [...SUITE_TOP, ...SUITE_BOTTOM];
 
 export default function Nav() {
   const path = usePathname();
@@ -89,6 +93,24 @@ export default function Nav() {
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
+  const renderRow = ({ label, href, icon: Icon, tier: reqTier }) => {
+    const active = path === href;
+    const slug = href.replace(/^\//, "");
+    const req = reqTier || "pro";
+    const locked = !isAdmin && !hasTier(tier, req) && !(req === "pro" && FREE_PAGES.includes(slug));
+    return (
+      <Link key={label} href={href} onClick={() => setOpen(false)}
+        className={`mono flex items-center gap-2.5 rounded-md px-3 py-2.5 text-[12px] tracking-[0.04em] transition-colors ${active ? "bg-signal/10 text-signal" : "text-muted hover:bg-white/[0.04] hover:text-ink"}`}>
+        <Icon size={14} strokeWidth={1.8} />
+        <span className="flex-1">{label}</span>
+        {reqTier === "cignal_plus" && (
+          <span className="mono rounded-sm border border-signal/40 px-1 py-0.5 text-[8px] tracking-[0.08em] text-signal">+</span>
+        )}
+        {locked && <Lock size={12} className="text-muted/70" />}
+      </Link>
+    );
+  };
+
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--line)] bg-bg/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-5 py-3">
@@ -136,24 +158,9 @@ export default function Nav() {
             {open && (
               <div className="absolute left-0 top-full z-50 mt-2 w-60 overflow-hidden rounded-lg border border-[var(--line-strong)] bg-bg2 p-1.5 shadow-2xl shadow-black/50">
                 <p className="kicker px-3 py-2">Subscriber Suite</p>
-                {SUITE.map(({ label, href, icon: Icon, tier: reqTier }) => {
-                  const active = path === href;
-                  const slug = href.replace(/^\//, "");
-                  const req = reqTier || "pro";
-                  const locked =
-                    !isAdmin && !hasTier(tier, req) && !(req === "pro" && FREE_PAGES.includes(slug));
-                  return (
-                    <Link key={label} href={href} onClick={() => setOpen(false)}
-                      className={`mono flex items-center gap-2.5 rounded-md px-3 py-2.5 text-[12px] tracking-[0.04em] transition-colors ${active ? "bg-signal/10 text-signal" : "text-muted hover:bg-white/[0.04] hover:text-ink"}`}>
-                      <Icon size={14} strokeWidth={1.8} />
-                      <span className="flex-1">{label}</span>
-                      {reqTier === "cignal_plus" && (
-                        <span className="mono rounded-sm border border-signal/40 px-1 py-0.5 text-[8px] tracking-[0.08em] text-signal">+</span>
-                      )}
-                      {locked && <Lock size={12} className="text-muted/70" />}
-                    </Link>
-                  );
-                })}
+                {SUITE_TOP.map(renderRow)}
+                <div className="mx-2 my-1.5 h-px bg-[var(--line)]" />
+                {SUITE_BOTTOM.map(renderRow)}
               </div>
             )}
           </div>
