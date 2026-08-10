@@ -160,6 +160,7 @@ export default function Nav() {
                 <p className="kicker px-3 py-2">Subscriber Suite</p>
                 {SUITE_TOP.map(renderRow)}
                 <div className="mx-2 my-1.5 h-px bg-[var(--line)]" />
+                <p className="kicker px-3 py-2">Workbench</p>
                 {SUITE_BOTTOM.map(renderRow)}
               </div>
             )}
