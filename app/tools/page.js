@@ -35,7 +35,13 @@ const TOOLS = [
     status: "live",
   },
   { name: "Cap-Rate Sensitivity Grid", desc: "Value and returns across a cap-rate × rent-growth matrix, seeded from the market's read.", tags: ["Excel"], status: "soon" },
-  { name: "Market Screener Export", desc: "Rank and filter metros by cycle phase and signal strength; download as CSV.", tags: ["CSV"], status: "soon" },
+  {
+    name: "Market Screener Export",
+    desc: "Every metro ranked by cycle — sort by momentum, filter by phase, find where to look, then export the screen as CSV.",
+    tags: ["Interactive", "CSV"],
+    href: "/screener",
+    status: "live",
+  },
   { name: "Signal Divergence — The Tell", desc: "Leading-vs-lagging divergence for your markets — the early-warning watch as a downloadable sheet.", tags: ["Excel"], status: "soon" },
 ];
 
@@ -81,7 +87,7 @@ export default function ToolsPage() {
         .card h3 { font-size:16px; font-weight:700; margin:0 0 6px; }
         .card p { font-size:12.5px; color:#9aa0a6; line-height:1.5; margin:0 0 14px; font-family:'IBM Plex Mono',monospace; flex:1; }
         .card__actions { display:flex; gap:8px; flex-wrap:wrap; }
-        .btn { display:inline-flex; align-items:center; gap:6px; padding:8px 12px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer; text-decoration:none;
+        .btn { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:999px; font-size:12.5px; font-weight:600; cursor:pointer; text-decoration:none;
                background:#16181b; color:#ECEDEF; border:1px solid #2a2c2f; }
         .btn--primary { background:#F5B544; color:#08090A; border-color:#F5B544; }
       `}</style>
