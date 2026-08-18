@@ -4,7 +4,6 @@ import CommunityCTA from "@/components/CommunityCTA";
 import CignalScoreCTA from "@/components/CignalScoreCTA";
 import CanaryMark from "@/components/CanaryMark";
 import AskCanary from "@/components/AskCanary";
-import TrainingForm from "@/components/TrainingForm";
 import { getActiveContent } from "@/lib/active-vertical";
 
 const suiteFor = (COPY = {}) => [
@@ -146,8 +145,7 @@ export default function AboutPage() {
       <p className="mt-4 max-w-2xl leading-relaxed text-muted">
         The platform hands you the read. If you want to learn to apply it yourself — to your investment,
         operations, or management business — we offer a coaching and certification track that teaches the
-        method behind the signals. It&apos;s selective, and you can <span className="text-ink">apply
-        below</span>.
+        method behind the signals. It&apos;s selective — <Link href="/training" className="text-signal underline-offset-2 hover:underline">apply here</Link>.
       </p>
 
       {/* Body + sidebar */}
@@ -284,28 +282,6 @@ export default function AboutPage() {
             </div>
           </section>
 
-          {/* Training / Apply */}
-          <section id="apply" className="scroll-mt-24 relative overflow-hidden rounded-2xl border border-signal/25 bg-gradient-to-b from-signal/[0.06] via-bg2/30 to-bg/10 p-6 md:p-8">
-            <div className="relative max-w-2xl">
-              <p className="kicker mb-4">Learn to apply the signals</p>
-              <h2 className="headline text-2xl text-ink">Training &amp; certification</h2>
-              <p className="mt-4 leading-relaxed text-muted">
-                The platform gives you the read. The training teaches you to <span className="text-ink">act
-                on it</span> — how to navigate the four phases of the cycle, tell a leading signal from a
-                lagging one, and translate the divergence into decisions for your investment, operations, or
-                management business. It&apos;s the difference between seeing the cycle and knowing what to do
-                about it.
-              </p>
-              <p className="mt-4 leading-relaxed text-muted">
-                The track is built for serious owners, operators, investors, and management firms, and moves
-                from foundations to advanced certification. Enrollment is selective — tell us about your
-                business and what you want to get out of it, and we&apos;ll follow up about fit.
-              </p>
-              <div className="mt-7 border-t border-[var(--line)] pt-7">
-                <TrainingForm />
-              </div>
-            </div>
-          </section>
         </div>
 
         {/* Sidebar */}
@@ -323,7 +299,7 @@ export default function AboutPage() {
       <section className="card mt-14 flex flex-col items-start justify-between gap-5 p-8 md:flex-row md:items-center">
         <div>
           <h2 className="headline text-2xl text-ink">Read the signals the market doesn&apos;t broadcast.</h2>
-          <p className="mt-2 text-muted">Create an account for the full intelligence suite — or <a href="#apply" className="text-signal underline-offset-2 hover:underline">apply for training</a> to learn the method behind it.</p>
+          <p className="mt-2 text-muted">Create an account for the full intelligence suite — or <a href="/training" className="text-signal underline-offset-2 hover:underline">apply for training</a> to learn the method behind it.</p>
         </div>
         <div className="flex shrink-0 gap-3">
           <Link href="/dashboard" className="mono flex items-center gap-2 rounded-sm bg-signal px-5 py-3 text-[12px] tracking-[0.08em] text-bg hover:opacity-90">Get Access <ArrowRight size={14} /></Link>

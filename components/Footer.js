@@ -6,7 +6,7 @@ import { getActiveContent } from "@/lib/active-vertical";
 const COLS = [
   { title: "PLATFORM", links: [["Dashboard", "/"], ["Indicators", "/indicators"], ["Market Maps", "/market-maps"], ["Signals", "/signals"]] },
   { title: "ANALYSIS", links: [["Forecasts", "/forecasts"], ["Research", "/research"], ["Portfolio Tracker", "/portfolio"], ["Benchmarks", "/market-maps"]] },
-  { title: "COMPANY", links: [["About", "/about"], ["Methodology", "/about"], ["FAQ", "/faq"], ["Disclaimer", "/disclaimer"]] },
+  { title: "COMPANY", links: [["About", "/about"], ["Methodology", "/about"], ["Training & Certification", "/training"], ["FAQ", "/faq"], ["Disclaimer", "/disclaimer"]] },
 ];
 
 export default function Footer() {
