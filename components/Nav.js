@@ -28,11 +28,11 @@ const SUITE_TOP = [
   { label: "Signals", href: "/signals", icon: Radio },
   { label: "Cycle Clock", href: "/where-are-we", icon: Compass },
   { label: "Indicators", href: "/indicators", icon: Activity, tier: "pro" },
-  { label: "Market Maps", href: "/market-maps", icon: BarChart3, tier: "cignal_plus" },
+  { label: "Market Maps", href: "/market-maps", icon: BarChart3, tier: "pro" },
   { label: "Forecasts", href: "/forecasts", icon: LineChart, tier: "pro" },
   { label: "Indices", href: "/indices", icon: TrendingUp, tier: "pro" },
   { label: "Research", href: "/research", icon: BookOpen, tier: "pro" },
-  { label: "Community", href: "/community", icon: Users, tier: "cignal_plus" },
+  { label: "Community", href: "/community", icon: Users, tier: "pro" },
 ];
 // Terminal menu, bottom group (below a divider) -- the workbench tools.
 const SUITE_BOTTOM = [

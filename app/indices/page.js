@@ -169,7 +169,7 @@ export default function IndicesPage() {
       <PaywallBlur
         page="indices"
         title="Housing Equity Complex"
-        minTier="cignal_plus"
+        minTier="pro"
         wrapClass="mt-8"
         blurb="The blended read across all 36 housing-economy names, split into sub-indices, with the divergence flag that fires when they stop agreeing. Unlock it with Cignal+."
       >

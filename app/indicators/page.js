@@ -126,7 +126,7 @@ export default function IndicatorsPage() {
         page="indicators"
         title="The Onion Framework"
         hard
-        minTier="cignal_plus"
+        minTier="pro"
         wrapClass="mt-8"
         blurb="The proprietary lens at the core of the Cignal method — it organizes every signal into layered rings so you can read the cycle from the outside in. Unlock it with Cignal+."
       >

@@ -425,7 +425,7 @@ function PortfolioInner() {
           page="portfolio"
           title="Portfolio Architect"
           hard
-          minTier="cignal_plus"
+          minTier="pro"
           wrapClass=""
           blurb="Cycle-conditional diversification — models how your portfolio should be weighted for the phase the market is actually in, not the one it was in when you bought. Unlock it with Cignal+."
         >
