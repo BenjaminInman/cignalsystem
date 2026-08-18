@@ -75,36 +75,43 @@ export async function POST(req) {
   const prof = profs?.[0] || {};
 
   const stripe = getStripe();
-
-  // Reuse the member's Stripe customer, or create + link one.
-  let customerId = prof.stripe_customer_id;
-  if (!customerId) {
-    const customer = await stripe.customers.create({
-      email: prof.email || user.email || undefined,
-      metadata: { supabase_user_id: user.id },
-    });
-    customerId = customer.id;
-    await patchProfile(user.id, { stripe_customer_id: customerId });
-  }
-
   const origin = req.headers.get("origin") || new URL(req.url).origin;
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    customer: customerId,
-    client_reference_id: user.id,
-    line_items: [{ price: row.stripe_price_id, quantity: 1 }],
-    subscription_data: { metadata: { supabase_user_id: user.id, tier } },
-    allow_promotion_codes: true,
-    custom_text: {
-      submit: {
-        message:
-          "By subscribing, you acknowledge that Cignal System is provided for informational and educational purposes only and does not constitute investment, financial, legal, or tax advice.",
-      },
-    },
-    success_url: `${origin}/dashboard?upgraded=1`,
-    cancel_url: `${origin}/upgrade?canceled=1`,
-  });
+  try {
+    // Reuse the member's Stripe customer, or create + link one.
+    let customerId = prof.stripe_customer_id;
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: prof.email || user.email || undefined,
+        metadata: { supabase_user_id: user.id },
+      });
+      customerId = customer.id;
+      await patchProfile(user.id, { stripe_customer_id: customerId });
+    }
 
-  return Response.json({ url: session.url });
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      customer: customerId,
+      client_reference_id: user.id,
+      line_items: [{ price: row.stripe_price_id, quantity: 1 }],
+      subscription_data: { metadata: { supabase_user_id: user.id, tier } },
+      allow_promotion_codes: true,
+      custom_text: {
+        submit: {
+          message:
+            "By subscribing, you acknowledge that Cignal System is provided for informational and educational purposes only and does not constitute investment, financial, legal, or tax advice.",
+        },
+      },
+      success_url: `${origin}/dashboard?upgraded=1`,
+      cancel_url: `${origin}/upgrade?canceled=1`,
+    });
+
+    return Response.json({ url: session.url });
+  } catch (err) {
+    console.error("stripe/checkout: failed:", err?.type, err?.message);
+    return Response.json(
+      { error: err?.message || "Checkout failed. Please try again." },
+      { status: 502 }
+    );
+  }
 }
