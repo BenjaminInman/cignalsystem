@@ -42,6 +42,13 @@ const TOOLS = [
     href: "/screener",
     status: "live",
   },
+  {
+    name: "Budget Builder",
+    desc: "Upload a property’s T-12 and build next year’s budget from local market signals — every line projected on a driver you can see and change.",
+    tags: ["Interactive"],
+    href: "/budget",
+    status: "live",
+  },
   { name: "Signal Divergence — The Tell", desc: "Leading-vs-lagging divergence for your markets — the early-warning watch as a downloadable sheet.", tags: ["Excel"], status: "soon" },
 ];
 
