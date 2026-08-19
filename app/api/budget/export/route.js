@@ -37,15 +37,20 @@ export async function POST(req){
   const rows=Array.isArray(p.rows)?p.rows:[];
   const meta=p.meta||{},market=p.market||{};
   const bySec=(sec)=>rows.filter((r)=>r.section===sec);
+  const start=p.start||{};
+  const sM=Number.isInteger(start.month)?start.month:0;
+  const sY=Number.isInteger(start.year)?start.year:(new Date().getFullYear()+1);
+  const monthLabels=[]; for(let i=0;i<12;i++){const m=(sM+i)%12;const y=sY+Math.floor((sM+i)/12);monthLabels.push(`${MON[m]} ${y}`);}
+  const periodRange=`${monthLabels[0]} – ${monthLabels[11]}`;
 
   const wb=new ExcelJS.Workbook();wb.creator="Cignal System";
   const cv=wb.addWorksheet("Cover",{views:[{showGridLines:false}]});
   const bd=wb.addWorksheet("Budget",{views:[{showGridLines:false,state:"frozen",xSplit:1,ySplit:6}]});
 
   // ---------------- BUDGET (live model) ----------------
-  bd.columns=[{width:34},{width:13},{width:9},...MON.map(()=>({width:10})),{width:13},{width:13},{width:9},{width:34}];
-  band(bd,`${meta.name||"Property"} — 12-Month Forward Budget (editable model)`,19);
-  const hdr=["Category / Line","T-12 Actual","Growth",...MON,"Annual","Var $","Var %","Basis / assumption"];
+  bd.columns=[{width:34},{width:13},{width:9},...MON.map(()=>({width:11})),{width:13},{width:13},{width:9},{width:34}];
+  band(bd,`${meta.name||"Property"} — 12-Month Budget · ${periodRange}`,19);
+  const hdr=["Category / Line","T-12 Actual","Growth",...monthLabels,"Annual","Var $","Var %","Basis / assumption"];
   hdr.forEach((h,i)=>{const c=bd.getCell(6,i+1);c.value=h;c.font={name:"Arial",size:9,bold:true,color:{argb:INK}};
     c.fill={type:"pattern",pattern:"solid",fgColor:{argb:HEADFILL}};c.alignment={horizontal:i===0||i===18?"left":"right",indent:i===0?1:0,wrapText:true};
     c.border={bottom:{style:"thin",color:{argb:LINE}}};});
@@ -120,7 +125,7 @@ export async function POST(req){
   let r=6;
   const kv=(k,v)=>{cv.getCell(r,1).value=k;cv.getCell(r,1).font={name:"Arial",size:10,color:{argb:MUTE}};
     cv.mergeCells(r,2,r,4);cv.getCell(r,2).value=v;cv.getCell(r,2).font={name:"Arial",size:10,bold:true,color:{argb:INK}};r++;};
-  kv("Market",market.name||"—");kv("Cycle phase",p.phase||"—");kv("Base period (T-12)",meta.period||"—");
+  kv("Market",market.name||"—");kv("Cycle phase",p.phase||"—");kv("Base period (T-12)",meta.period||"—");kv("Budget period",periodRange);
   kv("Generated",new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"}));r++;
   cv.mergeCells(r,1,r,4);cv.getCell(r,1).value="How to use this file";cv.getCell(r,1).font={name:"Arial",size:10,bold:true,color:{argb:INK}};r++;
   cv.mergeCells(r,1,r+3,4);

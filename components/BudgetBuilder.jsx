@@ -6,6 +6,8 @@ import { BUDGET_CATEGORIES, CAT_BY_KEY, SECTION_ORDER, SECTION_LABEL } from "@/l
 const $ = (n) => (n == null || isNaN(n) ? "—" : (n < 0 ? "-$" : "$") + Math.abs(Math.round(n)).toLocaleString());
 const pct = (f) => (f == null || isNaN(f) ? "—" : (f * 100).toFixed(1) + "%");
 const REMAP = BUDGET_CATEGORIES.map((c) => ({ key: c.key, label: c.label }));
+const MONTHS_FULL = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const MONTHS_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export default function BudgetBuilder() {
   const [file, setFile] = useState(null);
@@ -27,6 +29,14 @@ export default function BudgetBuilder() {
   const [rBusy, setRBusy] = useState(false);
   const [overrides, setOverrides] = useState({});
   const box = useRef(null);
+  const nextYear = new Date().getFullYear() + 1;
+  const [startMonth, setStartMonth] = useState(0);
+  const [startYear, setStartYear] = useState(nextYear);
+  const periodLabels = useMemo(() => {
+    const o = [];
+    for (let i = 0; i < 12; i++) { const m = (startMonth + i) % 12; const y = startYear + Math.floor((startMonth + i) / 12); o.push(`${MONTHS_ABBR[m]} ${y}`); }
+    return o;
+  }, [startMonth, startYear]);
 
   async function extract() {
     if (!file) return;
@@ -127,6 +137,7 @@ export default function BudgetBuilder() {
       }
       const payload = {
         meta: { name: meta?.name, period: meta?.period }, market: { name: market?.name }, phase,
+        start: { month: startMonth, year: startYear },
         rows,
         base: { income: grouped.income, controllable: grouped.controllable, noncontrollable: grouped.noncontrollable, noi: grouped.noi },
         proj: { income: projected.inc, controllable: projected.ctrl, noncontrollable: projected.non, noi: projected.noi },
@@ -208,6 +219,18 @@ export default function BudgetBuilder() {
         {results.length > 0 && <div className="bb__res">{results.map((m) => <div key={m.cbsa} className="bb__ri" onClick={() => pick(m)}>{m.name}</div>)}</div>}
       </div>
 
+      <div className="bb__period">
+        <span className="bb__plabel">Budget period</span>
+        <select className="bb__psel" value={startMonth} onChange={(e) => setStartMonth(+e.target.value)}>
+          {MONTHS_FULL.map((m, i) => <option key={i} value={i}>{m}</option>)}
+        </select>
+        <select className="bb__psel" value={startYear} onChange={(e) => setStartYear(+e.target.value)}>
+          {[nextYear - 1, nextYear, nextYear + 1].map((y) => <option key={y} value={y}>{y}</option>)}
+        </select>
+        <span className="bb__prange">{periodLabels[0]} – {periodLabels[11]}</span>
+        <span className="bb__phelp">Defaults to the year ahead — set a start month for a mid-year takeover.</span>
+      </div>
+
       {!market ? (<div className="bb__empty">↑ Search and select the market above — your forward budget, every line projected on its signal, appears here.</div>) :
        rBusy ? (<div className="bb__hint"><Loader2 size={14} className="spin" /> Pulling {market.name} signals…</div>) :
        projected && (<>
@@ -284,6 +307,12 @@ const S = `
 
   .bb__steplabel { font-size:12.5px; color:#9aa0a6; margin-bottom:8px; } .bb__steplabel b { color:#F5B544; font-weight:700; }
   .bb__mktrow.need { border-color:#F5B544; box-shadow:0 0 0 3px rgba(245,181,68,.10); }
+
+  .bb__period { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+  .bb__plabel { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:#797E85; }
+  .bb__psel { background:#0E0F11; color:#ECEDEF; border:1px solid #2a2c2f; border-radius:7px; padding:6px 8px; font-family:inherit; font-size:12.5px; color-scheme:dark; }
+  .bb__prange { font-size:12.5px; color:#F5B544; font-weight:600; }
+  .bb__phelp { font-size:11px; color:#5b5f66; width:100%; }
   .bb__empty { text-align:center; color:#797E85; font-size:12.5px; border:1.5px dashed #2a2c2f; border-radius:10px; padding:26px 18px; margin-top:4px; }
   .bb__mkt { position:relative; margin-bottom:14px; }
   .bb__mktrow { display:flex; align-items:center; gap:9px; border:1px solid #2a2c2f; border-radius:9px; padding:10px 12px; background:#0E0F11; color:#797E85; }
