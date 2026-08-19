@@ -92,6 +92,7 @@ export async function POST(req){
         monthFormulas(R); annVarFormulas(R);
         fmtRow(R,{indent:3});
         b.font={name:"Arial",size:9.5,color:{argb:BLUE}}; c.font={name:"Arial",size:9.5,color:{argb:BLUE}};
+        for(const col of MC) bd.getCell(`${col}${R}`).font={name:"Arial",size:9.5,color:{argb:BLUE}}; // months are editable too — overwrite any to hand-shape seasonality
         bd.getCell(`S${R}`).value=cat.basis||""; bd.getCell(`S${R}`).font={name:"Arial",size:8.5,color:{argb:MUTE}};bd.getCell(`S${R}`).alignment={wrapText:true,indent:1};
         R++;
       }
@@ -123,7 +124,7 @@ export async function POST(req){
   kv("Generated",new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"}));r++;
   cv.mergeCells(r,1,r,4);cv.getCell(r,1).value="How to use this file";cv.getCell(r,1).font={name:"Arial",size:10,bold:true,color:{argb:INK}};r++;
   cv.mergeCells(r,1,r+3,4);
-  cv.getCell(r,1).value="Blue cells on the Budget tab are editable inputs — each line's T-12 actual and its growth rate. Everything else (monthly spread, subtotals, annual, variance, and NOI) is a live formula, so changing any blue cell recalculates the whole budget. Growth rates are signal-blended forward rates (recent trend faded toward long-run norm), rent is cycle-adjusted for this market's phase, and insurance/taxes are editable defaults. Planning estimate, not advice.";
+  cv.getCell(r,1).value="Blue cells on the Budget tab are editable. Each line's T-12 actual and growth rate drive the monthly spread automatically — change either and the whole budget recalculates. The 12 monthly cells are also blue and editable: overwrite any individual month (for example, raise Marketing in May–July for leasing season) and the category subtotals, annual, and NOI follow. (Overwriting a month replaces its auto-spread for that one cell.) Growth rates are signal-blended forward rates, rent is cycle-adjusted for this market's phase, and insurance/taxes are editable defaults. Planning estimate, not advice.";
   cv.getCell(r,1).font={name:"Arial",size:9,color:{argb:MUTE}};cv.getCell(r,1).alignment={wrapText:true,vertical:"top"};r+=5;
   const sref=(k,formula,bold,col)=>{cv.getCell(r,1).value=k;cv.getCell(r,1).font={name:"Arial",size:10,color:{argb:MUTE}};
     const c=cv.getCell(r,2);c.value={formula};c.numFmt=CUR;c.font={name:"Arial",size:bold?11:10,bold:!!bold,color:{argb:col||INK}};c.alignment={horizontal:"left"};r++;};
