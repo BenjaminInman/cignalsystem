@@ -113,6 +113,35 @@ export default function BudgetBuilder() {
     return cat.driver;
   }
 
+  const [exporting, setExporting] = useState(false);
+  async function exportBudget() {
+    if (!projected) return;
+    setExporting(true); setErr(null);
+    try {
+      const rows = [];
+      for (const cat of BUDGET_CATEGORIES) {
+        if (!["revenue", "controllable", "noncontrollable"].includes(cat.section)) continue;
+        const row = projected.rows[cat.key];
+        if (!row) continue;
+        rows.push({ label: cat.label, section: cat.section, base: row.base, growth: row.growth, next: row.next, isFee: !!row.isFee, basis: why(cat) });
+      }
+      const payload = {
+        meta: { name: meta?.name, period: meta?.period }, market: { name: market?.name }, phase,
+        rows,
+        base: { income: grouped.income, controllable: grouped.controllable, noncontrollable: grouped.noncontrollable, noi: grouped.noi },
+        proj: { income: projected.inc, controllable: projected.ctrl, noncontrollable: projected.non, noi: projected.noi },
+      };
+      const r = await fetch("/api/budget/export", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      if (!r.ok) { setErr("Export failed. Please try again."); setExporting(false); return; }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url;
+      a.download = `Cignal_Budget_${(meta?.name || "Property").replace(/[^a-z0-9]+/gi, "_")}.xlsx`;
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    } catch { setErr("Export failed. Please try again."); }
+    setExporting(false);
+  }
+
   // ---------- UPLOAD ----------
   if (!grouped) return (
     <div className="bb">
@@ -211,7 +240,7 @@ export default function BudgetBuilder() {
         })}
 
         <div className="bb__foot"><div className="bb__fn">Every rate is a <b>forward</b> proposal — recent trend faded toward its long-run norm, so a spike (or slump) doesn’t just extrapolate. Adjust any, then export.</div>
-          <button className="bb__next" disabled title="Branded Excel export — next build">Export budget →</button></div>
+          <button className="bb__next on" disabled={exporting} onClick={exportBudget}>{exporting ? "Building…" : "Export budget →"}</button></div>
       </>)}
       <style jsx>{S}</style>
     </div>
