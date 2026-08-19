@@ -169,16 +169,17 @@ export default function BudgetBuilder() {
         <button className="bb__reset" onClick={() => setView("review")}>← Back to review</button>
       </div>
 
+      <div className="bb__steplabel"><b>Select this property’s market</b> — the forward budget is built from its local signals.{meta?.city ? "" : " This statement had no location in it, so search for it below."}</div>
       <div className="bb__mkt" ref={box}>
-        <div className="bb__mktrow">
+        <div className={`bb__mktrow ${!market ? "need" : ""}`}>
           <Search size={14} />
-          <input className="bb__mktin" placeholder={market ? market.name : "Search this property’s market — city, ST or ZIP"} value={q} onChange={(e) => setQ(e.target.value)} />
-          {market && <span className={`bb__phase ph-${(phase || "").toLowerCase()}`}>{phase || "—"}</span>}
+          <input className="bb__mktin" placeholder={market ? market.name : "Search city, ST or ZIP…"} value={q} onChange={(e) => setQ(e.target.value)} />
+          {market && <span className={`bb__phase ph-${(phase || "").split(/[ /]/)[0].toLowerCase()}`}>{phase || "—"}</span>}
         </div>
         {results.length > 0 && <div className="bb__res">{results.map((m) => <div key={m.cbsa} className="bb__ri" onClick={() => pick(m)}>{m.name}</div>)}</div>}
       </div>
 
-      {!market ? (<div className="bb__hint">Pick the property’s market to pull forward growth signals.{meta?.city ? " (Tried to match the statement’s location automatically.)" : ""}</div>) :
+      {!market ? (<div className="bb__empty">↑ Search and select the market above — your forward budget, every line projected on its signal, appears here.</div>) :
        rBusy ? (<div className="bb__hint"><Loader2 size={14} className="spin" /> Pulling {market.name} signals…</div>) :
        projected && (<>
         <div className="bb__totals">
@@ -251,6 +252,10 @@ const S = `
   .bb__foot { display:flex; justify-content:space-between; align-items:center; gap:14px; margin-top:16px; padding-top:14px; border-top:1px solid #1e2126; flex-wrap:wrap; }
   .bb__next { background:#16181b; color:#5b5f66; border:1px solid #2a2c2f; border-radius:999px; padding:9px 16px; font-size:13px; font-weight:600; font-family:inherit; }
   .bb__next.on { background:#F5B544; color:#08090A; cursor:pointer; border:0; }
+
+  .bb__steplabel { font-size:12.5px; color:#9aa0a6; margin-bottom:8px; } .bb__steplabel b { color:#F5B544; font-weight:700; }
+  .bb__mktrow.need { border-color:#F5B544; box-shadow:0 0 0 3px rgba(245,181,68,.10); }
+  .bb__empty { text-align:center; color:#797E85; font-size:12.5px; border:1.5px dashed #2a2c2f; border-radius:10px; padding:26px 18px; margin-top:4px; }
   .bb__mkt { position:relative; margin-bottom:14px; }
   .bb__mktrow { display:flex; align-items:center; gap:9px; border:1px solid #2a2c2f; border-radius:9px; padding:10px 12px; background:#0E0F11; color:#797E85; }
   .bb__mktin { flex:1; background:transparent; border:0; outline:0; color:#ECEDEF; font-family:inherit; font-size:13px; }
