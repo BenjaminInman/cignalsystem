@@ -123,7 +123,7 @@ export default function BudgetBuilder() {
         if (!["revenue", "controllable", "noncontrollable"].includes(cat.section)) continue;
         const row = projected.rows[cat.key];
         if (!row) continue;
-        rows.push({ label: cat.label, section: cat.section, base: row.base, growth: row.growth, next: row.next, isFee: !!row.isFee, basis: why(cat) });
+        rows.push({ label: cat.label, section: cat.section, base: row.base, growth: row.growth, next: row.next, isFee: !!row.isFee, basis: why(cat), lines: (grouped.cats[cat.key]?.lines || []).map((l) => ({ label: l.label, amount: l.amount })) });
       }
       const payload = {
         meta: { name: meta?.name, period: meta?.period }, market: { name: market?.name }, phase,
