@@ -282,6 +282,10 @@ function PortfolioInner() {
           return { ...cur, [propertyId]: srow };
         return cur;
       });
+      // re-fetch this asset's local-market benchmark with the (possibly new) ZIP
+      fetch(`/api/portfolio/benchmark?zip=${encodeURIComponent(prop.zip||"")}&city=${encodeURIComponent(prop.city||"")}&state=${encodeURIComponent(prop.state||"")}`)
+        .then((r) => r.json()).then((d) => setBenchmarks((b) => ({ ...b, [propertyId]: d }))).catch(() => {});
+
       if (openId === "new") setOpenId(propertyId);
     } catch (e) {
       setErr(e.message || "Could not save. Please try again.");
