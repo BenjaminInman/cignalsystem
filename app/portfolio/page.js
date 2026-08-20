@@ -11,6 +11,7 @@ import { isPageReady } from "@/lib/verticals";
 import ComingSoonInline from "@/components/ComingSoonInline";
 import PortfolioArchitect from "@/components/PortfolioArchitect";
 import PaywallBlur from "@/components/PaywallBlur";
+import MarketBenchmark from "@/components/MarketBenchmark";
 
 const CLASS_OPTIONS = ["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","D-"];
 const STRATEGY_OPTIONS = [
@@ -98,6 +99,7 @@ function PortfolioInner() {
   const [userId, setUserId] = useState(null);
   const [properties, setProperties] = useState(null); // null = loading
   const [latest, setLatest] = useState({});            // property_id -> latest snapshot row
+  const [benchmarks, setBenchmarks] = useState({});    // property_id -> local-market benchmark
   const [openId, setOpenId] = useState(null);          // expanded property id, or "new"
 
   // editor working state
@@ -122,6 +124,12 @@ function PortfolioInner() {
         .order("created_at", { ascending: true });
       const list = props || [];
       setProperties(list);
+      for (const p of list) {
+        if (p.city || p.state) {
+          fetch(`/api/portfolio/benchmark?city=${encodeURIComponent(p.city||"")}&state=${encodeURIComponent(p.state||"")}`)
+            .then((r) => r.json()).then((d) => setBenchmarks((b) => ({ ...b, [p.id]: d }))).catch(() => {});
+        }
+      }
       if (list.length) {
         const { data: rows } = await supabase
           .from("portfolio_snapshots")
@@ -381,6 +389,7 @@ function PortfolioInner() {
                     {[p.city, p.state].filter(Boolean).join(", ")}
                     {p.unit_count ? ` · ${p.unit_count} units` : ""}
                     {s.snapshot_month ? ` · as of ${monthLabel(s.snapshot_month.slice(0, 7))}` : " · no data yet"}
+                    {benchmarks[p.id]?.phase ? ` · ${benchmarks[p.id].phase}` : ""}
                   </p>
                 </div>
                 <div className="flex items-center gap-8">
@@ -396,6 +405,12 @@ function PortfolioInner() {
 
               {isOpen && (
                 <div className="border-t border-[var(--line)] p-6">
+                  {(p.city || p.state) && (
+                    <div className="mb-6">
+                      <p className="kicker mb-3">vs Local Market</p>
+                      <MarketBenchmark snapshot={latest[p.id] || {}} data={benchmarks[p.id]} />
+                    </div>
+                  )}
                   <div className="mb-5 flex items-center justify-end">
                     <button onClick={() => remove(p.id)} className="mono flex items-center gap-1.5 text-[11px] tracking-[0.04em] text-down hover:opacity-80">
                       <Trash2 size={13} /> Delete property
