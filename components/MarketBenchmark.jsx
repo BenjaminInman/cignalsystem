@@ -52,6 +52,10 @@ export default function MarketBenchmark({ snapshot = {}, data }) {
         {m.asOf && <span className="asof">HelloData · {m.asOf}</span>}
       </div>
 
+      {data.level === "metro" && !data.zip_requested && (
+        <div className="zipcta">Showing <b>metro-level</b>. Add this property’s <b>ZIP</b> in the Property section below to benchmark against its submarket instead of all of {data.market_name}.</div>
+      )}
+
       <div className="grid">
         <div className="row hd"><div className="rl">Metric</div><div className="ry">This asset</div><div className="rm">Local market</div><div className="rd">vs market</div></div>
 
@@ -97,6 +101,8 @@ const S = `
   .lim { font-size:10px; color:#E8B04B; }
   .lvl { font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:#5FB97C; border:1px solid #2e4a34; padding:2px 7px; border-radius:999px; }
   .cov { font-size:10px; color:#797E85; }
+  .zipcta { font-size:11.5px; color:#E8B04B; background:rgba(245,181,68,.06); border:1px solid rgba(245,181,68,.22); border-radius:7px; padding:8px 11px; margin-bottom:10px; line-height:1.5; }
+  .zipcta b { color:#F5B544; }
   .asof { font-size:10px; color:#5b5f66; margin-left:auto; }
   .grid { border:1px solid #1e2126; border-radius:8px; overflow:hidden; }
   .row { display:grid; grid-template-columns:1.5fr 1fr 1.3fr 1.4fr; gap:8px; padding:8px 12px; border-bottom:1px solid #141619; align-items:center; }
