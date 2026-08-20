@@ -14,6 +14,9 @@ export default function MarketBenchmark({ snapshot = {}, data }) {
 
   const m = data.market || {};
   const phaseKey = (data.phase || "").split(/[ /]/)[0].toLowerCase();
+  const covN = data.coverage && typeof data.coverage === "object"
+    ? (data.coverage.property_count ?? data.coverage.n_properties ?? data.coverage.properties ?? data.coverage.count ?? null)
+    : null;
 
   // asset blended rent = mean of the bedroom rents present
   const beds = [snapshot.avg_rent_1bed, snapshot.avg_rent_2bed, snapshot.avg_rent_3bed, snapshot.avg_rent_4bed].map(Number).filter((v) => v > 0);
@@ -40,8 +43,11 @@ export default function MarketBenchmark({ snapshot = {}, data }) {
   return (
     <div className="mb">
       <div className="head">
-        <span className="mkt">{data.market_name}</span>
+        <span className="mkt">{data.benchmark_area || data.market_name || "Market"}</span>
+        {data.level === "zip" && <span className="lvl">submarket</span>}
+        {data.level === "metro" && data.zip_requested && <span className="lim">metro-level — ZIP {data.zip_requested} not covered</span>}
         {data.phase && <span className="phase" style={{ color: PH[phaseKey] || "#9aa0a6", borderColor: (PH[phaseKey] || "#9aa0a6") + "55" }}>{data.phase}</span>}
+        {covN != null && <span className="cov">{covN} props</span>}
         {!data.covered && <span className="lim">limited local coverage</span>}
         {m.asOf && <span className="asof">HelloData · {m.asOf}</span>}
       </div>
@@ -75,7 +81,7 @@ export default function MarketBenchmark({ snapshot = {}, data }) {
           <Row label="Market days-on-market" yours="—" market={`${Math.round(m.dom)} days`} delta="" tone="#797E85" />
         )}
       </div>
-      <p className="foot">Rent is a blended comparison — your bedroom rents vs the metro’s blended figure; unit mix will differ. Hard market data (HelloData) shown alongside your reported actuals, never merged.</p>
+      <p className="foot">{`Rent is a blended comparison — your bedroom rents vs the ${data.level === "zip" ? "ZIP’s" : "metro’s"} blended figure; unit mix will differ. Hard market data (HelloData) shown alongside your reported actuals, never merged.`}</p>
       <style jsx>{S}</style>
     </div>
   );
@@ -89,6 +95,8 @@ const S = `
   .mkt { font-weight:600; color:#ECEDEF; }
   .phase { font-size:10px; text-transform:uppercase; letter-spacing:.06em; padding:2px 8px; border-radius:999px; border:1px solid; }
   .lim { font-size:10px; color:#E8B04B; }
+  .lvl { font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:#5FB97C; border:1px solid #2e4a34; padding:2px 7px; border-radius:999px; }
+  .cov { font-size:10px; color:#797E85; }
   .asof { font-size:10px; color:#5b5f66; margin-left:auto; }
   .grid { border:1px solid #1e2126; border-radius:8px; overflow:hidden; }
   .row { display:grid; grid-template-columns:1.5fr 1fr 1.3fr 1.4fr; gap:8px; padding:8px 12px; border-bottom:1px solid #141619; align-items:center; }

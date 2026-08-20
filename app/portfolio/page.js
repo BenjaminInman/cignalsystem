@@ -82,7 +82,7 @@ const EMPTY_SNAP = {
   total_rental_income: "", loss_to_lease: "", vacancy_loss: "", bad_debt: "", concessions: "",
   net_rental_income: "", other_income: "", total_income: "", total_expenses: "", noi: "",
 };
-const EMPTY_PROP = { name: "", city: "", state: "", unit_count: "", class: "", strategy: "" };
+const EMPTY_PROP = { name: "", city: "", state: "", zip: "", unit_count: "", class: "", strategy: "" };
 
 // ---------- gate ----------
 export default function PortfolioPage() {
@@ -125,8 +125,8 @@ function PortfolioInner() {
       const list = props || [];
       setProperties(list);
       for (const p of list) {
-        if (p.city || p.state) {
-          fetch(`/api/portfolio/benchmark?city=${encodeURIComponent(p.city||"")}&state=${encodeURIComponent(p.state||"")}`)
+        if (p.zip || p.city || p.state) {
+          fetch(`/api/portfolio/benchmark?zip=${encodeURIComponent(p.zip||"")}&city=${encodeURIComponent(p.city||"")}&state=${encodeURIComponent(p.state||"")}`)
             .then((r) => r.json()).then((d) => setBenchmarks((b) => ({ ...b, [p.id]: d }))).catch(() => {});
         }
       }
@@ -178,7 +178,7 @@ function PortfolioInner() {
     setErr(""); setOverride(false);
     setOpenId(p.id);
     setProp({
-      name: p.name || "", city: p.city || "", state: p.state || "",
+      name: p.name || "", city: p.city || "", state: p.state || "", zip: p.zip || "",
       unit_count: p.unit_count ?? "", class: p.class || "", strategy: p.strategy || "",
     });
     const { data: rows } = await supabase
@@ -223,6 +223,7 @@ function PortfolioInner() {
         name: prop.name.trim(),
         city: prop.city.trim() || null,
         state: prop.state.trim() || null,
+        zip: (prop.zip || "").trim() || null,
         unit_count: num(prop.unit_count),
         class: prop.class || null,
         strategy: prop.strategy || null,
@@ -405,7 +406,7 @@ function PortfolioInner() {
 
               {isOpen && (
                 <div className="border-t border-[var(--line)] p-6">
-                  {(p.city || p.state) && (
+                  {(p.zip || p.city || p.state) && (
                     <div className="mb-6">
                       <p className="kicker mb-3">vs Local Market</p>
                       <MarketBenchmark snapshot={latest[p.id] || {}} data={benchmarks[p.id]} />
@@ -583,6 +584,7 @@ function Editor({ prop, setProp, snap, setSnap, month, loadMonth, snaps, overrid
         <Field label="Property Name" wide><input value={prop.name} onChange={sp("name")} className="input" placeholder="e.g. The Maddox" /></Field>
         <Field label="City"><input value={prop.city} onChange={sp("city")} className="input" /></Field>
         <Field label="State"><input value={prop.state} onChange={sp("state")} className="input" maxLength={2} placeholder="TN" /></Field>
+        <Field label="ZIP" hint="submarket benchmark"><input value={prop.zip} onChange={sp("zip")} className="input" maxLength={5} placeholder="37211" /></Field>
         <Field label="Unit Count"><input type="number" value={prop.unit_count} onChange={sp("unit_count")} className="input" /></Field>
         <Field label="Class">
           <select value={prop.class} onChange={sp("class")} className="input">
