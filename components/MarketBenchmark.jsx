@@ -31,6 +31,14 @@ export default function MarketBenchmark({ snapshot = {}, data }) {
 
   const rg = data.rentGrowthY1 != null ? data.rentGrowthY1 * 100 : null;
 
+  // concession as a share of rent — comparable on both sides
+  const rawConc = Number(snapshot.concessions);
+  const gross = Number(snapshot.total_rental_income);
+  const assetConcPct = Number.isFinite(rawConc) && gross > 0 ? Math.abs(rawConc) / gross * 100 : null;
+  const concBase = mktAsk || mktEff;
+  let mktConcPct = m.concession != null && concBase ? (m.concession / concBase) * 100 : null;
+  if (mktConcPct != null && (mktConcPct < 0 || mktConcPct > 40)) mktConcPct = null; // guard against unit surprises
+
   const Row = ({ label, yours, market, delta, tone, note }) => (
     <div className="row">
       <div className="rl">{label}</div>
@@ -72,20 +80,25 @@ export default function MarketBenchmark({ snapshot = {}, data }) {
           delta={pctPts(occGap)}
           tone={occGap == null ? "#797E85" : occGap >= 0 ? "#5FB97C" : "#E5634D"} />
 
-        <Row label="Market rent growth (fwd)"
-          yours="—"
-          market={rg == null ? "—" : `${rg >= 0 ? "+" : ""}${rg.toFixed(1)}%`}
-          delta={rg == null ? "" : rg < 0 ? "softening" : "rising"}
-          tone={rg == null ? "#797E85" : rg < 0 ? "#E5634D" : "#5FB97C"} />
-
-        {m.concession != null && (
-          <Row label="Market concession" yours="—" market={m.concession <= 1 ? pct(m.concession * 100) : String(Math.round(m.concession))} delta="" tone="#797E85" />
-        )}
-        {m.dom != null && (
-          <Row label="Market days-on-market" yours="—" market={`${Math.round(m.dom)} days`} delta="" tone="#797E85" />
+        {(assetConcPct != null || mktConcPct != null) && (
+          <Row label="Concession (% of rent)"
+            yours={assetConcPct != null ? pct(assetConcPct) : "—"}
+            market={mktConcPct != null ? pct(mktConcPct) : "—"}
+            delta={(assetConcPct != null && mktConcPct != null) ? pctPts(assetConcPct - mktConcPct) : ""}
+            tone={(assetConcPct == null || mktConcPct == null) ? "#797E85" : assetConcPct <= mktConcPct ? "#5FB97C" : "#E5634D"} />
         )}
       </div>
-      <p className="foot">{`Rent is a blended comparison — your bedroom rents vs the ${data.level === "zip" ? "ZIP’s" : "metro’s"} blended figure; unit mix will differ. Hard market data (HelloData) shown alongside your reported actuals, never merged.`}</p>
+
+      {(rg != null || m.dom != null || m.concession != null) && (
+        <div className="ctx">
+          <span className="ctxlabel">Market context</span>
+          {rg != null && <span className="ctxi">Fwd rent growth <b style={{ color: rg < 0 ? "#E5634D" : "#5FB97C" }}>{rg >= 0 ? "+" : ""}{rg.toFixed(1)}%</b></span>}
+          {m.dom != null && <span className="ctxi">Days on market <b>{Math.round(m.dom)}</b></span>}
+          {m.concession != null && <span className="ctxi">Market concession <b>${Math.round(m.concession)}/mo</b></span>}
+        </div>
+      )}
+
+      <p className="foot">{`Rent and concession are blended comparisons — your figures vs the ${data.level === "zip" ? "ZIP’s" : "metro’s"} blended market; unit mix will differ. Concession is a share of rent on both sides. Hard market data (HelloData) sits alongside your reported actuals, never merged.`}</p>
       <style jsx>{S}</style>
     </div>
   );
@@ -110,5 +123,8 @@ const S = `
   .row.hd { background:#0E0F11; font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; color:#5b5f66; }
   .rl { color:#9aa0a6; } .ry { color:#ECEDEF; } .rm { color:#9aa0a6; } .rd { font-weight:600; }
   .note { color:#797E85; font-weight:400; }
+  .ctx { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:10px; padding:9px 12px; border:1px solid #1e2126; border-radius:8px; background:#0E0F11; }
+  .ctxlabel { font-size:9.5px; text-transform:uppercase; letter-spacing:.08em; color:#5b5f66; }
+  .ctxi { font-size:11.5px; color:#9aa0a6; } .ctxi b { color:#ECEDEF; font-weight:600; }
   .foot { font-size:10.5px; color:#5b5f66; margin-top:8px; line-height:1.5; }
 `;
