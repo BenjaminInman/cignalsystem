@@ -36,6 +36,17 @@ MF = {"column": "number_units", "filter": {"greaterThanOrEqualTo": 50}}
 AFF = {"column": "is_affordable", "filter": {"equals": False}}
 BACKOFF = int(os.environ.get("HD_FIRE_BACKOFF", "90"))
 
+def _eq(col, val): return {"column": col, "filter": {"equals": val}}
+# Four callable segments. Market-rate = conventional non-affordable, non-student,
+# non-senior. The others isolate each non-market cut. Each writes its own slug
+# namespace (hd_<metric>_<seg>) so nothing is lost and any cut is selectable.
+SEGMENT_FILTERS = {
+    "mkt": [MF, _eq("is_affordable", False), _eq("is_student", False), _eq("is_senior", False)],
+    "aff": [MF, _eq("is_affordable", True)],
+    "stu": [MF, _eq("is_student", True)],
+    "sen": [MF, _eq("is_senior", True)],
+}
+
 AVGS = [
     {"column": "asking_rent", "aggregate": "Avg"},
     {"column": "effective_rent", "aggregate": "Avg"},
@@ -155,11 +166,21 @@ def main():
     # between 2026-08-01 and 2026-08-03 reported success while firing nothing.
     # Coerce empty to the default explicitly.
     which = os.environ.get("HD_FIRE_MODE") or "both"
+    segments = [x.strip() for x in (os.environ.get("HD_FIRE_SEGMENTS") or "").split(",") if x.strip()]
+    metros_env = [x.strip() for x in (os.environ.get("HD_FIRE_METROS") or "").split(",") if x.strip()]
 
     conn2 = psycopg2.connect(db)
     conn2.autocommit = True
     with conn2.cursor() as cur:
-        metros = pending_metros(cur, which, limit)
+        if metros_env:
+            cur.execute("""SELECT r.code, COALESCE(s.msa_label, r.name)
+                             FROM regions r
+                             LEFT JOIN hd_metro_size s ON s.region_id = r.id
+                            WHERE r.region_type='metro' AND r.retired_at IS NULL
+                              AND r.code = ANY(%s)""", (metros_env,))
+            metros = cur.fetchall()
+        else:
+            metros = pending_metros(cur, which, limit)
 
     if which not in ("zip", "metro", "both"):
         sys.exit(f"ERROR: HD_FIRE_MODE={which!r} is not zip|metro|both")
@@ -168,49 +189,47 @@ def main():
         print("nothing pending — every covered metro already has HelloData pricing")
         return
 
-    print(f"firing {len(metros)} metro(s), mode={which}")
+    seg_list = segments if segments else [None]  # None = existing all-in (non-affordable) series
+    print(f"firing {len(metros)} metro(s), mode={which}, segments={seg_list}")
     fired = 0
     for code, name in metros:
         label = hd_label(name)
         mkt = {"column": "msa", "filter": {"equals": label}}
-        jobs = []
+        grains = []
         if which in ("zip", "both"):
-            jobs.append((f"cignal_zip_{code}", [{"column": "zip_code"},
-                                                {"column": "as_of_month"}] + AVGS))
+            grains.append(("zip", [{"column": "zip_code"}, {"column": "as_of_month"}] + AVGS))
         if which in ("metro", "both"):
-            jobs.append((f"cignal_metro_{code}", [{"column": "msa"},
-                                                  {"column": "as_of_month"}] + AVGS))
-        for jname, scopes in jobs:
-            st, j = fire(key, jname, scopes, [mkt, MF, AFF], webhook)
-            # HelloData caps concurrent exports at 10 and answers 429 beyond it.
-            # Back off and retry rather than dropping the market silently.
-            tries = 0
-            while st == 429 and tries < 8:
-                tries += 1
-                print(f"    429 (concurrency cap) - waiting {BACKOFF}s, retry {tries}")
-                time.sleep(BACKOFF)
-                st, j = fire(key, jname, scopes, [mkt, MF, AFF], webhook)
-            if st == 429:
-                print("    still capped; stopping this batch cleanly")
-                conn2.close()
-                print(f"fired {fired} export(s) before hitting the concurrency cap.")
-                return
-            uid = j.get("queryUUID")
-            print(f"  {jname:26} {label[:44]:46} {st} {uid or j}")
-            if uid:
-                fired += 1
-                with conn2.cursor() as c2:
-                    c2.execute(
-                        """INSERT INTO hd_fired (region_id, mode)
-                           SELECT id, %s FROM regions
-                            WHERE region_type='metro' AND code=%s AND retired_at IS NULL
-                           ON CONFLICT (region_id, mode)
-                             DO UPDATE SET fired_at = now()""",
-                        (jname.split("_")[1], code),
-                    )
-            # Deliberate pacing: a burst of 400 exports is how the large-query
-            # failures started. Slow is fine — the queue is asynchronous anyway.
-            time.sleep(nap)
+            grains.append(("metro", [{"column": "msa"}, {"column": "as_of_month"}] + AVGS))
+        for seg in seg_list:
+            seg_filters = SEGMENT_FILTERS[seg] if seg else [MF, AFF]
+            for grain, scopes in grains:
+                jname = f"cignal_{grain}_{code}" + (f"_{seg}" if seg else "")
+                filters = [mkt] + seg_filters
+                st, j = fire(key, jname, scopes, filters, webhook)
+                tries = 0
+                while st == 429 and tries < 8:
+                    tries += 1
+                    print(f"    429 (concurrency cap) - waiting {BACKOFF}s, retry {tries}")
+                    time.sleep(BACKOFF)
+                    st, j = fire(key, jname, scopes, filters, webhook)
+                if st == 429:
+                    print("    still capped; stopping this batch cleanly")
+                    conn2.close()
+                    print(f"fired {fired} export(s) before hitting the concurrency cap.")
+                    return
+                uid = j.get("queryUUID")
+                print(f"  {jname:30} {label[:40]:42} {st} {uid or j}")
+                if uid:
+                    fired += 1
+                    with conn2.cursor() as c2:
+                        c2.execute(
+                            """INSERT INTO hd_fired (region_id, mode)
+                               SELECT id, %s FROM regions
+                                WHERE region_type='metro' AND code=%s AND retired_at IS NULL
+                               ON CONFLICT (region_id, mode) DO UPDATE SET fired_at = now()""",
+                            (grain, code),
+                        )
+                time.sleep(nap)
 
     conn2.close()
     print(f"fired {fired} export(s). They will arrive at the webhook and be "

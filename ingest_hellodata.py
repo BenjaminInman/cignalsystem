@@ -220,7 +220,7 @@ def load(cur, indicator_id, region_type, rows, release):
     """, {"ind": indicator_id, "rt": region_type, "rel": release})
     return cur.rowcount
 
-def run_one(conn, mode, url, obs_date=None, release=None, refresh=True):
+def run_one(conn, mode, url, obs_date=None, release=None, refresh=True, segment=None):
     """Process a single export into an existing connection.
 
     Split out from main() so the drain worker can reuse it across a queue of
@@ -270,13 +270,15 @@ def run_one(conn, mode, url, obs_date=None, release=None, refresh=True):
             for slug, col, units, cls, hib, scale in METRICS:
                 if col not in df.columns:
                     print(f"  skip {slug}: column {col} absent"); continue
-                ind = ensure_indicator(cur, slug,
-                    f"HelloData {slug.replace('hd_','').replace('_',' ').title()} (multifamily)",
-                    f"querybuilder:{col}:{UNIVERSE}", units, cls, hib)
+                seg_slug = f"{slug}_{segment}" if segment else slug
+                seg_series = f"querybuilder:{col}:{UNIVERSE}" + (f"_{segment}" if segment else "")
+                ind = ensure_indicator(cur, seg_slug,
+                    f"HelloData {seg_slug.replace('hd_','').replace('_',' ').title()} (multifamily)",
+                    seg_series, units, cls, hib)
                 sub = df[["_code", "_date", col]].dropna(subset=[col])
                 rows = [(c, d, float(v) * scale) for c, d, v in sub.itertuples(index=False)]
                 n = load(cur, ind, region_type, rows, release)
-                print(f"  {slug}: {len(rows):,} cells -> {n:,} written")
+                print(f"  {seg_slug}: {len(rows):,} cells -> {n:,} written")
 
         elif mode == "coverage":
             cols = list(df.columns)

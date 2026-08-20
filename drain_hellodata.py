@@ -37,6 +37,12 @@ def mode_for(name):
     return None
 
 
+def seg_for(name):
+    """cignal_zip_45220_mkt -> 'mkt'. Un-suffixed names (all-in) -> None."""
+    parts = (name or "").lower().split("_")
+    return parts[3] if len(parts) >= 4 and parts[3] in ("mkt", "aff", "stu", "sen") else None
+
+
 def main():
     db = os.environ.get("SUPABASE_DB_URL")
     if not db:
@@ -88,7 +94,7 @@ def main():
 
         try:
             print(f"  [{mode}] {name}")
-            ing.run_one(conn, mode, url, refresh=False)
+            ing.run_one(conn, mode, url, refresh=False, segment=seg_for(name))
             with conn.cursor() as cur:
                 cur.execute(
                     "UPDATE hd_deliveries SET status='done', processed_at=now(), note=NULL "

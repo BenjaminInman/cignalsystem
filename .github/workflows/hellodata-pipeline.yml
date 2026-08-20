@@ -22,6 +22,14 @@ on:
         description: "zip | metro | both (fire only)"
         required: false
         default: "both"
+      fire_metros:
+        description: "specific metro codes, comma-sep (bypasses pending)"
+        required: false
+        default: ""
+      fire_segments:
+        description: "segments mkt,aff,stu,sen (blank = all-in)"
+        required: false
+        default: ""
       drain_limit:
         description: "deliveries to ingest (drain only)"
         required: false
@@ -62,6 +70,8 @@ jobs:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           HD_FIRE_LIMIT: ${{ github.event.inputs.fire_limit || '20' }}
           HD_FIRE_MODE: ${{ github.event.inputs.fire_mode || 'both' }}
+          HD_FIRE_METROS: ${{ github.event.inputs.fire_metros || '' }}
+          HD_FIRE_SEGMENTS: ${{ github.event.inputs.fire_segments || '' }}
         run: python fire_hellodata.py
 
   drain:
