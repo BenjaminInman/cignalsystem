@@ -537,6 +537,27 @@ function Editor({ prop, setProp, snap, setSnap, month, loadMonth, snaps, overrid
 
   return (
     <div className="space-y-7">
+      {/* property block */}
+      <Section title="Property" hint="City, State & ZIP set the local-market benchmark — the ZIP gives the sharpest submarket comparison.">
+        <Field label="Property Name" wide><input value={prop.name} onChange={sp("name")} className="input" placeholder="e.g. The Maddox" /></Field>
+        <Field label="City"><input value={prop.city} onChange={sp("city")} className="input" /></Field>
+        <Field label="State"><input value={prop.state} onChange={sp("state")} className="input" maxLength={2} placeholder="TN" /></Field>
+        <Field label="ZIP" hint="drives the submarket benchmark"><input value={prop.zip} onChange={sp("zip")} className="input" maxLength={5} placeholder="37211" /></Field>
+        <Field label="Unit Count"><input type="number" value={prop.unit_count} onChange={sp("unit_count")} className="input" /></Field>
+        <Field label="Class">
+          <select value={prop.class} onChange={sp("class")} className="input">
+            <option value="">—</option>
+            {CLASS_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </Field>
+        <Field label="Strategy" hint="for cycle rebalancing">
+          <select value={prop.strategy} onChange={sp("strategy")} className="input">
+            <option value="">—</option>
+            {STRATEGY_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+        </Field>
+      </Section>
+
       {/* auto-fill from documents */}
       <div className="rounded-lg border border-dashed border-[var(--line-strong,#2a2d31)] bg-white/[0.02] p-4">
         <div className="mb-1 flex items-center gap-2">
@@ -582,27 +603,6 @@ function Editor({ prop, setProp, snap, setSnap, month, loadMonth, snaps, overrid
           ? <span className="mono mb-2 text-[11px] text-up">● Editing recorded month</span>
           : <span className="mono mb-2 text-[11px] text-muted">○ New month — not yet recorded</span>}
       </div>
-
-      {/* property block */}
-      <Section title="Property">
-        <Field label="Property Name" wide><input value={prop.name} onChange={sp("name")} className="input" placeholder="e.g. The Maddox" /></Field>
-        <Field label="City"><input value={prop.city} onChange={sp("city")} className="input" /></Field>
-        <Field label="State"><input value={prop.state} onChange={sp("state")} className="input" maxLength={2} placeholder="TN" /></Field>
-        <Field label="ZIP" hint="submarket benchmark"><input value={prop.zip} onChange={sp("zip")} className="input" maxLength={5} placeholder="37211" /></Field>
-        <Field label="Unit Count"><input type="number" value={prop.unit_count} onChange={sp("unit_count")} className="input" /></Field>
-        <Field label="Class">
-          <select value={prop.class} onChange={sp("class")} className="input">
-            <option value="">—</option>
-            {CLASS_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </Field>
-        <Field label="Strategy" hint="for cycle rebalancing">
-          <select value={prop.strategy} onChange={sp("strategy")} className="input">
-            <option value="">—</option>
-            {STRATEGY_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-          </select>
-        </Field>
-      </Section>
 
       {/* operational block */}
       <Section title="Operational" hint="Leave a bedroom type blank where N/A.">
