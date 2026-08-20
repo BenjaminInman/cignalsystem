@@ -5,6 +5,14 @@ import { Download, ArrowUpRight, Wrench } from "lucide-react";
 
 const TOOLS = [
   {
+    name: "Litmus Test",
+    desc: "A 30-second go/no-go screen — cap, DSCR, cash-on-cash (and the value-add spread) against your minimum bar. Pass earns the full model; fail is dead.",
+    tags: ["Interactive", "Excel"],
+    href: "/litmus",
+    download: "/downloads/Cignal_Litmus_Test.xlsx",
+    status: "live",
+  },
+  {
     name: "Cignal Underwriting Model",
     desc: "The full cycle-adjusted multifamily model — pro forma, debt, LP/GP promote waterfall, and a Sell-vs-Refinance recommendation driven by the market's Cignal read.",
     tags: ["Excel", "Interactive"],
@@ -13,11 +21,10 @@ const TOOLS = [
     status: "live",
   },
   {
-    name: "Litmus Test",
-    desc: "A 30-second go/no-go screen — cap, DSCR, cash-on-cash (and the value-add spread) against your minimum bar. Pass earns the full model; fail is dead.",
-    tags: ["Interactive", "Excel"],
-    href: "/litmus",
-    download: "/downloads/Cignal_Litmus_Test.xlsx",
+    name: "Budget Builder",
+    desc: "Upload a property’s T-12 and build next year’s budget from local market signals — every line projected on a driver you can see and change.",
+    tags: ["Interactive"],
+    href: "/budget",
     status: "live",
   },
   {
@@ -34,7 +41,6 @@ const TOOLS = [
     href: "/exit-analyzer",
     status: "live",
   },
-  { name: "Cap-Rate Sensitivity Grid", desc: "Value and returns across a cap-rate × rent-growth matrix, seeded from the market's read.", tags: ["Excel"], status: "soon" },
   {
     name: "Market Screener Export",
     desc: "Every metro ranked by cycle — sort by momentum, filter by phase, find where to look, then export the screen as CSV.",
@@ -42,13 +48,7 @@ const TOOLS = [
     href: "/screener",
     status: "live",
   },
-  {
-    name: "Budget Builder",
-    desc: "Upload a property’s T-12 and build next year’s budget from local market signals — every line projected on a driver you can see and change.",
-    tags: ["Interactive"],
-    href: "/budget",
-    status: "live",
-  },
+  { name: "Cap-Rate Sensitivity Grid", desc: "Value and returns across a cap-rate × rent-growth matrix, seeded from the market's read.", tags: ["Excel"], status: "soon" },
   { name: "Signal Divergence — The Tell", desc: "Leading-vs-lagging divergence for your markets — the early-warning watch as a downloadable sheet.", tags: ["Excel"], status: "soon" },
 ];
 
