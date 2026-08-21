@@ -136,6 +136,37 @@ def pending_metros(cur, mode, limit):
     return cur.fetchall()
 
 
+def pending_metros_seg(cur, limit, check_slug="hd_effective_rent_mkt"):
+    """Metros still lacking SEGMENTED data, largest first, not fired in 20h.
+
+    Every metro already has the all-in series from the original backfill, so the
+    all-in pending logic would return nothing. Segmentation resumes off the
+    market-rate slug: a metro is done once hd_effective_rent_mkt exists for it.
+    The 20h fired guard prevents a batch re-firing the previous batch before its
+    exports have arrived (same failure mode documented in pending_metros)."""
+    cur.execute(
+        """
+        SELECT r.code, s.msa_label
+          FROM regions r
+          JOIN hd_metro_size s ON s.region_id = r.id AND s.msa_label IS NOT NULL
+         WHERE r.region_type = 'metro' AND r.retired_at IS NULL
+           AND r.code ~ '^[0-9]{5}$'
+           AND NOT EXISTS (
+                 SELECT 1 FROM observations o
+                   JOIN indicators i ON i.id = o.indicator_id
+                  WHERE i.slug = %s AND o.region_id = r.id)
+           AND NOT EXISTS (
+                 SELECT 1 FROM hd_fired f
+                  WHERE f.region_id = r.id
+                    AND f.fired_at > now() - interval '20 hours')
+         ORDER BY COALESCE(s.units, -1) DESC, r.name
+         LIMIT %s
+        """,
+        (check_slug, limit),
+    )
+    return cur.fetchall()
+
+
 def fire(key, name, scopes, filters, webhook, limit=500000):
     body = {
         "dataset": {"scopes": scopes, "filters": filters, "limit": limit},
@@ -179,6 +210,8 @@ def main():
                             WHERE r.region_type='metro' AND r.retired_at IS NULL
                               AND r.code = ANY(%s)""", (metros_env,))
             metros = cur.fetchall()
+        elif segments:
+            metros = pending_metros_seg(cur, limit)
         else:
             metros = pending_metros(cur, which, limit)
 

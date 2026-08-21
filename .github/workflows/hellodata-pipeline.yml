@@ -1,12 +1,8 @@
 name: HelloData pipeline
 
-# Two jobs, run independently:
-#   fire  - queue Dataset Exports, one MSA at a time (HelloData silently fails
-#           on anything larger; see fire_hellodata.py for the measurements)
-#   drain - ingest whatever the webhook has queued in hd_deliveries
-#
-# They are deliberately decoupled: exports arrive asynchronously over hours, so
-# firing and ingesting must not block on each other.
+# fire  - queue Dataset Exports one MSA at a time (HelloData silently fails on
+#         large pricing queries). drain - ingest what the webhook has queued.
+# Decoupled: exports arrive asynchronously over hours.
 on:
   workflow_dispatch:
     inputs:
@@ -33,32 +29,24 @@ on:
       drain_limit:
         description: "deliveries to ingest (drain only)"
         required: false
-        default: "50"
+        default: "200"
   schedule:
-    # Every 15 min. HelloData's cap is 10 CONCURRENT exports, not 10 per period,
-    # and each takes ~3-8 min, so the real ceiling is ~80-120/hour. Firing 5
-    # metros (10 exports) per quarter hour sits right at the cap.
-    # Drain only, hourly. Nothing is being fired on a schedule; this just picks
-    # up any late delivery and runs the integrity checks against the warehouse.
-    - cron: "17 * * * *"
+    # Segmented NATIONAL backfill, running unattended until every metro has the
+    # market-rate cut. Fire and drain alternate so deliveries clear between
+    # fires and the 10-concurrent export cap is not saturated. Turn OFF (delete
+    # the fire cron) once pending_metros_seg returns empty / national is done.
+    - cron: "0,30 * * * *"    # segmented fire (mkt,aff,stu,sen), 3 metros/run
+    - cron: "15,45 * * * *"   # drain sweep + integrity checks
 
-# Only one run at a time. Two drains overlapping would collide on
-# REFRESH MATERIALIZED VIEW CONCURRENTLY (which serialises anyway) and pile up
-# queued runs. Waiting rather than cancelling means no delivery is skipped.
 concurrency:
   group: hellodata-pipeline
   cancel-in-progress: false
 
 jobs:
-  # Fires a SMALL batch every 30 minutes. HelloData caps concurrent exports at
-  # 10, so a big one-shot run mostly 429s. Small paced batches let the national
-  # backfill complete unattended over a day or so.
-  # National backfill completed 2026-08-05. Firing is now MANUAL ONLY - there is
-  # no monthly auto-refresh yet by decision, and leaving it on the schedule would
-  # re-fire any metro that looks "missing" every 20h. Re-enable by adding
-  # `github.event_name == 'schedule' ||` when the monthly refresh is approved.
   fire:
-    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'fire' || github.event.inputs.job == 'both')
+    if: >-
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'fire' || github.event.inputs.job == 'both'))
+      || (github.event_name == 'schedule' && github.event.schedule == '0,30 * * * *')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -68,14 +56,16 @@ jobs:
       - env:
           HELLODATA_API_KEY: ${{ secrets.HELLODATA_API_KEY }}
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-          HD_FIRE_LIMIT: ${{ github.event.inputs.fire_limit || '20' }}
-          HD_FIRE_MODE: ${{ github.event.inputs.fire_mode || 'both' }}
+          HD_FIRE_LIMIT: ${{ github.event_name == 'schedule' && '3' || (github.event.inputs.fire_limit || '25') }}
+          HD_FIRE_MODE: "both"
           HD_FIRE_METROS: ${{ github.event.inputs.fire_metros || '' }}
-          HD_FIRE_SEGMENTS: ${{ github.event.inputs.fire_segments || '' }}
+          HD_FIRE_SEGMENTS: ${{ github.event_name == 'schedule' && 'mkt,aff,stu,sen' || (github.event.inputs.fire_segments || '') }}
         run: python fire_hellodata.py
 
   drain:
-    if: github.event_name == 'schedule' || github.event.inputs.job == 'drain' || github.event.inputs.job == 'both'
+    if: >-
+      (github.event_name == 'schedule' && github.event.schedule == '15,45 * * * *')
+      || (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'drain' || github.event.inputs.job == 'both'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -86,9 +76,6 @@ jobs:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           HD_DRAIN_LIMIT: ${{ github.event.inputs.drain_limit || '200' }}
         run: python drain_hellodata.py
-      # Invariant checks run after every drain. These are STATE invariants, not
-      # code errors - a build passes while the warehouse quietly drifts - so they
-      # have to run against the live DB. Failing the job is the point.
       - name: integrity checks
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
