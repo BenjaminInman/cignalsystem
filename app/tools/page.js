@@ -42,6 +42,13 @@ const TOOLS = [
     status: "live",
   },
   {
+    name: "Portfolio Architect",
+    desc: "Start upstream of the deal: set the phase and your target outcome, and the Architect maps which product classes, vintages, and market types to focus on — the strategy that tells you what to run through the other tools.",
+    tags: ["Interactive"],
+    href: "/architect",
+    status: "live",
+  },
+  {
     name: "Market Screener Export",
     desc: "Every metro ranked by cycle — sort by momentum, filter by phase, find where to look, then export the screen as CSV.",
     tags: ["Interactive", "CSV"],
