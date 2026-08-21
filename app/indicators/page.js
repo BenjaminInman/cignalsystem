@@ -5,6 +5,7 @@ import { Search, X } from "lucide-react";
 import { useContent } from "@/components/VerticalProvider";
 import IndicatorCompare from "@/components/IndicatorCompare";
 import PaywallBlur from "@/components/PaywallBlur";
+import CreditBackdrop from "@/components/CreditBackdrop";
 import OnionFramework from "@/components/OnionFramework";
 import SubmarketLookup from "@/components/SubmarketLookup";
 import IndicatorRow from "@/components/IndicatorRow";
@@ -204,6 +205,8 @@ export default function IndicatorsPage() {
           {rows.length === 0 && <p className="mono mt-8 rounded-lg border border-[var(--line)] p-8 text-center text-sm text-muted">No indicators match this filter.</p>}
         </>
       )}
+
+      <CreditBackdrop />
 
       <PaywallBlur
         page="indicators"
