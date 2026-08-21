@@ -183,47 +183,10 @@ def fire(key, name, scopes, filters, webhook, limit=500000):
     return r.status_code, j
 
 
-def main():
-    key = os.environ.get("HELLODATA_API_KEY")
-    db = os.environ.get("SUPABASE_DB_URL")
-    webhook = os.environ.get("WEBHOOK_URL",
-                             "https://multifamily.cignalsystem.com/api/hellodata/webhook")
-    if not (key and db):
-        sys.exit("ERROR: need HELLODATA_API_KEY and SUPABASE_DB_URL")
-    limit = int(os.environ.get("HD_FIRE_LIMIT") or "25")
-    nap = float(os.environ.get("HD_FIRE_SLEEP") or "3")
-    # NOTE: on scheduled runs GitHub sets input-backed env vars to the EMPTY
-    # STRING, not unset - so a dict default never fires. Every scheduled run
-    # between 2026-08-01 and 2026-08-03 reported success while firing nothing.
-    # Coerce empty to the default explicitly.
-    which = os.environ.get("HD_FIRE_MODE") or "both"
-    segments = [x.strip() for x in (os.environ.get("HD_FIRE_SEGMENTS") or "").split(",") if x.strip()]
-    metros_env = [x.strip() for x in (os.environ.get("HD_FIRE_METROS") or "").split(",") if x.strip()]
-
-    conn2 = psycopg2.connect(db)
-    conn2.autocommit = True
-    with conn2.cursor() as cur:
-        if metros_env:
-            cur.execute("""SELECT r.code, COALESCE(s.msa_label, r.name)
-                             FROM regions r
-                             LEFT JOIN hd_metro_size s ON s.region_id = r.id
-                            WHERE r.region_type='metro' AND r.retired_at IS NULL
-                              AND r.code = ANY(%s)""", (metros_env,))
-            metros = cur.fetchall()
-        elif segments:
-            metros = pending_metros_seg(cur, limit)
-        else:
-            metros = pending_metros(cur, which, limit)
-
-    if which not in ("zip", "metro", "both"):
-        sys.exit(f"ERROR: HD_FIRE_MODE={which!r} is not zip|metro|both")
-
-    if not metros:
-        print("nothing pending — every covered metro already has HelloData pricing")
-        return
-
-    seg_list = segments if segments else [None]  # None = existing all-in (non-affordable) series
-    print(f"firing {len(metros)} metro(s), mode={which}, segments={seg_list}")
+def fire_batch(conn2, key, webhook, metros, which, seg_list, nap):
+    """Fire one pass over `metros`. Returns (fired, capped). `capped` is True if
+    HelloData's 10-concurrent-export cap was hit and could not be cleared with
+    backoff - the caller should wait before the next pass."""
     fired = 0
     for code, name in metros:
         label = hd_label(name)
@@ -246,10 +209,8 @@ def main():
                     time.sleep(BACKOFF)
                     st, j = fire(key, jname, scopes, filters, webhook)
                 if st == 429:
-                    print("    still capped; stopping this batch cleanly")
-                    conn2.close()
-                    print(f"fired {fired} export(s) before hitting the concurrency cap.")
-                    return
+                    print("    still capped; pausing this pass")
+                    return fired, True
                 uid = j.get("queryUUID")
                 print(f"  {jname:30} {label[:40]:42} {st} {uid or j}")
                 if uid:
@@ -263,10 +224,82 @@ def main():
                             (grain, code),
                         )
                 time.sleep(nap)
+    return fired, False
 
+
+def main():
+    key = os.environ.get("HELLODATA_API_KEY")
+    db = os.environ.get("SUPABASE_DB_URL")
+    webhook = os.environ.get("WEBHOOK_URL",
+                             "https://multifamily.cignalsystem.com/api/hellodata/webhook")
+    if not (key and db):
+        sys.exit("ERROR: need HELLODATA_API_KEY and SUPABASE_DB_URL")
+    limit = int(os.environ.get("HD_FIRE_LIMIT") or "25")
+    nap = float(os.environ.get("HD_FIRE_SLEEP") or "3")
+    which = os.environ.get("HD_FIRE_MODE") or "both"
+    segments = [x.strip() for x in (os.environ.get("HD_FIRE_SEGMENTS") or "").split(",") if x.strip()]
+    metros_env = [x.strip() for x in (os.environ.get("HD_FIRE_METROS") or "").split(",") if x.strip()]
+    loop = os.environ.get("HD_FIRE_LOOP") == "1"
+    budget_min = float(os.environ.get("HD_FIRE_MINUTES") or "330")
+
+    if which not in ("zip", "metro", "both"):
+        sys.exit(f"ERROR: HD_FIRE_MODE={which!r} is not zip|metro|both")
+
+    conn2 = psycopg2.connect(db)
+    conn2.autocommit = True
+    seg_list = segments if segments else [None]  # None = existing all-in series
+
+    # ---- Continuous loop -------------------------------------------------
+    # Keep HelloData's export cap saturated until the pending list is empty or
+    # the time budget is spent. ONE long job in place of dozens of flaky cron
+    # runs - this is what removes the start/stop churn of the first backfill.
+    # The 20h hd_fired guard means re-querying pending never re-fires a metro
+    # mid-flight, so each pass advances to the next un-fired markets.
+    if loop:
+        deadline = time.time() + budget_min * 60
+        total = 0
+        while time.time() < deadline:
+            with conn2.cursor() as cur:
+                batch = pending_metros_seg(cur, limit) if segments else pending_metros(cur, which, limit)
+            if not batch:
+                print("nothing pending — segmentation complete")
+                break
+            fired, capped = fire_batch(conn2, key, webhook, batch, which, seg_list, nap)
+            total += fired
+            if capped or fired == 0:
+                # cap full (or this batch is all inside the 20h guard); let
+                # HelloData finish some exports before the next pass.
+                print("    pausing 180s to let the export cap drain")
+                time.sleep(180)
+            else:
+                time.sleep(20)
+        conn2.close()
+        print(f"loop finished: fired {total} export(s) this run.")
+        return
+
+    # ---- Single pass (manual / targeted / one scheduled batch) -----------
+    with conn2.cursor() as cur:
+        if metros_env:
+            cur.execute("""SELECT r.code, COALESCE(s.msa_label, r.name)
+                             FROM regions r
+                             LEFT JOIN hd_metro_size s ON s.region_id = r.id
+                            WHERE r.region_type='metro' AND r.retired_at IS NULL
+                              AND r.code = ANY(%s)""", (metros_env,))
+            metros = cur.fetchall()
+        elif segments:
+            metros = pending_metros_seg(cur, limit)
+        else:
+            metros = pending_metros(cur, which, limit)
+
+    if not metros:
+        print("nothing pending — every covered metro already has HelloData pricing")
+        conn2.close()
+        return
+
+    print(f"firing {len(metros)} metro(s), mode={which}, segments={seg_list}")
+    fired, _ = fire_batch(conn2, key, webhook, metros, which, seg_list, nap)
     conn2.close()
-    print(f"fired {fired} export(s). They will arrive at the webhook and be "
-          f"queued in hd_deliveries; run the drain job to ingest.")
+    print(f"fired {fired} export(s). They will arrive at the webhook and be queued in hd_deliveries.")
 
 
 if __name__ == "__main__":

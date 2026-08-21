@@ -1,8 +1,13 @@
 name: HelloData pipeline
 
-# fire  - queue Dataset Exports one MSA at a time (HelloData silently fails on
-#         large pricing queries). drain - ingest what the webhook has queued.
-# Decoupled: exports arrive asynchronously over hours.
+# fire  - a LONG-RUNNING loop that keeps HelloData's 10-concurrent export cap
+#         saturated until every metro has segment data (or the time budget is
+#         spent). One continuous job instead of many flaky cron runs - this is
+#         what avoids the start/stop churn of the first backfill.
+# drain - ingest whatever the webhook has queued, every 15 min, refreshing the
+#         analytics view each pass. Runs in PARALLEL with fire (separate
+#         concurrency groups): fire only posts export jobs and touches hd_fired;
+#         drain ingests into observations - they do not collide.
 on:
   workflow_dispatch:
     inputs:
@@ -11,7 +16,7 @@ on:
         required: true
         default: "drain"
       fire_limit:
-        description: "metros to fire (fire only)"
+        description: "pending batch size (fire only)"
         required: false
         default: "25"
       fire_mode:
@@ -26,28 +31,32 @@ on:
         description: "segments mkt,aff,stu,sen (blank = all-in)"
         required: false
         default: ""
+      fire_loop:
+        description: "1 = continuous loop, 0 = single pass (fire only)"
+        required: false
+        default: "0"
       drain_limit:
         description: "deliveries to ingest (drain only)"
         required: false
-        default: "200"
+        default: "300"
   schedule:
-    # Segmented NATIONAL backfill, running unattended until every metro has the
-    # market-rate cut. Fire and drain alternate so deliveries clear between
-    # fires and the 10-concurrent export cap is not saturated. Turn OFF (delete
-    # the fire cron) once pending_metros_seg returns empty / national is done.
-    - cron: "0,30 * * * *"    # segmented fire (mkt,aff,stu,sen), 3 metros/run
-    - cron: "15,45 * * * *"   # drain sweep + integrity checks
-
-concurrency:
-  group: hellodata-pipeline
-  cancel-in-progress: false
+    # Segmented NATIONAL backfill. The fire loop runs ~5.8h each start; a fresh
+    # start every 6h makes it effectively continuous. Drain sweeps every 15 min.
+    # When national is done pending_metros_seg returns empty and the loop exits
+    # immediately each cycle (harmless) - delete these crons to switch it off.
+    - cron: "0 */6 * * *"     # start the segmented fire loop
+    - cron: "*/15 * * * *"    # drain + view refresh
 
 jobs:
   fire:
     if: >-
       (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'fire' || github.event.inputs.job == 'both'))
-      || (github.event_name == 'schedule' && github.event.schedule == '0,30 * * * *')
+      || (github.event_name == 'schedule' && github.event.schedule == '0 */6 * * *')
     runs-on: ubuntu-latest
+    timeout-minutes: 360
+    concurrency:
+      group: hellodata-fire
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -56,17 +65,23 @@ jobs:
       - env:
           HELLODATA_API_KEY: ${{ secrets.HELLODATA_API_KEY }}
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-          HD_FIRE_LIMIT: ${{ github.event_name == 'schedule' && '3' || (github.event.inputs.fire_limit || '25') }}
+          HD_FIRE_LIMIT: ${{ github.event.inputs.fire_limit || '25' }}
           HD_FIRE_MODE: "both"
           HD_FIRE_METROS: ${{ github.event.inputs.fire_metros || '' }}
           HD_FIRE_SEGMENTS: ${{ github.event_name == 'schedule' && 'mkt,aff,stu,sen' || (github.event.inputs.fire_segments || '') }}
+          HD_FIRE_LOOP: ${{ github.event_name == 'schedule' && '1' || (github.event.inputs.fire_loop || '0') }}
+          HD_FIRE_MINUTES: "348"
         run: python fire_hellodata.py
 
   drain:
     if: >-
-      (github.event_name == 'schedule' && github.event.schedule == '15,45 * * * *')
+      (github.event_name == 'schedule' && github.event.schedule == '*/15 * * * *')
       || (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'drain' || github.event.inputs.job == 'both'))
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: hellodata-drain
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -74,7 +89,7 @@ jobs:
       - run: pip install pandas requests psycopg2-binary
       - env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-          HD_DRAIN_LIMIT: ${{ github.event.inputs.drain_limit || '200' }}
+          HD_DRAIN_LIMIT: ${{ github.event.inputs.drain_limit || '300' }}
         run: python drain_hellodata.py
       - name: integrity checks
         env:
