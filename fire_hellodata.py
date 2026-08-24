@@ -260,9 +260,31 @@ def main():
         total = 0
         while time.time() < deadline:
             with conn2.cursor() as cur:
-                batch = pending_metros_seg(cur, limit) if segments else pending_metros(cur, which, limit)
+                if metros_env:
+                    # Targeted cleanup: chase a specific metro list until each has
+                    # its market-rate rollup. Short 30-min guard so we retry a
+                    # failed/capped export without hammering it every pass.
+                    cur.execute(
+                        """SELECT r.code, COALESCE(s.msa_label, r.name)
+                             FROM regions r
+                             LEFT JOIN hd_metro_size s ON s.region_id = r.id
+                            WHERE r.region_type='metro' AND r.retired_at IS NULL
+                              AND r.code = ANY(%s)
+                              AND NOT EXISTS (SELECT 1 FROM observations o
+                                               JOIN indicators i ON i.id=o.indicator_id
+                                              WHERE i.slug='hd_effective_rent_mkt'
+                                                AND o.region_id=r.id)
+                              AND NOT EXISTS (SELECT 1 FROM hd_fired f
+                                              WHERE f.region_id=r.id
+                                                AND f.fired_at > now()-interval '30 minutes')""",
+                        (metros_env,))
+                    batch = cur.fetchall()
+                elif segments:
+                    batch = pending_metros_seg(cur, limit)
+                else:
+                    batch = pending_metros(cur, which, limit)
             if not batch:
-                print("nothing pending — segmentation complete")
+                print("nothing pending — complete (targeted or national)")
                 break
             fired, capped = fire_batch(conn2, key, webhook, batch, which, seg_list, nap)
             total += fired
