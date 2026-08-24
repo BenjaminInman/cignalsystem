@@ -53,6 +53,8 @@ export default function MarketBenchmark({ snapshot = {}, data }) {
       <div className="head">
         <span className="mkt">{data.benchmark_area || data.market_name || "Market"}</span>
         {data.level === "zip" && <span className="lvl">submarket</span>}
+        {data.basis === "market-rate" && <span className="lvl" style={{ color: "#5FB97C", borderColor: "#2e4a34" }}>market-rate</span>}
+        {data.basis === "all-in" && <span className="lim">all-in blend (not yet segmented)</span>}
         {data.level === "metro" && data.zip_requested && <span className="lim">metro-level — ZIP {data.zip_requested} not covered</span>}
         {data.phase && <span className="phase" style={{ color: PH[phaseKey] || "#9aa0a6", borderColor: (PH[phaseKey] || "#9aa0a6") + "55" }}>{data.phase}</span>}
         {covN != null && <span className="cov">{covN} props</span>}
@@ -98,7 +100,7 @@ export default function MarketBenchmark({ snapshot = {}, data }) {
         </div>
       )}
 
-      <p className="foot">{`Rent and concession are blended comparisons — your figures vs the ${data.level === "zip" ? "ZIP’s" : "metro’s"} blended market; unit mix will differ. Concession is a share of rent on both sides. Hard market data (HelloData) sits alongside your reported actuals, never merged.`}</p>
+      <p className="foot">{`Rent and concession are blended comparisons — your figures vs the ${data.level === "zip" ? "ZIP’s" : "metro’s"} ${data.basis === "market-rate" ? "conventional market-rate" : "all-in"} market (${data.basis === "market-rate" ? "student, senior & affordable excluded" : "not yet segmented"}); unit mix will differ. Concession is a share of rent on both sides. Hard market data (HelloData) sits alongside your reported actuals, never merged.`}</p>
       <style jsx>{S}</style>
     </div>
   );
