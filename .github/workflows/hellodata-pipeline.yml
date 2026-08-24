@@ -12,9 +12,13 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "fire | drain | both"
+        description: "fire | drain | both | chunk"
         required: true
         default: "drain"
+      chunk_segment:
+        description: "segment for chunk job: mkt|aff|stu|sen (chunk only)"
+        required: false
+        default: "mkt"
       fire_limit:
         description: "pending batch size (fire only)"
         required: false
@@ -72,6 +76,26 @@ jobs:
           HD_FIRE_LOOP: ${{ github.event_name == 'schedule' && '1' || (github.event.inputs.fire_loop || '0') }}
           HD_FIRE_MINUTES: "348"
         run: python fire_hellodata.py
+
+  chunk:
+    if: >-
+      github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'chunk'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    concurrency:
+      group: hellodata-fire
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install requests psycopg2-binary
+      - env:
+          HELLODATA_API_KEY: ${{ secrets.HELLODATA_API_KEY }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          HD_CHUNK_SEGMENT: ${{ github.event.inputs.chunk_segment || 'mkt' }}
+          HD_CHUNK: "60"
+        run: python fire_hellodata_chunked.py
 
   drain:
     if: >-

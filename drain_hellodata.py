@@ -38,9 +38,10 @@ def mode_for(name):
 
 
 def seg_for(name):
-    """cignal_zip_45220_mkt -> 'mkt'. Un-suffixed names (all-in) -> None."""
+    """Segment is the trailing token: cignal_zip_45220_mkt or the chunked
+    cignal_zip_35620_c1_mkt both -> 'mkt'. Un-suffixed (all-in) -> None."""
     parts = (name or "").lower().split("_")
-    return parts[3] if len(parts) >= 4 and parts[3] in ("mkt", "aff", "stu", "sen") else None
+    return parts[-1] if parts and parts[-1] in ("mkt", "aff", "stu", "sen") else None
 
 
 def main():

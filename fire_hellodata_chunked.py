@@ -45,6 +45,17 @@ AVGS = [
     {"column": "leased_percentage", "aggregate": "Avg"},
     {"column": "days_on_market", "aggregate": "Avg"},
 ]
+def _eq(c, v): return {"column": c, "filter": {"equals": v}}
+SEG = os.environ.get("HD_CHUNK_SEGMENT") or ""   # mkt|aff|stu|sen  ("" = all-in)
+SEG_FILTERS = {
+    "mkt": [MF, _eq("is_affordable", False), _eq("is_student", False), _eq("is_senior", False)],
+    "aff": [MF, _eq("is_affordable", True)],
+    "stu": [MF, _eq("is_student", True)],
+    "sen": [MF, _eq("is_senior", True)],
+}
+SEG_F = SEG_FILTERS[SEG] if SEG else [MF, AFF]
+SUF = f"_{SEG}" if SEG else ""
+CHECK_SLUG = "hd_effective_rent" + SUF
 CHUNK = int(os.environ.get("HD_CHUNK") or "60")
 NAP = float(os.environ.get("HD_SLEEP") or "4")
 BACKOFF = int(os.environ.get("HD_BACKOFF") or "90")
@@ -100,10 +111,10 @@ def main():
                AND NOT EXISTS (SELECT 1 FROM observations o
                                  JOIN indicators i ON i.id = o.indicator_id
                                 WHERE i.source = 'HelloData'
-                                  AND i.slug = 'hd_effective_rent'
+                                  AND i.slug = %s
                                   AND o.region_id = r.id)
              ORDER BY s.units DESC
-            """
+            """, (CHECK_SLUG,)
         )
         metros = cur.fetchall()
 
@@ -122,9 +133,9 @@ def main():
         print(f"  {code} {label[:40]:42} {len(zips):>4} zips -> {len(chunks)} chunk(s)")
 
         for n, ch in enumerate(chunks, 1):
-            name = f"cignal_zip_{code}_c{n}"
+            name = f"cignal_zip_{code}_c{n}{SUF}"
             scopes = [{"column": "zip_code"}, {"column": "as_of_month"}] + AVGS
-            filters = [{"column": "zip_code", "filter": {"in": ch}}, MF, AFF]
+            filters = [{"column": "zip_code", "filter": {"in": ch}}] + SEG_F
             st, j = fire_with_backoff(key, name, scopes, filters)
             print(f"    {name:26} {st} {j.get('queryUUID') or j}")
             if j.get("queryUUID"):
@@ -134,9 +145,9 @@ def main():
         # Metro-grain series: one row per month, tiny, no chunking needed.
         st, j = fire_with_backoff(
             key,
-            f"cignal_metro_{code}",
+            f"cignal_metro_{code}{SUF}",
             [{"column": "msa"}, {"column": "as_of_month"}] + AVGS,
-            [{"column": "msa", "filter": {"equals": label}}, MF, AFF],
+            [{"column": "msa", "filter": {"equals": label}}] + SEG_F,
         )
         print(f"    cignal_metro_{code:<20} {st} {j.get('queryUUID') or j}")
         if j.get("queryUUID"):
