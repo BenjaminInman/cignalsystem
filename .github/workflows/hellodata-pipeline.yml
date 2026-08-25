@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "fire | drain | both | chunk"
+        description: "fire | drain | both | chunk | coverage"
         required: true
         default: "drain"
       chunk_segment:
@@ -96,6 +96,23 @@ jobs:
           HD_CHUNK_SEGMENT: ${{ github.event.inputs.chunk_segment || 'mkt' }}
           HD_CHUNK: "60"
         run: python fire_hellodata_chunked.py
+
+  coverage:
+    if: >-
+      github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'coverage'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: hellodata-fire
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install requests
+      - env:
+          HELLODATA_API_KEY: ${{ secrets.HELLODATA_API_KEY }}
+        run: python fire_coverage_seg.py
 
   drain:
     if: >-

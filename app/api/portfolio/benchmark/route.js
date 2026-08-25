@@ -56,10 +56,20 @@ export async function GET(req) {
       for (const r of hd || []) { const b = BASE[r.slug]; if (!b) continue; if (!latest[b] || r.obs_date > latest[b].date) latest[b] = { date: r.obs_date, value: r.value == null ? null : Number(r.value) }; }
       return latest;
     };
-    // market-rate first, all-in fallback for un-segmented markets
+    // market-rate first, all-in fallback. Per-segment disclosure floor: only
+    // serve market-rate at ZIP level when that ZIP clears the market-rate floor
+    // (>=3 market-rate properties, no single property >50% of units). A thin
+    // ZIP falls back to the all-in blend, which has its own floor.
     const pullPreferMkt = async (regionType, regionCode) => {
-      const m = await pull(regionType, regionCode, MKT_SLUGS);
-      if (m.asking_rent || m.leased_pct) return { latest: m, basis: "market-rate" };
+      let mktAllowed = true;
+      if (regionType === "zip") {
+        const { data: pub } = await supabase.rpc("hd_segment_publishable", { p_zip: regionCode, p_segment: "mkt" });
+        mktAllowed = pub === true;
+      }
+      if (mktAllowed) {
+        const m = await pull(regionType, regionCode, MKT_SLUGS);
+        if (m.asking_rent || m.leased_pct) return { latest: m, basis: "market-rate" };
+      }
       const a = await pull(regionType, regionCode, ALLIN_SLUGS);
       if (a.asking_rent || a.leased_pct) return { latest: a, basis: "all-in" };
       return null;

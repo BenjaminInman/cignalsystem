@@ -299,17 +299,30 @@ def run_one(conn, mode, url, obs_date=None, release=None, refresh=True, segment=
                 buf.write(f"{c},{p},{u},{mx},{'t' if pub else 'f'}\n")
             buf.seek(0)
             cur.copy_expert("COPY _hd_cov (code, p, u, mx, pub) FROM STDIN WITH CSV", buf)
-            cur.execute("""
-                INSERT INTO hd_region_coverage
-                    (region_id, properties, units, max_property_units, publishable, as_of)
-                SELECT r.id, s.p, s.u, s.mx, s.pub, %(d)s
-                FROM _hd_cov s JOIN regions r ON r.region_type='zip' AND r.code=s.code
-                ON CONFLICT (region_id) DO UPDATE SET
-                    properties=excluded.properties, units=excluded.units,
-                    max_property_units=excluded.max_property_units,
-                    publishable=excluded.publishable, as_of=excluded.as_of,
-                    updated_at=now();
-            """, {"d": obs_date})
+            if segment:
+                cur.execute("""
+                    INSERT INTO hd_segment_coverage
+                        (region_id, segment, properties, units, max_property_units, publishable, as_of)
+                    SELECT r.id, %(seg)s, s.p, s.u, s.mx, s.pub, %(d)s
+                    FROM _hd_cov s JOIN regions r ON r.region_type='zip' AND r.code=s.code
+                    ON CONFLICT (region_id, segment) DO UPDATE SET
+                        properties=excluded.properties, units=excluded.units,
+                        max_property_units=excluded.max_property_units,
+                        publishable=excluded.publishable, as_of=excluded.as_of,
+                        updated_at=now();
+                """, {"d": obs_date, "seg": segment})
+            else:
+                cur.execute("""
+                    INSERT INTO hd_region_coverage
+                        (region_id, properties, units, max_property_units, publishable, as_of)
+                    SELECT r.id, s.p, s.u, s.mx, s.pub, %(d)s
+                    FROM _hd_cov s JOIN regions r ON r.region_type='zip' AND r.code=s.code
+                    ON CONFLICT (region_id) DO UPDATE SET
+                        properties=excluded.properties, units=excluded.units,
+                        max_property_units=excluded.max_property_units,
+                        publishable=excluded.publishable, as_of=excluded.as_of,
+                        updated_at=now();
+                """, {"d": obs_date})
             npub = sum(1 for r in rows if r[4])
             print(f"  coverage: {len(rows):,} zips -> {npub:,} publishable, "
                   f"{len(rows)-npub:,} suppressed (floor {MIN_PROPERTIES} props / "
