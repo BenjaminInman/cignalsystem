@@ -46,16 +46,14 @@ AVGS = [
     {"column": "days_on_market", "aggregate": "Avg"},
 ]
 def _eq(c, v): return {"column": c, "filter": {"equals": v}}
-SEG = os.environ.get("HD_CHUNK_SEGMENT") or ""   # mkt|aff|stu|sen  ("" = all-in)
+# One or more segments, comma-separated. "" = all-in.
+SEGS = [x.strip() for x in (os.environ.get("HD_CHUNK_SEGMENT") or "").split(",") if x.strip()] or [""]
 SEG_FILTERS = {
     "mkt": [MF, _eq("is_affordable", False), _eq("is_student", False), _eq("is_senior", False)],
     "aff": [MF, _eq("is_affordable", True)],
     "stu": [MF, _eq("is_student", True)],
     "sen": [MF, _eq("is_senior", True)],
 }
-SEG_F = SEG_FILTERS[SEG] if SEG else [MF, AFF]
-SUF = f"_{SEG}" if SEG else ""
-CHECK_SLUG = "hd_effective_rent" + SUF
 CHUNK = int(os.environ.get("HD_CHUNK") or "60")
 NAP = float(os.environ.get("HD_SLEEP") or "4")
 BACKOFF = int(os.environ.get("HD_BACKOFF") or "90")
@@ -127,7 +125,7 @@ def main():
                                       AND i.slug = %s
                                       AND o.region_id = r.id)
                  ORDER BY s.units DESC
-                """, (CHECK_SLUG,)
+                """, (("hd_effective_rent" + (f"_{SEGS[0]}" if SEGS[0] else "")),)
             )
         metros = cur.fetchall()
 
@@ -137,7 +135,11 @@ def main():
 
     zl = json.load(open("ziplists.json"))  # {code: [zip, ...]}
     total = 0
-    for code, label, units in metros:
+    for SEG in SEGS:
+      SEG_F = SEG_FILTERS[SEG] if SEG else [MF, AFF]
+      SUF = f"_{SEG}" if SEG else ""
+      print(f"=== segment: {SEG or 'all-in'} ===")
+      for code, label, units in metros:
         zips = zl.get(code)
         if not zips:
             print(f"  {code} {label[:40]:42} NO ZIP LIST - skipped")
