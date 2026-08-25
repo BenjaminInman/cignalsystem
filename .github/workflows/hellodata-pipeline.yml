@@ -19,6 +19,10 @@ on:
         description: "segment for chunk job: mkt|aff|stu|sen (chunk only)"
         required: false
         default: "mkt"
+      chunk_metros:
+        description: "explicit metro codes for chunk job (blank = auto-missing)"
+        required: false
+        default: ""
       fire_limit:
         description: "pending batch size (fire only)"
         required: false
@@ -94,6 +98,7 @@ jobs:
           HELLODATA_API_KEY: ${{ secrets.HELLODATA_API_KEY }}
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           HD_CHUNK_SEGMENT: ${{ github.event.inputs.chunk_segment || 'mkt' }}
+          HD_CHUNK_METROS: ${{ github.event.inputs.chunk_metros || '' }}
           HD_CHUNK: "60"
         run: python fire_hellodata_chunked.py
 

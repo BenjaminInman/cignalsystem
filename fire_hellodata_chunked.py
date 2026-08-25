@@ -98,24 +98,37 @@ def main():
     if not (key and db):
         sys.exit("ERROR: need HELLODATA_API_KEY and SUPABASE_DB_URL")
 
+    metros_env = [x.strip() for x in (os.environ.get("HD_CHUNK_METROS") or "").split(",") if x.strip()]
     conn = psycopg2.connect(db)
     conn.autocommit = True
     with conn.cursor() as cur:
-        cur.execute(
-            """
-            SELECT r.code, s.msa_label, s.units
-              FROM regions r
-              JOIN hd_metro_size s ON s.region_id = r.id
-             WHERE s.msa_label IS NOT NULL
-               AND r.retired_at IS NULL
-               AND NOT EXISTS (SELECT 1 FROM observations o
-                                 JOIN indicators i ON i.id = o.indicator_id
-                                WHERE i.source = 'HelloData'
-                                  AND i.slug = %s
-                                  AND o.region_id = r.id)
-             ORDER BY s.units DESC
-            """, (CHECK_SLUG,)
-        )
+        if metros_env:
+            # Explicit targets: fill ZIP-level gaps for oversized metros whose
+            # metro-level series exists but whose ZIP chunks partially dropped.
+            cur.execute(
+                """SELECT r.code, s.msa_label, s.units
+                     FROM regions r JOIN hd_metro_size s ON s.region_id = r.id
+                    WHERE s.msa_label IS NOT NULL AND r.retired_at IS NULL
+                      AND r.code = ANY(%s)
+                    ORDER BY s.units DESC""",
+                (metros_env,),
+            )
+        else:
+            cur.execute(
+                """
+                SELECT r.code, s.msa_label, s.units
+                  FROM regions r
+                  JOIN hd_metro_size s ON s.region_id = r.id
+                 WHERE s.msa_label IS NOT NULL
+                   AND r.retired_at IS NULL
+                   AND NOT EXISTS (SELECT 1 FROM observations o
+                                     JOIN indicators i ON i.id = o.indicator_id
+                                    WHERE i.source = 'HelloData'
+                                      AND i.slug = %s
+                                      AND o.region_id = r.id)
+                 ORDER BY s.units DESC
+                """, (CHECK_SLUG,)
+            )
         metros = cur.fetchall()
 
     if not metros:
