@@ -41,6 +41,42 @@ SYMBOLS = [
 ]
 
 
+def _closes(client, symbols, stype, start, end, id_to_sym):
+    """Fetch each symbol's two most recent closes. When id_to_sym is given, the
+    request is by instrument_id and results are keyed back to our ticker via it;
+    otherwise results are keyed by the raw_symbol Databento returns."""
+    data = client.timeseries.get_range(
+        dataset="EQUS.SUMMARY",
+        schema="ohlcv-1d",
+        symbols=symbols,
+        stype_in=stype,
+        stype_out="instrument_id",
+        start=start.isoformat(),
+        end=end.isoformat(),
+    )
+    df = data.to_df()
+    if df.empty:
+        return {}
+    df = df.reset_index()
+    df["date"] = df["ts_event"].dt.date
+    if id_to_sym is not None:
+        col = "instrument_id" if "instrument_id" in df.columns else "symbol"
+        df["_key"] = df[col].astype(str).map(id_to_sym)
+    else:
+        df["_key"] = df["symbol"]
+    out = {}
+    for sym, g in df.groupby("_key"):
+        if not isinstance(sym, str) or not sym:
+            continue
+        g = g.sort_values("date")
+        if len(g) < 2:
+            # only one session -> no prior close -> skip (donut needs a move)
+            continue
+        last, prev = g.iloc[-1], g.iloc[-2]
+        out[sym] = (last["date"], float(last["close"]), float(prev["close"]))
+    return out
+
+
 def latest_two_closes():
     """Return {symbol: (as_of_date, close, prev_close)} using the two most
     recent trading sessions available in EQUS.SUMMARY."""
@@ -49,28 +85,41 @@ def latest_two_closes():
     avail = client.metadata.get_dataset_range(dataset="EQUS.SUMMARY")
     end = dt.date.fromisoformat(avail["end"][:10])
     start = end - dt.timedelta(days=12)
-    data = client.timeseries.get_range(
-        dataset="EQUS.SUMMARY",
-        schema="ohlcv-1d",
-        symbols=SYMBOLS,
-        stype_in="raw_symbol",
-        stype_out="instrument_id",
-        start=start.isoformat(),
-        end=end.isoformat(),
-    )
-    df = data.to_df()  # to_df maps instrument_id back to 'symbol' via metadata
-    if df.empty:
-        raise RuntimeError("Databento returned no bars")
-    df = df.reset_index()
-    df["date"] = df["ts_event"].dt.date
-    out = {}
-    for sym, g in df.groupby("symbol"):
-        g = g.sort_values("date")
-        if len(g) < 2:
-            # a symbol with only one session: no prior close -> skip (donut needs a move)
-            continue
-        last, prev = g.iloc[-1], g.iloc[-2]
-        out[sym] = (last["date"], float(last["close"]), float(prev["close"]))
+
+    out = _closes(client, SYMBOLS, "raw_symbol", start, end, None)
+
+    # A symbol that's missing, or whose latest session is behind the dataset end,
+    # has usually rotated instrument_id -- its post-rotation bars stop mapping back
+    # under raw_symbol. Resolve those laggards to their current instrument_id(s)
+    # over the window and re-request by id so we recover the fresh sessions.
+    laggards = [s for s in SYMBOLS if s not in out or out[s][0] < end]
+    if laggards:
+        print(f"resolving laggards via symbology: {laggards}")
+        try:
+            res = client.symbology.resolve(
+                dataset="EQUS.SUMMARY",
+                symbols=laggards,
+                stype_in="raw_symbol",
+                stype_out="instrument_id",
+                start_date=start.isoformat(),
+                end_date=end.isoformat(),
+            )
+            id_to_sym = {}
+            for sym, ivs in (res.get("result") or {}).items():
+                for iv in ivs or []:
+                    iid = iv.get("s")
+                    if iid:
+                        id_to_sym[str(iid)] = sym
+            print(f"  resolved {len(id_to_sym)} instrument_id(s) for {len(laggards)} laggard(s)")
+            if id_to_sym:
+                fixed = _closes(client, list(id_to_sym), "instrument_id", start, end, id_to_sym)
+                for s, v in fixed.items():
+                    if s not in out or v[0] > out[s][0]:
+                        out[s] = v
+                print(f"  recovered current sessions for: {sorted(fixed)}")
+        except Exception as e:
+            print(f"  symbology fallback error: {e}")
+
     return out
 
 
