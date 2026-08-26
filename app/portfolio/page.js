@@ -302,6 +302,18 @@ function PortfolioInner() {
     if (openId === id) setOpenId(null);
   }
 
+  // Live submarket preview: re-pull the local-market benchmark when the property's
+  // ZIP / city / state changes (on blur), so the panel updates immediately without
+  // waiting for a Save. Only for already-saved assets — a brand-new property has no
+  // id to key the benchmark against yet, so it resolves on first save.
+  function previewBenchmark(propId, vals) {
+    if (!propId || propId === "new") return;
+    const zip = (vals?.zip || "").trim(), city = (vals?.city || "").trim(), state = (vals?.state || "").trim();
+    if (!(zip || city || state)) return;
+    fetch(`/api/portfolio/benchmark?zip=${encodeURIComponent(zip)}&city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}`, { cache: "no-store" })
+      .then((r) => r.json()).then((d) => setBenchmarks((b) => ({ ...b, [propId]: d }))).catch(() => {});
+  }
+
   const deriveLive = derive(snap);
 
   // ---------- render ----------
@@ -370,6 +382,7 @@ function PortfolioInner() {
             override={override} setOverride={setOverride}
             deriveLive={deriveLive}
             saving={saving} err={err} onSave={save}
+            onPreviewBenchmark={(vals) => previewBenchmark(openId, vals)}
           />
         </div>
       )}
@@ -457,8 +470,16 @@ function PortfolioInner() {
 }
 
 // ---------- editor ----------
-function Editor({ prop, setProp, snap, setSnap, month, loadMonth, snaps, override, setOverride, deriveLive, saving, err, onSave }) {
+function Editor({ prop, setProp, snap, setSnap, month, loadMonth, snaps, override, setOverride, deriveLive, saving, err, onSave, onPreviewBenchmark }) {
   const sp = (k) => (e) => setProp({ ...prop, [k]: e.target.value });
+  // Re-pull the local-market benchmark on blur of an identity field, so the panel
+  // previews the submarket immediately. Wait on an incomplete ZIP (1–4 digits);
+  // fire on a full 5-digit ZIP or a cleared ZIP (which reverts to metro-level).
+  const previewLocalMarket = () => {
+    const z = (prop.zip || "").trim();
+    if (z.length > 0 && z.length < 5) return;
+    onPreviewBenchmark?.({ zip: z, city: prop.city, state: prop.state });
+  };
   const ss = (k) => (e) => setSnap({ ...snap, [k]: e.target.value });
   const recorded = new Set((snaps || []).map((r) => r.snapshot_month?.slice(0, 7)));
   // Effective income honors a manual Total Income override; expenses is always the raw input.
@@ -540,9 +561,9 @@ function Editor({ prop, setProp, snap, setSnap, month, loadMonth, snaps, overrid
       {/* property block */}
       <Section title="Property" hint="City, State & ZIP set the local-market benchmark — the ZIP gives the sharpest submarket comparison.">
         <Field label="Property Name" wide><input value={prop.name} onChange={sp("name")} className="input" placeholder="e.g. The Maddox" /></Field>
-        <Field label="City"><input value={prop.city} onChange={sp("city")} className="input" /></Field>
-        <Field label="State"><input value={prop.state} onChange={sp("state")} className="input" maxLength={2} placeholder="TN" /></Field>
-        <Field label="ZIP" hint="drives the submarket benchmark"><input value={prop.zip} onChange={sp("zip")} className="input" maxLength={5} placeholder="37211" /></Field>
+        <Field label="City"><input value={prop.city} onChange={sp("city")} onBlur={previewLocalMarket} className="input" /></Field>
+        <Field label="State"><input value={prop.state} onChange={sp("state")} onBlur={previewLocalMarket} className="input" maxLength={2} placeholder="TN" /></Field>
+        <Field label="ZIP" hint="drives the submarket benchmark"><input value={prop.zip} onChange={sp("zip")} onBlur={previewLocalMarket} className="input" maxLength={5} placeholder="37211" /></Field>
         <Field label="Unit Count"><input type="number" value={prop.unit_count} onChange={sp("unit_count")} className="input" /></Field>
         <Field label="Class">
           <select value={prop.class} onChange={sp("class")} className="input">
