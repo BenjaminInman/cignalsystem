@@ -105,7 +105,7 @@ export async function GET(req) {
       market_name: marketName || (cbsa ? `Metro ${cbsa}` : null),
       cbsa, phase, rentGrowthY1, market, coverage, basis,
       zip_requested: zip || null,
-    });
+    }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   } catch (e) {
     console.error("[portfolio:benchmark]", e?.message);
     return Response.json({ error: "unavailable" }, { status: 500 });

@@ -126,7 +126,7 @@ function PortfolioInner() {
       setProperties(list);
       for (const p of list) {
         if (p.zip || p.city || p.state) {
-          fetch(`/api/portfolio/benchmark?zip=${encodeURIComponent(p.zip||"")}&city=${encodeURIComponent(p.city||"")}&state=${encodeURIComponent(p.state||"")}`)
+          fetch(`/api/portfolio/benchmark?zip=${encodeURIComponent(p.zip||"")}&city=${encodeURIComponent(p.city||"")}&state=${encodeURIComponent(p.state||"")}`, { cache: "no-store" })
             .then((r) => r.json()).then((d) => setBenchmarks((b) => ({ ...b, [p.id]: d }))).catch(() => {});
         }
       }
@@ -283,7 +283,7 @@ function PortfolioInner() {
         return cur;
       });
       // re-fetch this asset's local-market benchmark with the (possibly new) ZIP
-      fetch(`/api/portfolio/benchmark?zip=${encodeURIComponent(prop.zip||"")}&city=${encodeURIComponent(prop.city||"")}&state=${encodeURIComponent(prop.state||"")}`)
+      fetch(`/api/portfolio/benchmark?zip=${encodeURIComponent(prop.zip||"")}&city=${encodeURIComponent(prop.city||"")}&state=${encodeURIComponent(prop.state||"")}`, { cache: "no-store" })
         .then((r) => r.json()).then((d) => setBenchmarks((b) => ({ ...b, [propertyId]: d }))).catch(() => {});
 
       if (openId === "new") setOpenId(propertyId);
