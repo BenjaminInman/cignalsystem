@@ -171,7 +171,7 @@ export default function IndicesPage() {
         title="Housing Equity Complex"
         minTier="pro"
         wrapClass="mt-8"
-        blurb="The blended read across all 36 housing-economy names, split into sub-indices, with the divergence flag that fires when they stop agreeing. Unlock it with Cignal+."
+        blurb="The blended read across all 36 housing-economy names, split into sub-indices, with the divergence flag that fires when they stop agreeing. Unlock it with Cignal Pro."
       >
       <div className="card p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">

@@ -129,7 +129,7 @@ export default function IndicatorsPage() {
         hard
         minTier="pro"
         wrapClass="mt-8"
-        blurb="The proprietary lens at the core of the Cignal method — it organizes every signal into layered rings so you can read the cycle from the outside in. Unlock it with Cignal+."
+        blurb="The proprietary lens at the core of the Cignal method — it organizes every signal into layered rings so you can read the cycle from the outside in. Unlock it with Cignal Pro."
       >
         <OnionFramework active={layer} onSelect={setLayer} counts={layerCounts} countText={countText} />
       </PaywallBlur>
