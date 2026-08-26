@@ -184,6 +184,16 @@ def main():
     # One refresh for the whole batch. Refreshing per-file would serialise ~400
     # concurrent refreshes of a half-million-row view and take all night.
     if ok and do_refresh:
+        # Derive metro-level rollups from ZIP data for any metro missing a native
+        # rollup (giants that cap out the metro export, plus small metros) so the
+        # metro grain is complete. Units-weighted, gap-filling (never overwrites a
+        # native metro value). Runs before the refresh so derived rows land in the mv.
+        print("deriving metro rollups from ZIP data …")
+        with conn.cursor() as cur:
+            cur.execute("SET statement_timeout = 0")
+            cur.execute("SELECT public.hd_derive_metro_rollups();")
+            derived = cur.fetchone()[0]
+        print(f"derived {derived} metro-rollup rows.")
         print("refreshing mv_indicator_analytics …")
         with conn.cursor() as cur:
             cur.execute("SET statement_timeout = 0")
