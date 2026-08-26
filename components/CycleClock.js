@@ -156,7 +156,7 @@ export default function CycleClock() {
             <div className="flex-1 min-w-[240px]">
               {sel ? (
                 <div className="mb-5 rounded-lg border border-[var(--line)] bg-bg/40 p-4">
-                  <p className="headline text-lg">{sel.label} {sel.ring === "local" && <span className="mono ml-1 text-[10px] tracking-[0.1em] text-signal">LOCAL · {sel.grain}</span>}</p>
+                  <p className="headline text-lg">{sel.label} {sel.ring === "local" && <span className="mono ml-1 text-[10px] tracking-[0.1em] text-signal">LOCAL · {sel.grain}{sel.src ? ` · ${sel.src}` : ""}</span>}</p>
                   <p className="text-2xl font-semibold">{sel.value}<span className="ml-1 text-[13px] text-muted">{sel.unit}</span></p>
                   <p className="mono mt-1 text-[11.5px] text-muted">{CLS_LABEL[sel.cls]} · in <b style={{ color: phaseByKey(sel.phase).txt }}>{phaseByKey(sel.phase).label}</b> · {sel.trajectory} · norm {sel.norm}{sel.unit === "%" || sel.unit.includes("%") ? "" : ""}</p>
                   {sel.trail && sel.trail.length > 1 && (
