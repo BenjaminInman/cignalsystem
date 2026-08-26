@@ -29,7 +29,7 @@ const BASKET = [
   { slug: "permits_5plus", label: "Permits (5+ units)", kind: "leading", unit: "K SAAR", pct: true, good: "down" },
   { slug: "yield_spread", label: "Yield Curve (10y–3mo)", kind: "leading", unit: "pp", pct: false, good: "up" },
   { slug: "cli_oecd", label: "OECD Leading Index", kind: "leading", unit: "index", pct: false, good: "up" },
-  { slug: "consumer_sentiment", label: "Consumer Sentiment", kind: "leading", unit: "index", pct: false, good: "up" },
+  { slug: "umich_sentiment_direct", label: "Consumer Sentiment", kind: "leading", unit: "index", pct: false, good: "up" },
   { slug: "employment", label: "Payroll Employment", kind: "leading", unit: "K", pct: false, good: "up" },
   { slug: "rental_vacancy", label: "Rental Vacancy", kind: "trailing", unit: "%", pct: false, good: "down" },
   { slug: "zori_national_mf", label: "Multifamily Rent (ZORI)", kind: "trailing", unit: "$", pct: true, good: "up" },
