@@ -50,28 +50,44 @@ export async function GET(req) {
       }
     }
 
+    // Read the analytics view directly (like the Cycle Clock) rather than via the
+    // hd_analytics RPC: that RPC gates on auth.uid(), which does not resolve through
+    // the SSR route-handler client, so it silently returned empty and the market
+    // column came back blank. The endpoint has already gated the user to Pro above,
+    // and the disclosure floors are re-applied per-region in pullPreferMkt below.
     const pull = async (regionType, regionCode, slugs) => {
-      const { data: hd } = await supabase.rpc("hd_analytics", { p_slugs: slugs, p_region_type: regionType, p_region_code: regionCode, p_limit: slugs.length * 6 });
+      const { data: rows } = await supabase
+        .from("v_indicator_analytics")
+        .select("slug,obs_date,value")
+        .in("slug", slugs)
+        .eq("region_type", regionType)
+        .eq("region_code", regionCode)
+        .order("obs_date", { ascending: false })
+        .limit(slugs.length * 6);
       const latest = {};
-      for (const r of hd || []) { const b = BASE[r.slug]; if (!b) continue; if (!latest[b] || r.obs_date > latest[b].date) latest[b] = { date: r.obs_date, value: r.value == null ? null : Number(r.value) }; }
+      for (const r of rows || []) { const b = BASE[r.slug]; if (!b) continue; if (!latest[b] || r.obs_date > latest[b].date) latest[b] = { date: r.obs_date, value: r.value == null ? null : Number(r.value) }; }
       return latest;
     };
-    // market-rate first, all-in fallback. Per-segment disclosure floor: only
-    // serve market-rate at ZIP level when that ZIP clears the market-rate floor
-    // (>=3 market-rate properties, no single property >50% of units). A thin
-    // ZIP falls back to the all-in blend, which has its own floor.
+    // market-rate first, all-in fallback. Disclosure floors apply only at ZIP level
+    // (metros aggregate thousands of properties): market-rate needs the per-segment
+    // floor; the all-in blend needs the region coverage floor. Metros are unfloored.
     const pullPreferMkt = async (regionType, regionCode) => {
-      let mktAllowed = true;
+      let mktAllowed = true, allinAllowed = true;
       if (regionType === "zip") {
         const { data: pub } = await supabase.rpc("hd_segment_publishable", { p_zip: regionCode, p_segment: "mkt" });
         mktAllowed = pub === true;
+        const { data: cov } = await supabase.rpc("hd_coverage", { p_zip: regionCode });
+        const covRow = Array.isArray(cov) ? cov[0] : cov;
+        allinAllowed = !!(covRow && covRow.publishable);
       }
       if (mktAllowed) {
         const m = await pull(regionType, regionCode, MKT_SLUGS);
         if (m.asking_rent || m.leased_pct) return { latest: m, basis: "market-rate" };
       }
-      const a = await pull(regionType, regionCode, ALLIN_SLUGS);
-      if (a.asking_rent || a.leased_pct) return { latest: a, basis: "all-in" };
+      if (allinAllowed) {
+        const a = await pull(regionType, regionCode, ALLIN_SLUGS);
+        if (a.asking_rent || a.leased_pct) return { latest: a, basis: "all-in" };
+      }
       return null;
     };
 
