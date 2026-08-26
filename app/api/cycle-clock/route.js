@@ -30,6 +30,21 @@ async function sb(path) {
   return r.ok ? r.json() : null;
 }
 
+async function rpcBool(fn, args) {
+  try {
+    const r = await fetch(`${SUPA}/rest/v1/rpc/${fn}`, {
+      method: "POST",
+      headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
+      cache: "no-store",
+      body: JSON.stringify(args),
+    });
+    if (!r.ok) return false;
+    return (await r.json()) === true;
+  } catch {
+    return false;
+  }
+}
+
 // Look back ~5 years so every frequency forms multiple quarters: daily series
 // (Treasury) aren't truncated to a couple months, and annual series (county GDP)
 // still return several points.
@@ -107,13 +122,26 @@ const LOCAL_CONFIG = {
   gdp:     { slug: "gdp_local",     label: "Local GDP",     cls: "coincident", unit: "% YoY", polarity: 1,  basis: "yoyPct" },
 };
 
-async function rentLadder(zip, xw) {
+async function rentLadder(zip, xw, cbsa) {
+  // Prefer HelloData conventional MARKET-RATE effective rent (net of concessions
+  // — a sharper cycle signal than list rent), respecting the per-segment
+  // disclosure floor at ZIP level. Fall back to metro market-rate, then ZORI for
+  // ZIPs HelloData doesn't cover, so every market still gets a rent signal.
+  const pub = await rpcBool("hd_segment_publishable", { p_zip: zip, p_segment: "mkt" });
+  if (pub) {
+    const z = await hist("hd_effective_rent_mkt", zip);
+    if (z.length) return { rows: z, grain: "ZIP", src: "HelloData market-rate" };
+  }
+  if (cbsa) {
+    const m = await hist("hd_effective_rent_mkt", cbsa);
+    if (m.length) return { rows: m, grain: "Metro", src: "HelloData market-rate" };
+  }
   const z = await hist("zori_zip", zip);
-  if (z.length) return { rows: z, grain: "ZIP" };
+  if (z.length) return { rows: z, grain: "ZIP", src: "ZORI" };
   for (const [slug, code, grain] of [["zori_city", xw?.city_label, "City"], ["zori_county", xw?.county_label, "County"], ["zori_metro_mf", xw?.metro_label, "Metro"]]) {
     if (!code) continue;
     const rs = await hist(slug, code);
-    if (rs.length) return { rows: rs, grain };
+    if (rs.length) return { rows: rs, grain, src: "ZORI" };
   }
   return null;
 }
@@ -126,7 +154,7 @@ async function localIndicators(zip) {
   let metroName = null;
   if (cbsa) metroName = (await sb(`regions?code=eq.${cbsa}&region_type=eq.metro&select=name&limit=1`))?.[0]?.name || null;
 
-  const rent = await rentLadder(zip, xw);
+  const rent = await rentLadder(zip, xw, cbsa);
   const [vac, jobs, unemp, wages, gdp] = await Promise.all([
     cbsa ? hist("apt_vacancy", cbsa) : Promise.resolve(null),
     cbsa ? hist("bls_metro_employment", cbsa) : Promise.resolve(null),
@@ -136,11 +164,11 @@ async function localIndicators(zip) {
   ]);
 
   const out = [];
-  const push = (rows, key, grain) => {
+  const push = (rows, key, grain, src) => {
     const ind = buildIndicator(rows, { ...LOCAL_CONFIG[key], ring: "local", norm: null, grain });
-    if (ind) out.push(ind);
+    if (ind) { if (src) ind.src = src; out.push(ind); }
   };
-  if (rent) push(rent.rows, "rent", rent.grain);
+  if (rent) push(rent.rows, "rent", rent.grain, rent.src);
   push(vac, "vacancy", "Metro");
   push(jobs, "jobs", "Metro");
   push(unemp, "unemp", "Metro");
