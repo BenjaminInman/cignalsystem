@@ -29,7 +29,7 @@ DBN_KEY = os.environ["DATABENTO_API_KEY"]
 # 34 exchange-listed tickers. EXPI -> AGNT (eXp World Holdings renamed May 2026).
 SYMBOLS = [
     # Home Builders
-    "PHM", "DHI", "LEN", "TMHC", "KBH", "TOL", "LGIH", "CCS", "NVR",
+    "PHM", "DHI", "LEN", "KBH", "TOL", "LGIH", "CCS", "NVR",
     # Home Improvement
     "HD", "LOW", "FND", "FAST", "BLDR",
     # Lenders (FNMA/FMCC handled separately as GSE signals)
@@ -37,7 +37,9 @@ SYMBOLS = [
     # Brokerages / CRE services
     "CBRE", "JLL", "COMP", "AGNT", "CWK", "MMI", "CIGI", "NMRK",
     # Residential REITs
-    "EQR", "CPT", "ESS", "AVB", "MAA", "UDR", "IRT", "NXRT",
+    # VMRK = Vivmark Residential, the Aug-2026 AvalonBay(AVB)+Equity Residential(EQR)
+    # merger of equals; AVB retired, EQR renamed/re-tickered to VMRK on 2026-08-18.
+    "VMRK", "CPT", "ESS", "MAA", "UDR", "IRT", "NXRT",
 ]
 
 
