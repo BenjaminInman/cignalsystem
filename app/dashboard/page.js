@@ -39,6 +39,14 @@ function DashboardInner() {
     createClient().auth.getUser().then(({ data }) => setEmail(data.user?.email || ""));
   }, []);
 
+  // Welcome-email backstop: if the signup-time send was dropped (e.g. cancelled on
+  // a fast redirect), this idempotent call catches it on first dashboard load. The
+  // route resolves the address from the session and the send is once-per-user
+  // server-side, so it can't double-send an already-welcomed member.
+  useEffect(() => {
+    fetch("/api/email/welcome", { method: "POST", keepalive: true }).catch(() => {});
+  }, []);
+
   return (
     <div className="pt-12 pb-16">
       <p className="kicker mb-3 flex items-center gap-2">

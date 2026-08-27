@@ -54,12 +54,23 @@ export default function AuthForm({ mode }) {
         });
         if (error) throw error;
         if (data.session) {
-          // Fire-and-forget: send the one-time welcome, never block the redirect.
-          fetch("/api/email/welcome", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email }),
-          }).catch(() => {});
+          // Send the one-time welcome reliably. `keepalive` lets the request
+          // survive the navigation below (a plain fire-and-forget gets cancelled
+          // by the browser on redirect on slow connections, dropping the email);
+          // the awaited race gives it a moment to reach the server but never
+          // blocks the redirect more than ~2.5s. Idempotent, so the dashboard
+          // backstop can't double-send.
+          try {
+            await Promise.race([
+              fetch("/api/email/welcome", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email }),
+                keepalive: true,
+              }),
+              new Promise((resolve) => setTimeout(resolve, 2500)),
+            ]);
+          } catch {}
           router.push(next);
           router.refresh();
         } else {
