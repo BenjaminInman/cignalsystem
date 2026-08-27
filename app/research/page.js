@@ -95,6 +95,7 @@ function ResearchInner() {
               <CanaryMark size={30} className="text-bg" title="Canary" />
             </span>
             <h1 className="headline text-4xl text-ink md:text-5xl">Canary</h1>
+            <span className="mono self-center rounded border border-signal/50 px-1.5 py-0.5 text-[10px] font-medium tracking-[0.18em] text-signal" title="Canary is in beta — we're expanding what it can read as we grow.">BETA</span>
           </div>
           <p className="mt-5 text-muted">
             Canary is the original leading indicator &mdash; the signal that sounds before the trouble shows.
