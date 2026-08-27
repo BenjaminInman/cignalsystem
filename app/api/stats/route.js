@@ -15,7 +15,10 @@ export const revalidate = 1800;
 // stale count beats an empty one on a page whose entire job is to convey scale,
 // and these numbers move slowly enough that stale is nearly indistinguishable
 // from current.
-let lastGood = null;
+// Seeded with a recent real snapshot so a cold serverless instance (fresh module
+// memory) still returns real numbers on the rare fetch failure, instead of null.
+// Overwritten by the first successful live fetch. Counts move slowly; stale is fine.
+let lastGood = { mf_metro_count: 671, zip_count: 11142, obs_count: 8715606 };
 
 export async function GET() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

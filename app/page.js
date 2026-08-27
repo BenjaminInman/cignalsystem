@@ -136,20 +136,22 @@ export default function Home() {
   // couldn't trace. The leading/coincident/trailing divergence read lives in the
   // dashboard/training instead, where it can be explained.
   useEffect(() => {
+    // The strip must never blank. INDICATORS TRACKED is client-side (the length
+    // of the tab), so it renders immediately. The DB-derived counts fall back to
+    // recent real values when /api/stats hasn't answered yet or fails — a slightly
+    // stale count beats an empty one on a strip whose whole job is to convey scale.
+    const applyStats = (s) => setStats([
+      { label: "INDICATORS TRACKED", value: String(INDICATORS.length || 0), unit: "live", tone: "signal" },
+      { label: "MULTIFAMILY MARKETS", value: String(s?.mf_metro_count ?? 671), unit: "metros", tone: "ink" },
+      { label: "ZIP CODES", value: fmtK(s?.zip_count ?? 11142), unit: "tracked", tone: "ink" },
+      { label: "DATA POINTS", value: fmtK(s?.obs_count ?? 8700000), unit: "live", tone: "signal" },
+    ]);
+    applyStats(null); // paint real numbers right away; the fetch refreshes the DB counts
     fetch("/api/stats")
       .then((r) => r.json())
-      .then((d) => {
-        const s = d?.stats;
-        if (!s) return;
-        setStats([
-          { label: "INDICATORS TRACKED", value: String(INDICATORS.length || 0), unit: "live", tone: "signal" },
-          { label: "MULTIFAMILY MARKETS", value: String(s.mf_metro_count ?? 0), unit: "metros", tone: "ink" },
-          { label: "ZIP CODES", value: fmtK(s.zip_count ?? 0), unit: "tracked", tone: "ink" },
-          { label: "DATA POINTS", value: fmtK(s.obs_count ?? 0), unit: "live", tone: "signal" },
-        ]);
-      })
+      .then((d) => { if (d?.stats) applyStats(d.stats); })
       .catch(() => {});
-  }, []);
+  }, [INDICATORS.length]);
 
   const [latestNews, setLatestNews] = useState(NEWS.slice(0, 3));
   useEffect(() => {
