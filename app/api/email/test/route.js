@@ -8,6 +8,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { sendEmail, isEmailConfigured } from "@/lib/email/resend";
+import { welcomeEmailHtml, WELCOME_SUBJECT } from "@/lib/email/templates";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export async function POST() {
 
   const { data: prof } = await supabase
     .from("profiles")
-    .select("is_admin, email")
+    .select("is_admin, email, full_name")
     .eq("id", user.id)
     .single();
 
@@ -39,13 +40,15 @@ export async function POST() {
     );
   }
 
-  // Pre-domain-verification constraints: from = onboarding@resend.dev,
-  // to = your Resend account email (the admin's own address).
+  // Send the ACTUAL welcome template from the verified domain, so this smoke test
+  // doubles as a true preview of what a new member receives. Lands in the admin's
+  // own inbox.
   const result = await sendEmail({
-    from: "onboarding@resend.dev",
+    from: "Cignal System <noreply@cignalsystem.com>",
     to: prof.email || user.email,
-    subject: "Cignal System — Resend test",
-    html: "<p>Resend is wired into the app. <strong>Sending works.</strong></p>",
+    subject: `[TEST] ${WELCOME_SUBJECT}`,
+    html: welcomeEmailHtml(prof.full_name || null),
+    replyTo: "ben@benjamininman.com",
   });
 
   return NextResponse.json(result, { status: result.ok ? 200 : 502 });
