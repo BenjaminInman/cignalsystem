@@ -56,16 +56,13 @@ export async function GET(req) {
     // column came back blank. The endpoint has already gated the user to Pro above,
     // and the disclosure floors are re-applied per-region in pullPreferMkt below.
     const pull = async (regionType, regionCode, slugs) => {
-      const { data: rows } = await supabase
-        .from("v_indicator_analytics")
-        .select("slug,obs_date,value")
-        .in("slug", slugs)
-        .eq("region_type", regionType)
-        .eq("region_code", regionCode)
-        .order("obs_date", { ascending: false })
-        .limit(slugs.length * 6);
+      // Read via a SECURITY DEFINER RPC (owner-run) rather than a direct PostgREST
+      // table read. The direct read proved flaky through the route client — it would
+      // intermittently return empty while raw SQL and RPC calls returned the data,
+      // blanking the market column. The RPC returns one latest row per slug.
+      const { data: rows } = await supabase.rpc("hd_benchmark", { p_region_type: regionType, p_region_code: regionCode, p_slugs: slugs });
       const latest = {};
-      for (const r of rows || []) { const b = BASE[r.slug]; if (!b) continue; if (!latest[b] || r.obs_date > latest[b].date) latest[b] = { date: r.obs_date, value: r.value == null ? null : Number(r.value) }; }
+      for (const r of rows || []) { const b = BASE[r.slug]; if (!b) continue; latest[b] = { date: r.obs_date, value: r.value == null ? null : Number(r.value) }; }
       return latest;
     };
     // market-rate first, all-in fallback. Disclosure floors apply only at ZIP level
