@@ -136,7 +136,7 @@ def pending_metros(cur, mode, limit):
     return cur.fetchall()
 
 
-def pending_metros_seg(cur, limit, check_slug="hd_effective_rent_mkt"):
+def pending_metros_seg(cur, limit, check_slug="hd_effective_rent_mkt", month=None):
     """Metros still lacking SEGMENTED data, largest first, not fired in 20h.
 
     Every metro already has the all-in series from the original backfill, so the
@@ -154,7 +154,8 @@ def pending_metros_seg(cur, limit, check_slug="hd_effective_rent_mkt"):
            AND NOT EXISTS (
                  SELECT 1 FROM observations o
                    JOIN indicators i ON i.id = o.indicator_id
-                  WHERE i.slug = %s AND o.region_id = r.id)
+                  WHERE i.slug = %s AND o.region_id = r.id
+                    AND o.obs_date >= COALESCE(%s::date, '1900-01-01'::date))
            AND NOT EXISTS (
                  SELECT 1 FROM hd_fired f
                   WHERE f.region_id = r.id
@@ -162,7 +163,7 @@ def pending_metros_seg(cur, limit, check_slug="hd_effective_rent_mkt"):
          ORDER BY COALESCE(s.units, -1) DESC, r.name
          LIMIT %s
         """,
-        (check_slug, limit),
+        (check_slug, month, limit),
     )
     return cur.fetchall()
 
@@ -183,7 +184,7 @@ def fire(key, name, scopes, filters, webhook, limit=500000):
     return r.status_code, j
 
 
-def fire_batch(conn2, key, webhook, metros, which, seg_list, nap):
+def fire_batch(conn2, key, webhook, metros, which, seg_list, nap, skip_zip=frozenset()):
     """Fire one pass over `metros`. Returns (fired, capped). `capped` is True if
     HelloData's 10-concurrent-export cap was hit and could not be cleared with
     backoff - the caller should wait before the next pass."""
@@ -192,7 +193,7 @@ def fire_batch(conn2, key, webhook, metros, which, seg_list, nap):
         label = hd_label(name)
         mkt = {"column": "msa", "filter": {"equals": label}}
         grains = []
-        if which in ("zip", "both"):
+        if which in ("zip", "both") and code not in skip_zip:
             grains.append(("zip", [{"column": "zip_code"}, {"column": "as_of_month"}] + AVGS))
         if which in ("metro", "both"):
             grains.append(("metro", [{"column": "msa"}, {"column": "as_of_month"}] + AVGS))
@@ -238,6 +239,10 @@ def main():
     nap = float(os.environ.get("HD_FIRE_SLEEP") or "3")
     which = os.environ.get("HD_FIRE_MODE") or "both"
     segments = [x.strip() for x in (os.environ.get("HD_FIRE_SEGMENTS") or "").split(",") if x.strip()]
+    # Monthly refresh: a metro stays pending until it has data for this month
+    # (YYYY-MM-01). Blank = original backfill semantics (pending until ANY data).
+    refresh = (os.environ.get("HD_REFRESH_MONTH") or "").strip() or None
+    zip_cap = int(os.environ.get("HD_ZIP_UNIT_CAP") or "500000")
     metros_env = [x.strip() for x in (os.environ.get("HD_FIRE_METROS") or "").split(",") if x.strip()]
     loop = os.environ.get("HD_FIRE_LOOP") == "1"
     budget_min = float(os.environ.get("HD_FIRE_MINUTES") or "330")
@@ -247,7 +252,17 @@ def main():
 
     conn2 = psycopg2.connect(db)
     conn2.autocommit = True
-    seg_list = segments if segments else [None]  # None = existing all-in series
+    # None = existing all-in series; token "all" lets a run mix all-in + segments.
+    seg_list = [None if x == "all" else x for x in segments] if segments else [None]
+    skip_zip = frozenset()
+    if refresh:
+        # Oversized metros silently drop ZIP-grain exports; their ZIPs go through
+        # fire_hellodata_chunked.py instead. Metro grain is still fired here.
+        with conn2.cursor() as cur:
+            cur.execute("""SELECT r.code FROM regions r JOIN hd_metro_size s ON s.region_id=r.id
+                            WHERE r.region_type='metro' AND s.units > %s""", (zip_cap,))
+            skip_zip = frozenset(c for (c,) in cur.fetchall())
+        print(f"refresh month {refresh}; ZIP grain skipped for {len(skip_zip)} oversized metro(s): {sorted(skip_zip)}")
 
     # ---- Continuous loop -------------------------------------------------
     # Keep HelloData's export cap saturated until the pending list is empty or
@@ -280,13 +295,13 @@ def main():
                         (metros_env,))
                     batch = cur.fetchall()
                 elif segments:
-                    batch = pending_metros_seg(cur, limit)
+                    batch = pending_metros_seg(cur, limit, month=refresh)
                 else:
                     batch = pending_metros(cur, which, limit)
             if not batch:
                 print("nothing pending — complete (targeted or national)")
                 break
-            fired, capped = fire_batch(conn2, key, webhook, batch, which, seg_list, nap)
+            fired, capped = fire_batch(conn2, key, webhook, batch, which, seg_list, nap, skip_zip)
             total += fired
             if capped or fired == 0:
                 # cap full (or this batch is all inside the 20h guard); let
@@ -309,7 +324,7 @@ def main():
                               AND r.code = ANY(%s)""", (metros_env,))
             metros = cur.fetchall()
         elif segments:
-            metros = pending_metros_seg(cur, limit)
+            metros = pending_metros_seg(cur, limit, month=refresh)
         else:
             metros = pending_metros(cur, which, limit)
 
@@ -319,7 +334,7 @@ def main():
         return
 
     print(f"firing {len(metros)} metro(s), mode={which}, segments={seg_list}")
-    fired, _ = fire_batch(conn2, key, webhook, metros, which, seg_list, nap)
+    fired, _ = fire_batch(conn2, key, webhook, metros, which, seg_list, nap, skip_zip)
     conn2.close()
     print(f"fired {fired} export(s). They will arrive at the webhook and be queued in hd_deliveries.")
 

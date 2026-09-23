@@ -47,7 +47,9 @@ AVGS = [
 ]
 def _eq(c, v): return {"column": c, "filter": {"equals": v}}
 # One or more segments, comma-separated. "" = all-in.
-SEGS = [x.strip() for x in (os.environ.get("HD_CHUNK_SEGMENT") or "").split(",") if x.strip()] or [""]
+# Token "all" = the all-in series, so one run can refresh all-in + every segment.
+SEGS = [("" if x.strip() == "all" else x.strip())
+        for x in (os.environ.get("HD_CHUNK_SEGMENT") or "").split(",") if x.strip()] or [""]
 SEG_FILTERS = {
     "mkt": [MF, _eq("is_affordable", False), _eq("is_student", False), _eq("is_senior", False)],
     "aff": [MF, _eq("is_affordable", True)],

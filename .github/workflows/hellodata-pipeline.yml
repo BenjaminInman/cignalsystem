@@ -43,6 +43,10 @@ on:
         description: "1 = continuous loop, 0 = single pass (fire only)"
         required: false
         default: "0"
+      refresh_month:
+        description: "monthly refresh: re-fire metros lacking this month, YYYY-MM-01 (fire only; blank = backfill)"
+        required: false
+        default: ""
       drain_limit:
         description: "deliveries to ingest (drain only)"
         required: false
@@ -79,13 +83,14 @@ jobs:
           HD_FIRE_SEGMENTS: ${{ github.event_name == 'schedule' && 'mkt,aff,stu,sen' || (github.event.inputs.fire_segments || '') }}
           HD_FIRE_LOOP: ${{ github.event_name == 'schedule' && '1' || (github.event.inputs.fire_loop || '0') }}
           HD_FIRE_MINUTES: "348"
+          HD_REFRESH_MONTH: ${{ github.event.inputs.refresh_month || '' }}
         run: python fire_hellodata.py
 
   chunk:
     if: >-
       github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'chunk'
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 350
     concurrency:
       group: hellodata-fire
       cancel-in-progress: false
