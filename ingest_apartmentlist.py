@@ -16,7 +16,11 @@ import pandas as pd, psycopg2, requests
 from psycopg2.extras import execute_values
 
 PAGE = "https://www.apartmentlist.com/research/category/data-rent-estimates"
-UA = {"User-Agent": "Mozilla/5.0 (cignal-bot; +https://cignalsystem.com)"}
+UA = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+}
 SERIES = [
     ("apt_rent_estimate",  r"Apartment_List_Rent_Estimates_(\d{4})_(\d{2})\.csv", 1.0,   "overall"),
     ("apt_vacancy",        r"Apartment_List_Vacancy_Index_(\d{4})_(\d{2})\.csv",  100.0, None),
@@ -25,8 +29,11 @@ SERIES = [
 
 
 def find_urls():
-    html = requests.get(PAGE, headers=UA, timeout=60).text
-    links = set(re.findall(r'(?:https:)?//(?:assets|downloads)\.ctfassets\.net/[^"\'\s<>]+?\.csv', html))
+    r = requests.get(PAGE, headers=UA, timeout=60)
+    html = r.text.replace("\\u002F", "/").replace("\\/", "/")
+    links = set(re.findall(r'(?:https:)?//(?:assets|downloads)\.ctfassets\.net/[^"\'\s<>\\]+?\.csv', html))
+    if not links:
+        print(f"page fetch: HTTP {r.status_code}, {len(r.text):,} bytes; head: {r.text[:300]!r}")
     out = {}
     for slug, pat, *_ in SERIES:
         hits = sorted(((m.group(1) + m.group(2), l) for l in links if (m := re.search(pat, l))), reverse=True)
