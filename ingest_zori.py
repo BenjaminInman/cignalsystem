@@ -169,6 +169,9 @@ def main():
     conn = psycopg2.connect(db_url); conn.autocommit = False
     try:
         with conn.cursor() as cur:
+            # zori_zip is ~460K rows; the insert-if-changed lateral join exceeds the
+            # role's default statement_timeout and rolled back the Aug + Sep 2026 runs.
+            cur.execute("SET LOCAL statement_timeout = 0")
             for s in SERIES:
                 print(f"\n[{s['slug']}]")
                 long = download_and_melt(s["url"], s.get("region_filter"), s.get("code_override"), s.get("code_with_state", False))

@@ -1,0 +1,26 @@
+name: Ingest Apartment List
+
+# Apartment List posts the prior month's rent / vacancy / time-on-market CSVs
+# around month-end. Run early in the month with a retry; insert-if-changed makes
+# re-runs no-ops.
+on:
+  schedule:
+    - cron: "0 14 3 * *"
+    - cron: "0 14 10 * *"
+    - cron: "0 14 20 * *"
+  workflow_dispatch: {}
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install deps
+        run: pip install pandas psycopg2-binary requests
+      - name: Run ingestion
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: python ingest_apartmentlist.py

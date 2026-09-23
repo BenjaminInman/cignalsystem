@@ -158,6 +158,9 @@ def load_series(cur, ind_id, region_id, rows, release):
     Writes nothing when the value is unchanged, so a normal month only touches
     the one new observation even though we re-read the full history every run.
     """
+    # One transaction spans all three series, so ON COMMIT DROP never fires between
+    # them; drop explicitly or the 2nd series fails with DuplicateTable.
+    cur.execute("DROP TABLE IF EXISTS stage")
     cur.execute("CREATE TEMP TABLE stage (obs_date date, value numeric) ON COMMIT DROP")
     execute_values(cur, "INSERT INTO stage (obs_date, value) VALUES %s",
                    [(r.obs_date, float(r.value)) for r in rows.itertuples(index=False)])

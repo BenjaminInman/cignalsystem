@@ -116,12 +116,12 @@ def main():
 
             cur.execute(
                 "SELECT o.indicator_id, o.region_id, o.obs_date, o.value, o.revision "
-                "FROM observations o WHERE o.indicator_id = ANY(%s) AND o.revision=0",
+                "FROM observations o WHERE o.indicator_id = ANY(%s::uuid[]) AND o.revision=0",
                 (list(ids.values()),))
             rev0 = {(i, r, d): v for i, r, d, v, _ in cur.fetchall()}
             cur.execute(
                 "SELECT indicator_id, region_id, obs_date, MAX(revision) FROM observations "
-                "WHERE indicator_id = ANY(%s) GROUP BY 1,2,3", (list(ids.values()),))
+                "WHERE indicator_id = ANY(%s::uuid[]) GROUP BY 1,2,3", (list(ids.values()),))
             maxrev = {(i, r, d): mr for i, r, d, mr in cur.fetchall()}
 
             release = dt.date.today()
