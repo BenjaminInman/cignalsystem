@@ -1,5 +1,7 @@
 export const runtime = "nodejs";
-export const revalidate = 3600;
+// Timed ISR on route handlers stopped regenerating in production (served build-time data for weeks).
+// Render per request; the inner fetch() calls keep their own revalidate windows to cap upstream load.
+export const dynamic = "force-dynamic";
 
 
 // Rent series: the multifamily vertical reads Zillow's multifamily-only ZORI cut.

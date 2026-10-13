@@ -12,7 +12,9 @@ const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SB_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export const runtime = "nodejs";
-export const revalidate = 3600;
+// Timed ISR on route handlers stopped regenerating in production (served build-time data for weeks).
+// Render per request; the inner fetch() calls keep their own revalidate windows to cap upstream load.
+export const dynamic = "force-dynamic";
 
 // Delinquency (monthly) and new business volume (quarterly) are separate
 // constructs -- how the book is holding up vs how much they're lending -- so

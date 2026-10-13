@@ -1,5 +1,8 @@
+import { yearAgo as yearAgoByDate } from "@/lib/yoy";
 export const runtime = "nodejs";
-export const revalidate = 1800;
+// Timed ISR on route handlers stopped regenerating in production (served build-time data for weeks).
+// Render per request; the inner fetch() calls keep their own revalidate windows to cap upstream load.
+export const dynamic = "force-dynamic";
 
 const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SB_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -61,7 +64,11 @@ async function fetchSeries(indicatorId, regionId) {
 function buildItem(cfg, rows) {
   const latest = rows[0];
   const prior = rows[1];
-  const yearAgo = rows[12] || rows[rows.length - 1];
+  // Year-ago is matched by date via lib/yoy (row offsets break on gaps such as
+  // the never-published Oct-2025 CPI, which inflated CPI YoY here).
+  const asDated = (rs) => rs.map((r) => ({ date: String(r.obs_date), value: parseFloat(r.value) }));
+  const yearAgo = yearAgoByDate(asDated(rows));
+  const priorYearAgo = prior ? yearAgoByDate(asDated(rows.slice(1))) : null;
   const v = parseFloat(latest.value);
   const p = prior ? parseFloat(prior.value) : null;
   const ya = yearAgo ? parseFloat(yearAgo.value) : null;
@@ -70,7 +77,7 @@ function buildItem(cfg, rows) {
   if (cfg.show === "yoy" && ya) {
     const yoy = ((v - ya) / ya) * 100;
     value = `${yoy >= 0 ? "+" : ""}${yoy.toFixed(1)}%`;
-    if (p) { const pyoy = ((p - parseFloat(rows[13]?.value || rows[rows.length - 1].value)) / parseFloat(rows[13]?.value || rows[rows.length - 1].value)) * 100; dir = yoy > pyoy ? "up" : yoy < pyoy ? "down" : "flat"; }
+    if (p != null && priorYearAgo) { const pya = parseFloat(priorYearAgo.value); const pyoy = ((p - pya) / pya) * 100; dir = yoy > pyoy ? "up" : yoy < pyoy ? "down" : "flat"; }
     change = "YoY";
   } else if (cfg.show === "mom_k") {
     value = p != null ? `${v - p >= 0 ? "+" : ""}${Math.round(v - p)}K` : `${Math.round(v)}K`;
