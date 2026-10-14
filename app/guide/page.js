@@ -11,7 +11,7 @@ export const metadata = {
 const VIDEO = "/media/terminal-walkthrough.mp4";
 const POSTER = "/media/terminal-walkthrough.jpg";
 // Flip on once the recording is committed to /public/media.
-const HAS_VIDEO = false;
+const HAS_VIDEO = true;
 
 export default function GuidePage() {
   return (
@@ -19,7 +19,7 @@ export default function GuidePage() {
       <p className="kicker mb-3">Terminal guide</p>
       <h1 className="headline text-4xl text-ink md:text-5xl">What every tab does, and when to use it.</h1>
       <p className="mt-4 max-w-2xl leading-relaxed text-muted">
-        The Terminal menu at the top of every page holds the whole system. Here&apos;s a plain-English summary of each tab.
+        The Terminal menu at the top of every page holds the whole system. Here&apos;s a two-and-a-half-minute tour, followed by a plain-English summary of each tab.
       </p>
 
       {HAS_VIDEO && (<div className="mt-8 overflow-hidden rounded-xl border border-[var(--line)] bg-bg2">
