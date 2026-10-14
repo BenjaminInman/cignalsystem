@@ -30,7 +30,7 @@ const LENSES = [
     vertical: "investor",
     icon: LineChart,
     name: "Passive Investors",
-    who: "LPs in syndications, funds and JV partnerships",
+    who: "Limited partners in syndications, funds and JV partnerships",
     pain: "Judge whether a sponsor is buying at the right point in the cycle before you wire the money.",
     samples: ["Cap rate vs. 10Y spread", "National vacancy", "Debt service coverage"],
     live: true,
