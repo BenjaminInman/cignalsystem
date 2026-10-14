@@ -162,6 +162,12 @@ export default function Nav() {
                 <div className="mx-2 my-1.5 h-px bg-[var(--line)]" />
                 <p className="kicker px-3 py-2">Workbench</p>
                 {SUITE_BOTTOM.map(renderRow)}
+                <div className="mx-2 my-1.5 h-px bg-[var(--line)]" />
+                <Link href="/guide" onClick={() => setOpen(false)}
+                  className={`mono flex items-center gap-2.5 rounded-md px-3 py-2.5 text-[12px] tracking-[0.04em] transition-colors ${path === "/guide" ? "bg-signal/10 text-signal" : "text-signal/90 hover:bg-white/[0.04]"}`}>
+                  <Compass size={14} strokeWidth={1.8} />
+                  <span className="flex-1">Terminal Guide</span>
+                </Link>
               </div>
             )}
           </div>
@@ -213,7 +219,7 @@ export default function Nav() {
 
       {/* mobile strip */}
       <nav className="flex items-center gap-1 overflow-x-auto border-t border-[var(--line)] px-3 py-2 md:hidden">
-        {[...PRIMARY, ...SUITE].map(({ label, href }) => {
+        {[...PRIMARY, ...SUITE, { label: "Guide", href: "/guide" }].map(({ label, href }) => {
           const active = path === href;
           const pop = href === "/cignalscore";
           const cls = pop

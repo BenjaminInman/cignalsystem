@@ -10,6 +10,9 @@ import MyZipCodes from "@/components/MyZipCodes";
 import MarketSnapshot from "@/components/MarketSnapshot";
 import { createClient } from "@/lib/supabase/client";
 import { toneColor } from "@/components/ui";
+import GettingStarted from "@/components/GettingStarted";
+import PlanBanner from "@/components/PlanBanner";
+import { hasTier } from "@/lib/tiers";
 
 const SUITE = [
   { name: "Indicators", href: "/indicators", icon: Activity, desc: "Leading & trailing metrics across every major metro." },
@@ -35,9 +38,28 @@ function DashboardInner() {
   );
 
   const [email, setEmail] = useState("");
+  const [tier, setTier] = useState(null); // null until the profile loads
   useEffect(() => {
-    createClient().auth.getUser().then(({ data }) => setEmail(data.user?.email || ""));
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      const u = data.user;
+      setEmail(u?.email || "");
+      if (!u) { setTier("free"); return; }
+      // Fresh from Stripe (?upgraded=1) the webhook can land a moment after the
+      // redirect, so re-check the tier briefly instead of showing "Free".
+      const justUpgraded = new URLSearchParams(window.location.search).get("upgraded") === "1";
+      let tries = 0;
+      const load = () =>
+        supabase.from("profiles").select("tier, is_admin").eq("id", u.id).single()
+          .then(({ data: p }) => {
+            const t = p?.is_admin ? "pro" : p?.tier || "free";
+            if (justUpgraded && !hasTier(t, "pro") && tries++ < 8) { setTimeout(load, 1500); return; }
+            setTier(t);
+          });
+      load();
+    });
   }, []);
+  const isPro = tier ? hasTier(tier, "pro") : false;
 
   // Welcome-email backstop: if the signup-time send was dropped (e.g. cancelled on
   // a fast redirect), this idempotent call catches it on first dashboard load. The
@@ -55,12 +77,19 @@ function DashboardInner() {
       <h1 className="headline text-4xl text-ink md:text-5xl">Command center</h1>
       <p className="mt-3 max-w-2xl text-muted">
         {email ? <>Signed in as <span className="text-ink">{email}</span>. </> : null}
-        Your full intelligence suite is unlocked — jump into any module below.
+        {tier === null
+          ? "Loading your terminal…"
+          : isPro
+            ? "Your full intelligence suite is unlocked. Jump into any module below."
+            : "Your free terminal: dashboard, signals and the Cycle Clock. Pro unlocks the rest."}
       </p>
+
+      <PlanBanner tier={tier === null ? null : isPro ? "pro" : "free"} />
+      <GettingStarted isPro={isPro} />
 
       <Watchlist />
 
-      <MyZipCodes />
+      <div id="my-zips" className="scroll-mt-24"><MyZipCodes /></div>
 
 
       <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,360px)_1fr]">

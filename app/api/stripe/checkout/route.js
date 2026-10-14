@@ -105,7 +105,7 @@ export async function POST(req) {
         },
       },
       success_url: `${origin}${verticalHref(verticalFromRequest(req), "/dashboard")}?upgraded=1`,
-      cancel_url: `${origin}${verticalHref(verticalFromRequest(req), "/upgrade")}?canceled=1`,
+      cancel_url: `${origin}${verticalHref(verticalFromRequest(req), "/dashboard")}?checkout=canceled`,
     });
 
     return Response.json({ url: session.url });

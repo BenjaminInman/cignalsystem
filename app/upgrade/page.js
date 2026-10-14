@@ -5,6 +5,11 @@ import { PAGE_LABELS } from "@/lib/access";
 import UpgradeCTA from "@/components/UpgradeCTA";
 import IndicatorsDemo from "@/components/IndicatorsDemo";
 import CycleClockDemo from "@/components/CycleClockDemo";
+import AutoCheckout from "@/components/AutoCheckout";
+import { redirect } from "next/navigation";
+import { hasTier } from "@/lib/tiers";
+import { headers } from "next/headers";
+import { verticalHref } from "@/lib/vertical-slug";
 
 export const metadata = { title: "Upgrade · Cignal System" };
 export const dynamic = "force-dynamic";
@@ -33,6 +38,21 @@ export default async function UpgradePage({ searchParams }) {
   const label = PAGE_LABELS[slug] || "this page";
 
   const supabase = createClient();
+
+  // Arrived from a "Start Pro" sign-up: open checkout straight away. Members
+  // who already have Pro go to their dashboard instead of paying twice.
+  if (searchParams?.start === "pro") {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: prof } = await supabase.from("profiles").select("tier, is_admin").eq("id", user.id).single();
+      if (prof?.is_admin || hasTier(prof?.tier, "pro")) {
+        const v = headers().get("x-vertical") || "multifamily";
+        redirect(verticalHref(v, "/dashboard"));
+      }
+      return <AutoCheckout />;
+    }
+  }
+
   const { data: tierRows } = await supabase
     .from("tiers")
     .select("slug, name, price_monthly_cents, active")

@@ -14,7 +14,11 @@ export default function AuthForm({ mode }) {
   const isSignup = mode === "signup";
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next") || "/dashboard";
+  // ?plan=pro: the visitor chose Pro before signing up, so send them straight
+  // to checkout afterwards (/upgrade?start=pro opens Stripe automatically)
+  // instead of dropping them on the dashboard to hunt for the upgrade button.
+  const plan = params.get("plan") === "pro" ? "pro" : null;
+  const next = params.get("next") || (plan ? "/upgrade?start=pro" : "/dashboard");
   // Vertical this form is served under (/multifamily/login -> "multifamily").
   const verticalSlug = useVertical()?.slug || DEFAULT_VERTICAL;
   const supabase = createClient();
@@ -144,15 +148,30 @@ export default function AuthForm({ mode }) {
       title={isSignup ? "Create your account" : "Access the terminal"}
     >
       <p className={`text-sm leading-relaxed text-muted ${isSignup ? "mb-6" : "mb-3"}`}>
-        {isSignup
-          ? "Set up access to the indicators, maps, forecasts, and signals behind Cignal System."
-          : "Sign in to your subscriber suite — indicators, market maps, forecasts, and signals."}
+        {plan
+          ? isSignup
+            ? "Create your account, then you'll go straight to secure checkout for Cignal Pro ($179/mo)."
+            : "Sign in, then you'll go straight to secure checkout for Cignal Pro ($179/mo)."
+          : isSignup
+            ? "Set up access to the indicators, maps, forecasts, and signals behind Cignal System."
+            : "Sign in to your subscriber suite — indicators, market maps, forecasts, and signals."}
       </p>
+
+      {plan && (
+        <ol className="mono mb-6 grid grid-cols-2 gap-2 text-[11px] tracking-[0.06em]">
+          <li className="rounded-md border border-signal/50 bg-signal/10 px-3 py-2 text-signal">
+            STEP 1 · {isSignup ? "CREATE ACCOUNT" : "SIGN IN"}
+          </li>
+          <li className="rounded-md border border-[var(--line-strong)] px-3 py-2 text-muted">
+            STEP 2 · SECURE CHECKOUT
+          </li>
+        </ol>
+      )}
 
       {!isSignup && (
         <p className="mb-6 text-sm leading-relaxed text-muted">
           Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-signal hover-line">Create an account here</Link>.
+          <Link href={plan ? "/register?plan=pro" : "/register"} className="text-signal hover-line">Create an account here</Link>.
         </p>
       )}
 
@@ -197,7 +216,7 @@ export default function AuthForm({ mode }) {
           className="mono flex w-full items-center justify-center gap-2 rounded-md bg-signal px-4 py-2.5 text-[13px] font-medium tracking-[0.06em] text-bg transition-all hover:brightness-110 disabled:opacity-60"
         >
           {busy ? <Loader2 size={15} className="animate-spin" /> : <ArrowRight size={15} strokeWidth={2} />}
-          {isSignup ? "Create account" : "Sign in"}
+          {isSignup ? (plan ? "Create account & continue" : "Create account") : plan ? "Sign in & continue" : "Sign in"}
         </button>
 
         {isSignup && (
@@ -232,7 +251,7 @@ export default function AuthForm({ mode }) {
       <p className="mono mt-7 text-center text-[12px] tracking-[0.04em] text-muted">
         {isSignup ? "Already have access? " : "No account yet? "}
         <Link
-          href={isSignup ? "/login" : "/register"}
+          href={(isSignup ? "/login" : "/register") + (plan ? "?plan=pro" : "")}
           className="text-signal hover-line"
         >
           {isSignup ? "Sign in" : "Request clearance"}
