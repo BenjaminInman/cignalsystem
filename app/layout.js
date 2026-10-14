@@ -12,7 +12,7 @@ import { SITE_URL } from "@/lib/vertical-slug";
 const HUB_META = {
   title: "Cignal System — Market Cycle Intelligence",
   description:
-    "Every market moves through four phases. Cignal System reads leading and trailing indicators to show which phase your market is in — for multifamily operators, passive investors, real estate investors and business owners.",
+    "Every market moves through 4 phases. Cignal System reads leading and trailing indicators to show which phase your market is in — for multifamily operators, passive investors, real estate investors and business owners.",
 };
 
 export function generateMetadata() {

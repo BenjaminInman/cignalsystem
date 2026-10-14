@@ -146,8 +146,8 @@ export default async function Hub() {
             Market cycle intelligence · When &gt; How
           </p>
           <h1 className="headline max-w-5xl text-[2.6rem] text-ink sm:text-5xl md:text-7xl">
-            Every market moves through four phases. The people who profit know which one we&apos;re in{" "}
-            <span className="text-signal">before everyone else does.</span>
+            Every market moves through 4 phases. The people who profit know which phase we&apos;re in{" "}
+            <span className="text-signal">before the competition.</span>
           </h1>
           <p className="mt-7 max-w-2xl text-lg leading-relaxed text-muted">
             Cignal System separates leading indicators from trailing ones so you can see the turn while it&apos;s still forming,
