@@ -57,3 +57,5 @@ jobs:
             --data "${BODY}")
           cat /tmp/out.json; echo
           if [ "$CODE" != "200" ]; then echo "::error::send failed with HTTP $CODE"; exit 1; fi
+
+# Schedule re-registered 2026-10-14: scheduled runs had failed at startup since 2026-10-05.

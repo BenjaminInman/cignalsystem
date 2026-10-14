@@ -21,3 +21,5 @@ jobs:
           BLS_API_KEY: ${{ secrets.BLS_API_KEY }}
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: python ingest_bls.py
+
+# Schedule re-registered 2026-10-14: scheduled runs had failed at startup since 2026-10-05.

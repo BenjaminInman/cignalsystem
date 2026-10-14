@@ -31,3 +31,5 @@ jobs:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python compose_news.py
+
+# Schedule re-registered 2026-10-14: scheduled runs had failed at startup since 2026-10-05.

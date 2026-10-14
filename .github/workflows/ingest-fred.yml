@@ -29,3 +29,5 @@ jobs:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: python ingest_fred.py
+
+# Schedule re-registered 2026-10-14: scheduled runs had failed at startup since 2026-10-05.

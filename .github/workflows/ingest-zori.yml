@@ -27,3 +27,5 @@ jobs:
           # Add this in repo Settings -> Secrets and variables -> Actions
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: python ingest_zori.py
+
+# Schedule re-registered 2026-10-14: scheduled runs had failed at startup since 2026-10-05.
