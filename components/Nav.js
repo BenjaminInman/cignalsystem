@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "@/lib/vnav";
 import { useState, useRef, useEffect } from "react";
 import { Home, Newspaper, Radio, Info, Gauge, LayoutDashboard, Activity, BarChart3, LineChart, TrendingUp, BookOpen, Briefcase, Users, Bell, ChevronDown, Terminal, LogOut, ShieldCheck, Lock, CreditCard, Compass, Calculator, Building2, Wrench } from "lucide-react";
 import { useVertical } from "@/components/VerticalProvider";
+import MarketSwitcher from "@/components/MarketSwitcher";
 import { createClient } from "@/lib/supabase/client";
 import { FREE_PAGES } from "@/lib/access";
 import { hasTier } from "@/lib/tiers";
@@ -127,11 +128,7 @@ export default function Nav() {
               CIGNAL<span className="text-signal">·</span>SYSTEM
             </span>
           </Link>
-          {vertical?.label && (
-            <span className="mono hidden rounded border border-[var(--line-strong)] px-1.5 py-0.5 text-[9px] tracking-[0.16em] text-muted sm:inline-block">
-              {vertical.label.toUpperCase()}
-            </span>
-          )}
+          <MarketSwitcher vertical={vertical} />
         </div>
 
         <nav className="hidden items-center gap-1 md:flex">
