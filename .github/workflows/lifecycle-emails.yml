@@ -1,0 +1,50 @@
+name: Lifecycle emails
+
+# Free-to-Pro nurture sequence + personalized "My Markets" reports.
+# Calls POST /api/email/lifecycle, which decides who is due.
+#
+# Scheduled sending is OFF until Benjamin approves the copy. To turn it on,
+# uncomment the schedule block below.
+on:
+  # schedule:
+  #   - cron: "15 14 * * *"   # daily, 14:15 UTC (9:15 CT)
+  workflow_dispatch:
+    inputs:
+      dryRun:
+        description: "Dry run (report who would get what, send nothing)"
+        type: boolean
+        default: true
+      only:
+        description: "Limit to one stream: nurture | reports (blank = both)"
+        type: string
+        default: ""
+      previewTo:
+        description: "Send one copy of every template to this address instead (no member sends)"
+        type: string
+        default: ""
+
+concurrency:
+  group: lifecycle-emails
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run lifecycle emails
+        env:
+          SITE_URL: ${{ secrets.SITE_URL || 'https://www.cignalsystem.com' }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          DRY: ${{ github.event_name == 'schedule' && 'false' || inputs.dryRun }}
+          ONLY: ${{ inputs.only }}
+          PREVIEW_TO: ${{ inputs.previewTo }}
+        run: |
+          set -euo pipefail
+          BODY=$(python3 -c 'import json,os; print(json.dumps({"dryRun": os.environ["DRY"]=="true", "only": os.environ.get("ONLY") or None, "previewTo": os.environ.get("PREVIEW_TO") or None}))')
+          echo "Request: $BODY"
+          CODE=$(curl -s -o /tmp/out.json -w "%{http_code}" -X POST "${SITE_URL}/api/email/lifecycle" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "content-type: application/json" \
+            --data "${BODY}")
+          cat /tmp/out.json; echo
+          if [ "$CODE" != "200" ]; then echo "::error::lifecycle run failed with HTTP $CODE"; exit 1; fi
