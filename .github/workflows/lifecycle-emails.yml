@@ -3,11 +3,10 @@ name: Lifecycle emails
 # Free-to-Pro nurture sequence + personalized "My Markets" reports.
 # Calls POST /api/email/lifecycle, which decides who is due.
 #
-# Scheduled sending is OFF until Benjamin approves the copy. To turn it on,
-# uncomment the schedule block below.
+# Copy approved by Benjamin 2026-10-14; daily sending on.
 on:
-  # schedule:
-  #   - cron: "15 14 * * *"   # daily, 14:15 UTC (9:15 CT)
+  schedule:
+    - cron: "11 14 * * *"   # daily, 14:11 UTC (9:11 CT)
   workflow_dispatch:
     inputs:
       dryRun:
