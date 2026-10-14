@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useRef } from "react";
-import Link from "next/link";
+import Link from "@/components/VLink";
 import { Activity, BarChart3, LineChart, Radio, BookOpen, Briefcase, ArrowUpRight, Plus, X, Check, ChevronDown, Star } from "lucide-react";
 import { useVertical, useContent } from "@/components/VerticalProvider";
 import { isPageReady } from "@/lib/verticals";

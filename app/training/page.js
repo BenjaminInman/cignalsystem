@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/VLink";
 import { ArrowLeft } from "lucide-react";
 import TrainingForm from "@/components/TrainingForm";
 import { getActiveContent } from "@/lib/active-vertical";

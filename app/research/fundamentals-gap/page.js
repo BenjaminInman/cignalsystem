@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/VLink";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
 
 const SENT = "#E5634D";

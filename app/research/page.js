@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/VLink";
 import { useState, useEffect, useRef } from "react";
 import { ArrowUp, ArrowUpRight, Lock, TrendingUp, TrendingDown, Minus, ChevronDown } from "lucide-react";
 import { useVertical } from "@/components/VerticalProvider";
@@ -205,9 +205,9 @@ function ResearchInner() {
                   <div className="mt-1">
                     <p className="text-sm leading-relaxed text-muted">{item.error}</p>
                     {item.upgrade && (
-                      <a href="/upgrade?page=research" className="mono mt-2 inline-block rounded-md bg-signal/15 px-3 py-1.5 text-[12px] tracking-[0.06em] text-signal hover:bg-signal/25">
+                      <Link href="/upgrade?page=research" className="mono mt-2 inline-block rounded-md bg-signal/15 px-3 py-1.5 text-[12px] tracking-[0.06em] text-signal hover:bg-signal/25">
                         UPGRADE TO PRO
-                      </a>
+                      </Link>
                     )}
                   </div>
                 ) : (

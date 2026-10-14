@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/VLink";
 import { Lock, Radio } from "lucide-react";
 import YieldCurve from "@/components/YieldCurve";
 import { createClient } from "@/lib/supabase/client";

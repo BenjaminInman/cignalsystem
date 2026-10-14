@@ -232,7 +232,7 @@ def main():
     key = os.environ.get("HELLODATA_API_KEY")
     db = os.environ.get("SUPABASE_DB_URL")
     webhook = os.environ.get("WEBHOOK_URL",
-                             "https://multifamily.cignalsystem.com/api/hellodata/webhook")
+                             "https://www.cignalsystem.com/api/hellodata/webhook")
     if not (key and db):
         sys.exit("ERROR: need HELLODATA_API_KEY and SUPABASE_DB_URL")
     limit = int(os.environ.get("HD_FIRE_LIMIT") or "25")

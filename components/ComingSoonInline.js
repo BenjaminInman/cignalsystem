@@ -13,7 +13,7 @@ export default function ComingSoonInline({ vertical, title }) {
           here soon — the live Multifamily system shows the full version today.
         </p>
         <a
-          href="https://multifamily.cignalsystem.com"
+          href="/multifamily"
           className="mono mt-7 inline-flex items-center gap-2 rounded-sm border border-signal/40 px-4 py-2.5 text-[12px] tracking-[0.08em] text-signal hover:bg-signal/10"
         >
           SEE IT ON MULTIFAMILY →

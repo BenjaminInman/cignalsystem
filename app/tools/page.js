@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/VLink";
 import { Download, ArrowUpRight, Wrench } from "lucide-react";
 
 const TOOLS = [

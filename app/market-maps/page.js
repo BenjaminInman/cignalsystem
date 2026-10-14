@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import Link from "next/link";
+import Link from "@/components/VLink";
 import { MapPin, Building2, ChevronDown, Truck, Package, Search, Bookmark, Check, Loader2, Factory } from "lucide-react";
 import { toneColor, Sparkline } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
@@ -1116,10 +1116,10 @@ function ZipLookup() {
                   <IndicatorRow key={row.name} row={row} />
                 ))}
                 {hd?.gated && (
-                  <a href="/upgrade" className="mono flex items-center gap-2 rounded-md border border-signal/25 bg-signal/[0.06] px-4 py-3 text-[11px] tracking-[0.08em] text-muted transition-colors hover:border-signal/50">
+                  <Link href="/upgrade" className="mono flex items-center gap-2 rounded-md border border-signal/25 bg-signal/[0.06] px-4 py-3 text-[11px] tracking-[0.08em] text-muted transition-colors hover:border-signal/50">
                     <span className="text-signal">EFFECTIVE RENT · CONCESSION LOAD · DAYS ON MARKET (MF)</span>
                     <span>— licensed multifamily data, Pro and above</span>
-                  </a>
+                  </Link>
                 )}
                 {leaseFreeRows.map((row) => (
                   <IndicatorRow key={row.name} row={row} />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/VLink";
 import { Compass, ArrowUpRight, Loader2, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 

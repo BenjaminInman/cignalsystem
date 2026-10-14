@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/VLink";
 import { Lock, Check, LineChart, BookOpen, Briefcase, Users, Activity, TrendingUp, Layers, BarChart3, Building2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PAGE_LABELS } from "@/lib/access";

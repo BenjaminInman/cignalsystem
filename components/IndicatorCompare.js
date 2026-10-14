@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "@/components/VLink";
+
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Lock, Plus, X } from "lucide-react";
 import { useContent } from "@/components/VerticalProvider";
@@ -349,9 +351,9 @@ export default function IndicatorCompare() {
             )}
           </div>
           {atCap && tier !== "pro" && (
-            <a href="/upgrade?page=indicators" className="mono inline-flex items-center gap-1.5 rounded-md bg-signal/15 px-3 py-1.5 text-[11px] tracking-[0.06em] text-signal hover:bg-signal/25">
+            <Link href="/upgrade?page=indicators" className="mono inline-flex items-center gap-1.5 rounded-md bg-signal/15 px-3 py-1.5 text-[11px] tracking-[0.06em] text-signal hover:bg-signal/25">
               <Lock size={11} /> Add up to 5 with Pro
-            </a>
+            </Link>
           )}
         </div>
 
@@ -423,9 +425,9 @@ export default function IndicatorCompare() {
           <p className="text-sm text-muted">
             <span className="text-ink">See the pattern, not just the moment.</span> Pro opens 20- and 40-year history and up to five layered indicators.
           </p>
-          <a href="/upgrade?page=indicators" className="mono shrink-0 rounded-md bg-signal px-4 py-2 text-[12px] tracking-[0.06em] text-bg hover:brightness-110">
+          <Link href="/upgrade?page=indicators" className="mono shrink-0 rounded-md bg-signal px-4 py-2 text-[12px] tracking-[0.06em] text-bg hover:brightness-110">
             Unlock full history →
-          </a>
+          </Link>
         </div>
       )}
       </div>

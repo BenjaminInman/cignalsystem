@@ -11,7 +11,7 @@ Env: HELLODATA_API_KEY, [HD_COV_SEGMENTS=mkt,aff,stu,sen]
 import os, sys, json, time, requests
 
 API = "https://api.hellodata.ai/dataset/export"
-WEBHOOK = os.environ.get("WEBHOOK_URL", "https://multifamily.cignalsystem.com/api/hellodata/webhook")
+WEBHOOK = os.environ.get("WEBHOOK_URL", "https://www.cignalsystem.com/api/hellodata/webhook")
 MF = {"column": "number_units", "filter": {"greaterThanOrEqualTo": 50}}
 def _eq(c, v): return {"column": c, "filter": {"equals": v}}
 SEG_FILTERS = {

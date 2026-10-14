@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "@/components/VLink";
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Users, Facebook, Send, Lock, CornerDownLeft } from "lucide-react";
 import { useVertical } from "@/components/VerticalProvider";
@@ -191,9 +193,9 @@ function CignalRoom() {
                   </button>
                 </div>
               ) : (
-                <a href="/login" className="flex items-center justify-center gap-2 rounded-md border border-signal/40 bg-signal/10 px-4 py-3 text-[12px] mono tracking-[0.06em] text-signal transition-colors hover:bg-signal hover:text-bg">
+                <Link href="/login" className="flex items-center justify-center gap-2 rounded-md border border-signal/40 bg-signal/10 px-4 py-3 text-[12px] mono tracking-[0.06em] text-signal transition-colors hover:bg-signal hover:text-bg">
                   <Lock size={13} /> SIGN IN TO JOIN THE CIGNAL ROOM
-                </a>
+                </Link>
               )}
               {me && (
                 <p className="mono mt-1.5 flex items-center gap-1.5 px-1 text-[10px] tracking-[0.04em] text-muted">

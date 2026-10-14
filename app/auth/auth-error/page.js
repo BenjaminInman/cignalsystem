@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/VLink";
 
 export const metadata = { title: "Link problem · Cignal System" };
 

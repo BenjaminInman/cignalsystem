@@ -1,4 +1,5 @@
 import { ArrowRight } from "lucide-react";
+import WaitlistForm from "@/components/WaitlistForm";
 
 export default function ComingSoon({ vertical }) {
   return (
@@ -21,9 +22,16 @@ export default function ComingSoon({ vertical }) {
         We&apos;re tuning the indicators and signals for this vertical now.
       </p>
 
-      <a href="https://multifamily.cignalsystem.com" className="mono mt-9 inline-flex items-center gap-2 rounded-sm bg-signal px-5 py-3 text-[12px] tracking-[0.08em] text-bg hover:opacity-90">
-        See the live Multifamily system <ArrowRight size={14} />
-      </a>
+      <div className="mt-9 flex w-full justify-center">
+        <WaitlistForm vertical={vertical.slug} source="coming-soon" />
+      </div>
+
+      <div className="mt-8 flex flex-wrap items-center justify-center gap-5">
+        <a href="/multifamily" className="mono inline-flex items-center gap-2 rounded-sm bg-signal px-5 py-3 text-[12px] tracking-[0.08em] text-bg hover:opacity-90">
+          See the live Multifamily system <ArrowRight size={14} />
+        </a>
+        <a href="/" className="mono text-[12px] tracking-[0.08em] text-muted hover:text-ink">ALL MARKETS →</a>
+      </div>
 
       <p className="mono mt-10 text-[10px] tracking-[0.2em] text-muted">MORE VERTICALS COMING · ECONIQ</p>
     </div>

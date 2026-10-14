@@ -34,7 +34,7 @@ import requests, psycopg2
 
 API = "https://api.hellodata.ai/dataset/export"
 WEBHOOK = os.environ.get(
-    "WEBHOOK_URL", "https://multifamily.cignalsystem.com/api/hellodata/webhook"
+    "WEBHOOK_URL", "https://www.cignalsystem.com/api/hellodata/webhook"
 )
 MF = {"column": "number_units", "filter": {"greaterThanOrEqualTo": 50}}
 AFF = {"column": "is_affordable", "filter": {"equals": False}}

@@ -7,7 +7,7 @@
 // the product: the tiles, the expandable detail, the chart, and the
 // quarter-over-quarter read, on illustrative numbers only.
 
-import Link from "next/link";
+import Link from "@/components/VLink";
 import { Lock } from "lucide-react";
 import IndicatorRow from "@/components/IndicatorRow";
 

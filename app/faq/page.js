@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/VLink";
 import { HelpCircle, ArrowRight } from "lucide-react";
 import FaqAccordion from "@/components/FaqAccordion";
 

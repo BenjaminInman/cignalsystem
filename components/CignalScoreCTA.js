@@ -1,3 +1,4 @@
+import Link from "@/components/VLink";
 import { ArrowRight } from "lucide-react";
 
 const SCORE_URL = "/cignalscore";
@@ -48,9 +49,9 @@ export default function CignalScoreCTA() {
         <span className="text-[var(--line-strong)]">·</span>
         <span>5 MIN</span>
       </div>
-      <a href={SCORE_URL} className="mono mt-4 flex w-full items-center justify-center gap-2 rounded-sm bg-signal px-4 py-2.5 text-[12px] tracking-[0.08em] text-bg hover:opacity-90">
+      <Link href={SCORE_URL} className="mono mt-4 flex w-full items-center justify-center gap-2 rounded-sm bg-signal px-4 py-2.5 text-[12px] tracking-[0.08em] text-bg hover:opacity-90">
         Take the free assessment <ArrowRight size={14} />
-      </a>
+      </Link>
     </div>
   );
 }

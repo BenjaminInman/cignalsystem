@@ -1,11 +1,11 @@
 import { getNews } from "@/lib/news";
-import { verticalSlugFromHost } from "@/lib/vertical-slug";
+import { verticalFromRequest } from "@/lib/vertical-request";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request) {
-  const slug = verticalSlugFromHost(request.headers.get("host"));
+  const slug = verticalFromRequest(request);
   const items = await getNews(18, slug);
   return Response.json({ items });
 }

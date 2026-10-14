@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/VLink";
 import { Crosshair, ArrowUpRight } from "lucide-react";
 
 // Timing-role tones, consistent with the Cycle Wheel / tone palette.

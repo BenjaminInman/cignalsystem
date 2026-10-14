@@ -6,14 +6,42 @@ import SocialRail from "@/components/SocialRail";
 import ComingSoon from "@/components/ComingSoon";
 import { VerticalProvider } from "@/components/VerticalProvider";
 import CommunityNotifier from "@/components/CommunityNotifier";
-import { getActiveVertical, getActiveContent } from "@/lib/active-vertical";
+import { getActiveVertical, getActiveContent, isHubRequest, activePublicPath } from "@/lib/active-vertical";
+import { SITE_URL } from "@/lib/vertical-slug";
+
+const HUB_META = {
+  title: "Cignal System — Market Cycle Intelligence",
+  description:
+    "Every market moves through four phases. Cignal System reads leading and trailing indicators to show which phase your market is in — for multifamily operators, passive investors, real estate investors and business owners.",
+};
 
 export function generateMetadata() {
-  const v = getActiveVertical();
-  return { title: v.title, description: v.description };
+  const hub = isHubRequest();
+  const v = hub ? HUB_META : getActiveVertical();
+  const path = activePublicPath();
+  return {
+    metadataBase: new URL(SITE_URL),
+    title: v.title,
+    description: v.description,
+    ...(path ? { alternates: { canonical: path } } : {}),
+    openGraph: { title: v.title, description: v.description, siteName: "Cignal System", url: path || "/", type: "website" },
+  };
 }
 
 export default function RootLayout({ children }) {
+  // The hub ("/") renders its own chrome; verticals get the full app shell.
+  if (isHubRequest()) {
+    return (
+      <html lang="en">
+        <body>
+          <div className="atmosphere" />
+          <div className="grain" />
+          <div style={{ position: "relative", zIndex: 2 }}>{children}</div>
+        </body>
+      </html>
+    );
+  }
+
   const vertical = getActiveVertical();
   const content = getActiveContent();
 

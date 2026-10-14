@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/VLink";
 import { socialLinks } from "@/lib/brand";
 import { ICONS } from "@/components/SocialIcons";
 import { getActiveContent } from "@/lib/active-vertical";
@@ -27,6 +27,10 @@ export default function Footer() {
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">
               {COPY.footerTagline || "Military Grade Economic Intelligence for Multifamily Real Estate Owners, Operators, Investors, Management Firms, Lenders and Equity Groups."}
             </p>
+            {/* Plain <a>: the hub uses its own layout, so it needs a full page load. */}
+            <a href="/" className="mono mt-4 inline-flex items-center gap-1.5 text-[11px] tracking-[0.12em] text-muted hover:text-signal">
+              ← ALL CIGNAL MARKETS
+            </a>
             <div className="mt-5 flex items-center gap-2">
               {socialLinks().map(({ key, label, href }) => {
                 const Icon = ICONS[key];

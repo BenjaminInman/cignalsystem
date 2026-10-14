@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/VLink";
 import { Activity, Radio, LineChart, BarChart3, BookOpen, Briefcase, ArrowRight } from "lucide-react";
 import CommunityCTA from "@/components/CommunityCTA";
 import CignalScoreCTA from "@/components/CignalScoreCTA";
@@ -299,7 +299,7 @@ export default function AboutPage() {
       <section className="card mt-14 flex flex-col items-start justify-between gap-5 p-8 md:flex-row md:items-center">
         <div>
           <h2 className="headline text-2xl text-ink">Read the signals the market doesn&apos;t broadcast.</h2>
-          <p className="mt-2 text-muted">Create an account for the full intelligence suite — or <a href="/training" className="text-signal underline-offset-2 hover:underline">apply for training</a> to learn the method behind it.</p>
+          <p className="mt-2 text-muted">Create an account for the full intelligence suite — or <Link href="/training" className="text-signal underline-offset-2 hover:underline">apply for training</Link> to learn the method behind it.</p>
         </div>
         <div className="flex shrink-0 gap-3">
           <Link href="/dashboard" className="mono flex items-center gap-2 rounded-sm bg-signal px-5 py-3 text-[12px] tracking-[0.08em] text-bg hover:opacity-90">Get Access <ArrowRight size={14} /></Link>

@@ -5,6 +5,8 @@ export const dynamic = "force-dynamic";
 
 import { createClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe";
+import { verticalFromRequest } from "@/lib/vertical-request";
+import { verticalHref } from "@/lib/vertical-slug";
 
 const SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -27,7 +29,7 @@ export async function POST(req) {
   const origin = req.headers.get("origin") || new URL(req.url).origin;
   const portal = await getStripe().billingPortal.sessions.create({
     customer: prof.stripe_customer_id,
-    return_url: `${origin}/dashboard`,
+    return_url: `${origin}${verticalHref(verticalFromRequest(req), "/dashboard")}`,
   });
 
   return Response.json({ url: portal.url });

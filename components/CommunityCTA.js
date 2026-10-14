@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/VLink";
 import { Users, ArrowRight, Facebook } from "lucide-react";
 
 const XLogo = () => (

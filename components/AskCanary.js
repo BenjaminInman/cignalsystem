@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/VLink";
 import CanaryMark from "@/components/CanaryMark";
 
 // Reusable "Ask Canary" affordance. Drop it anywhere with a pre-filled question;

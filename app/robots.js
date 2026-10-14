@@ -1,4 +1,4 @@
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://multifamily.cignalsystem.com";
+import { SITE_URL as SITE } from "@/lib/vertical-slug";
 
 export default function robots() {
   return {
@@ -7,7 +7,13 @@ export default function robots() {
         userAgent: "*",
         allow: "/",
         // Gated surfaces and machinery — nothing here is useful to a crawler.
-        disallow: ["/api/", "/admin", "/account", "/portfolio", "/dashboard", "/auth/"],
+        // Pages live under a market subdirectory (/multifamily/dashboard), so
+        // the wildcard forms cover every market.
+        disallow: [
+          "/api/",
+          "/*/admin", "/*/account", "/*/portfolio", "/*/dashboard", "/*/auth/",
+          "/admin", "/account", "/portfolio", "/dashboard", "/auth/",
+        ],
       },
     ],
     sitemap: `${SITE}/sitemap.xml`,

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "@/components/VLink";
+
 import { useState, useEffect } from "react";
 import { Lock, ShieldCheck, ArrowRight, ArrowLeft, ScanLine, Check, FileWarning, Mail } from "lucide-react";
 import { QUESTIONS, DIMS, BIAS_COPY, bandBlurb } from "@/lib/cignalscore";
@@ -302,12 +304,12 @@ function Results({ result, revealed }) {
           })}
         </div>
         <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
-          <a href="/register" className={`mono inline-flex items-center justify-center gap-2 rounded-md px-6 py-3 text-[13px] tracking-[0.08em] transition-colors ${recPlatform === "free" ? "bg-signal text-bg hover:opacity-90" : "border border-signal/40 text-signal hover:bg-signal hover:text-bg"}`}>
+          <Link href="/register" className={`mono inline-flex items-center justify-center gap-2 rounded-md px-6 py-3 text-[13px] tracking-[0.08em] transition-colors ${recPlatform === "free" ? "bg-signal text-bg hover:opacity-90" : "border border-signal/40 text-signal hover:bg-signal hover:text-bg"}`}>
             <Check size={15} /> Create your free account
-          </a>
-          <a href="/upgrade" className={`mono inline-flex items-center justify-center gap-2 rounded-md px-6 py-3 text-[13px] tracking-[0.08em] transition-colors ${recPlatform === "pro" ? "bg-signal text-bg hover:opacity-90" : "border border-signal/40 text-signal hover:bg-signal hover:text-bg"}`}>
+          </Link>
+          <Link href="/upgrade" className={`mono inline-flex items-center justify-center gap-2 rounded-md px-6 py-3 text-[13px] tracking-[0.08em] transition-colors ${recPlatform === "pro" ? "bg-signal text-bg hover:opacity-90" : "border border-signal/40 text-signal hover:bg-signal hover:text-bg"}`}>
             Go Pro — $79/mo <ArrowRight size={16} />
-          </a>
+          </Link>
         </div>
       </div>
 

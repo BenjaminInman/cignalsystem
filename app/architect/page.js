@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/VLink";
 import { ArrowUpRight } from "lucide-react";
 import PortfolioArchitect from "@/components/PortfolioArchitect";
 

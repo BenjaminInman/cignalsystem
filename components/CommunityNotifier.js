@@ -5,7 +5,7 @@
 // toast slide in from the top-right no matter what page they're on — unless
 // they're already in the room (where they'd see the message live anyway).
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname } from "@/lib/vnav";
 import { X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 

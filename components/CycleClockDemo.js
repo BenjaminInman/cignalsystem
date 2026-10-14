@@ -7,7 +7,7 @@
 // leading-vs-trailing divergence.
 
 import { useState, useMemo } from "react";
-import Link from "next/link";
+import Link from "@/components/VLink";
 import { Lock } from "lucide-react";
 
 const CX = 220, CY = 220, R_OUT = 200;

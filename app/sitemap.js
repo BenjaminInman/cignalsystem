@@ -1,10 +1,17 @@
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://multifamily.cignalsystem.com";
+import { SITE_URL as SITE } from "@/lib/vertical-slug";
+
+// The hub lives at "/" and each market in its own subdirectory. Multifamily is
+// the flagship, so all of its public pages are listed; the other live markets
+// list their home pages (they share multifamily's data pages, so listing every
+// page would hand Google near-duplicates).
+const MF = "/multifamily";
+const OTHER_MARKETS = ["/investors", "/realestate"];
 
 // Public, indexable surfaces only. Authenticated Terminal routes (dashboard,
 // portfolio, account, admin) are deliberately excluded and are disallowed in
 // robots.js as well.
 const ROUTES = [
-  ["", 1.0, "hourly"],
+  ["", 0.9, "hourly"],
   ["/about", 0.7, "monthly"],
   ["/indicators", 0.9, "daily"],
   ["/market-maps", 0.8, "daily"],
@@ -27,10 +34,14 @@ const ROUTES = [
 
 export default function sitemap() {
   const now = new Date();
-  return ROUTES.map(([path, priority, changeFrequency]) => ({
-    url: `${SITE}${path}`,
-    lastModified: now,
-    changeFrequency,
-    priority,
-  }));
+  return [
+    { url: SITE, lastModified: now, changeFrequency: "daily", priority: 1.0 },
+    ...ROUTES.map(([path, priority, changeFrequency]) => ({
+      url: `${SITE}${MF}${path}`,
+      lastModified: now,
+      changeFrequency,
+      priority,
+    })),
+    ...OTHER_MARKETS.map((m) => ({ url: `${SITE}${m}`, lastModified: now, changeFrequency: "daily", priority: 0.8 })),
+  ];
 }

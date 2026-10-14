@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import Link from "@/components/VLink";
+import { usePathname, useRouter } from "@/lib/vnav";
 import { useState, useRef, useEffect } from "react";
 import { Home, Newspaper, Radio, Info, Gauge, LayoutDashboard, Activity, BarChart3, LineChart, TrendingUp, BookOpen, Briefcase, Users, Bell, ChevronDown, Terminal, LogOut, ShieldCheck, Lock, CreditCard, Compass, Calculator, Building2, Wrench } from "lucide-react";
 import { useVertical } from "@/components/VerticalProvider";

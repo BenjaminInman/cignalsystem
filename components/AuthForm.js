@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import Link from "@/components/VLink";
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "@/lib/vnav";
 import { Mail, Lock, ArrowRight, Loader2, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { verticalSlugFromHost } from "@/lib/vertical-slug";
+import { DEFAULT_VERTICAL, verticalHref } from "@/lib/vertical-slug";
+import { useVertical } from "@/components/VerticalProvider";
 
 // mode: "signin" | "signup"
 export default function AuthForm({ mode }) {
@@ -13,6 +15,8 @@ export default function AuthForm({ mode }) {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") || "/dashboard";
+  // Vertical this form is served under (/multifamily/login -> "multifamily").
+  const verticalSlug = useVertical()?.slug || DEFAULT_VERTICAL;
   const supabase = createClient();
 
   const [email, setEmail] = useState("");
@@ -25,7 +29,7 @@ export default function AuthForm({ mode }) {
 
   const redirectTo =
     typeof window !== "undefined"
-      ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`
+      ? `${window.location.origin}${verticalHref(verticalSlug, "/auth/callback")}?next=${encodeURIComponent(verticalHref(verticalSlug, next))}`
       : undefined;
 
   async function handlePassword(e) {
@@ -41,14 +45,11 @@ export default function AuthForm({ mode }) {
           options: {
             emailRedirectTo: redirectTo,
             // Stamp which site this signup came through so the admin can
-            // segment the funnel by audience. Read from the live host with the
-            // same alias map the middleware uses, so investor./realestate./
-            // multifamily. all resolve identically on both sides.
+            // segment the funnel by audience. Taken from the subdirectory the
+            // form is served under (/multifamily, /investors, /realestate).
             data: {
               full_name: fullName.trim(),
-              origin_vertical: verticalSlugFromHost(
-                typeof window !== "undefined" ? window.location.hostname : ""
-              ),
+              origin_vertical: verticalSlug,
             },
           },
         });
