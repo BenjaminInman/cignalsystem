@@ -58,6 +58,7 @@ export default async function AccountPage() {
   const current = tierRows?.find((t) => t.slug === tier);
   const planLabel = current?.name || TIER_LABEL[tier] || "Free";
   const planPrice = price(current?.price_monthly_cents);
+  const proPrice = price(tierRows?.find((t) => t.slug === "pro")?.price_monthly_cents);
 
   return (
     <div className="mx-auto max-w-3xl pt-14 pb-20 fade-up">
@@ -135,17 +136,16 @@ export default async function AccountPage() {
             </p>
           )}
 
-          {/* Controls */}
-          {hasCustomer ? (
-            <ManageBillingButton
-              label={isPaid ? "Manage or cancel subscription" : "Manage billing"}
-            />
+          {/* Controls. Free members always get the upgrade button, even if
+              they have a Stripe customer record from an abandoned checkout or
+              a past subscription; paid members manage or cancel in Stripe. */}
+          {isPaid ? (
+            <ManageBillingButton label="Manage or cancel subscription" />
           ) : (
             <div className="flex flex-wrap items-center gap-4">
               <UpgradeCTA />
-              {planPrice && planPrice !== "Free" && (
-                <span className="mono text-[13px] text-muted">{planPrice}</span>
-              )}
+              {proPrice && <span className="mono text-[13px] text-muted">{proPrice}</span>}
+              {hasCustomer && <ManageBillingButton label="Billing history" variant="link" />}
             </div>
           )}
         </div>

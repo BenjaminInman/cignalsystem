@@ -5,7 +5,8 @@ import { CreditCard, Loader2 } from "lucide-react";
 
 // Opens the Stripe billing portal (update card, view invoices, cancel).
 // Drop onto any account/settings surface for active subscribers.
-export default function ManageBillingButton({ label = "Manage billing" }) {
+// variant="link": a quiet text link (e.g. "Billing history" beside an Upgrade button).
+export default function ManageBillingButton({ label = "Manage billing", variant = "button" }) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
 
@@ -31,7 +32,11 @@ export default function ManageBillingButton({ label = "Manage billing" }) {
       <button
         onClick={onClick}
         disabled={busy}
-        className="mono inline-flex items-center gap-2 rounded-md border border-[var(--line)] px-4 py-2.5 text-[12px] tracking-[0.06em] text-ink transition-all hover:border-signal disabled:opacity-60"
+        className={
+          variant === "link"
+            ? "mono inline-flex items-center gap-1.5 text-[12px] tracking-[0.06em] text-muted transition-colors hover:text-ink disabled:opacity-60"
+            : "mono inline-flex items-center gap-2 rounded-md border border-[var(--line)] px-4 py-2.5 text-[12px] tracking-[0.06em] text-ink transition-all hover:border-signal disabled:opacity-60"
+        }
       >
         {busy ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} strokeWidth={1.8} />}
         {label}
