@@ -290,9 +290,9 @@ export default async function Hub() {
                 <li>Cycle Clock</li>
                 <li>Daily market ticker and news</li>
               </ul>
-              <Link href={href(home, "/register")} className="mono mt-8 inline-flex w-fit items-center gap-2 rounded-sm border border-[var(--line-strong)] px-5 py-2.5 text-[12px] tracking-[0.08em] text-ink hover:border-signal/50">
+              <a href="#signup" className="mono mt-8 inline-flex w-fit items-center gap-2 rounded-sm border border-[var(--line-strong)] px-5 py-2.5 text-[12px] tracking-[0.08em] text-ink hover:border-signal/50">
                 CREATE FREE ACCOUNT <ArrowRight size={13} />
-              </Link>
+              </a>
             </div>
             <div className="card flex flex-col border-signal/30 p-7">
               <p className="kicker text-signal">Cignal Pro</p>
@@ -304,9 +304,54 @@ export default async function Hub() {
                 <li>Full indicator library, forecasts and market maps</li>
                 <li>Submarket benchmarks, portfolio tracking and underwriting tools</li>
               </ul>
-              <Link href={href(home, "/register")} className="mono mt-8 inline-flex w-fit items-center gap-2 rounded-sm bg-signal px-5 py-2.5 text-[12px] tracking-[0.08em] text-bg hover:opacity-90">
+              <a href="#signup" className="mono mt-8 inline-flex w-fit items-center gap-2 rounded-sm bg-signal px-5 py-2.5 text-[12px] tracking-[0.08em] text-bg hover:opacity-90">
                 START FREE, UPGRADE INSIDE <ArrowRight size={13} />
-              </Link>
+              </a>
+            </div>
+          </div>
+
+          {/* Sign-up asks for the market explicitly: never assume it from the
+              last market visited, so nobody lands in the wrong one. */}
+          <div id="signup" className="card mt-4 scroll-mt-24 p-6 md:p-7">
+            <p className="kicker mb-2">Choose your market</p>
+            <h3 className="headline text-2xl text-ink md:text-3xl">Which market are you signing up for?</h3>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
+              One account works across every Cignal market. This sets the one you start in, and you can switch any time.
+            </p>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {LENSES.map(({ vertical, icon: Icon, name, who, live }) =>
+                live ? (
+                  <Link
+                    key={vertical}
+                    href={href(vertical, "/register")}
+                    className="group flex items-start gap-3 rounded-lg border border-[var(--line-strong)] p-4 transition-colors hover:border-signal/60 hover:bg-signal/[0.05]"
+                  >
+                    <Icon size={20} className="mt-0.5 shrink-0 text-signal" strokeWidth={1.8} />
+                    <span className="min-w-0">
+                      <span className="block font-semibold text-ink">{name}</span>
+                      <span className="block text-xs text-muted">{who}</span>
+                      <span className="mono mt-2 inline-flex items-center gap-1 text-[11px] tracking-[0.08em] text-signal">
+                        SIGN UP <ArrowRight size={12} />
+                      </span>
+                    </span>
+                  </Link>
+                ) : (
+                  <a
+                    key={vertical}
+                    href="#markets"
+                    className="flex items-start gap-3 rounded-lg border border-dashed border-[var(--line-strong)] p-4 transition-colors hover:border-signal/40"
+                  >
+                    <Icon size={20} className="mt-0.5 shrink-0 text-muted" strokeWidth={1.8} />
+                    <span className="min-w-0">
+                      <span className="block font-semibold text-ink">{name}</span>
+                      <span className="block text-xs text-muted">{who}</span>
+                      <span className="mono mt-2 inline-flex items-center gap-1 text-[11px] tracking-[0.08em] text-muted">
+                        EARLY ACCESS LIST <ArrowRight size={12} />
+                      </span>
+                    </span>
+                  </a>
+                )
+              )}
             </div>
           </div>
         </section>
