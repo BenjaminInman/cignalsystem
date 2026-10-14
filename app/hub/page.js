@@ -48,7 +48,7 @@ const LENSES = [
     vertical: "small-business",
     icon: Briefcase,
     name: "Business Owners",
-    who: "Small to mid-size businesses: retail, restaurants, contractors, professional services and local service companies planning hiring, inventory and expansion",
+    who: "Small to mid-size businesses: retail, restaurants, contractors, professional services and local service companies",
     pain: "Plan hiring, inventory and expansion around the cycle your customers are actually in.",
     samples: ["Consumer sentiment", "Employment", "Credit spreads"],
     live: false,
@@ -196,7 +196,7 @@ export default async function Hub() {
               <article key={vertical} className="card flex flex-col p-6 md:p-7">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <Icon size={22} className="text-signal" strokeWidth={1.8} />
+                    <Icon size={22} className="shrink-0 text-signal" strokeWidth={1.8} />
                     <div>
                       <h3 className="text-lg font-semibold text-ink">{name}</h3>
                       <p className="text-sm text-muted">{who}</p>

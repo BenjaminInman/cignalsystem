@@ -10,7 +10,7 @@ const MARKETS = [
   { path: "multifamily", icon: Building2, name: "Multifamily", who: "Owners, operators, syndicators, lenders, property management and asset managers", live: true },
   { path: "investors", icon: LineChart, name: "Passive Investors", who: "LPs in syndications, funds and JV partnerships", live: true },
   { path: "realestate", icon: Home, name: "Real Estate Investors", who: "SFR, small multifamily, commercial, self storage, hotel, retail, medical and land", live: true },
-  { path: "business", icon: Briefcase, name: "Business Owners", who: "Small to mid-size businesses: retail, restaurants, contractors, professional services and local service companies planning hiring, inventory and expansion", live: false },
+  { path: "business", icon: Briefcase, name: "Business Owners", who: "Small to mid-size businesses: retail, restaurants, contractors, professional services and local service companies", live: false },
 ];
 
 export default function SignupChooser() {
