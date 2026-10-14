@@ -27,6 +27,7 @@ const DAY = 86400000;
 const CADENCE_DAYS = { weekly: 7, monthly: 30, quarterly: 91 };
 const FIRST_REPORT_AFTER_DAYS = 3; // give new members a few days to save ZIPs
 const MAX_ZIPS = 5;
+const MIN_NURTURE_GAP_DAYS = 3; // members who joined long ago still get the series spaced out
 
 const sb = (path, init = {}) =>
   fetch(`${SUPA}/rest/v1/${path}`, {
@@ -106,7 +107,8 @@ export async function POST(req) {
     const age = (now - new Date(prof.created_at).getTime()) / DAY;
 
     // Nurture (free members only; at most one step per run)
-    if (only !== "reports" && !isPro && !st.nurture_opt_out && st.nurture_step < NURTURE.length && age >= NURTURE[st.nurture_step].day) {
+    const sinceLast = st.nurture_last_at ? (now - new Date(st.nurture_last_at).getTime()) / DAY : Infinity;
+    if (only !== "reports" && !isPro && !st.nurture_opt_out && st.nurture_step < NURTURE.length && age >= NURTURE[st.nurture_step].day && sinceLast >= MIN_NURTURE_GAP_DAYS) {
       const { subject, html } = renderNurture(st.nurture_step, { first, market, token: st.token, macro });
       const r = dryRun ? { ok: true } : await sendEmail({ to: prof.email, subject, html, from: FROM, replyTo: REPLY_TO });
       log.push({ email: prof.email, type: `nurture ${st.nurture_step + 1}`, ok: r.ok, error: r.error });
