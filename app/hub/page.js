@@ -146,7 +146,7 @@ export default async function Hub() {
             Market cycle intelligence · When &gt; How
           </p>
           <h1 className="headline max-w-5xl text-[2.6rem] text-ink sm:text-5xl md:text-7xl">
-            Every market moves through 4 phases. The people who profit know which phase we&apos;re in{" "}
+            Every market moves through 4&nbsp;phases. The people who profit know which phase we&apos;re in{" "}
             <span className="text-signal">before the competition.</span>
           </h1>
           <p className="mt-7 max-w-2xl text-lg leading-relaxed text-muted">
