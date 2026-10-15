@@ -49,7 +49,7 @@ export async function GET() {
         "content-type": "application/json",
       },
       body: "{}",
-      next: { revalidate },
+      next: { revalidate: 3600 },
     });
     if (!res.ok) return Response.json({ periods: {}, degraded: true });
     const data = await res.json();

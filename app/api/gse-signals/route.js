@@ -34,7 +34,7 @@ async function latestTwo(slug) {
     `&order=obs_date.desc&limit=2`;
   const res = await fetch(url, {
     headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` },
-    next: { revalidate },
+    next: { revalidate: 3600 },
   });
   if (!res.ok) return null;
   const rows = await res.json();
