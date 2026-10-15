@@ -136,3 +136,13 @@ export async function POST(req) {
 
   return Response.json({ ok: true, dryRun, members: profiles.length, sent: log.length, log });
 }
+
+// Vercel Cron calls GET (with Authorization: Bearer $CRON_SECRET). A scheduled
+// run is always a real send of every due email.
+export async function GET(req) {
+  return POST(new Request(req.url, {
+    method: "POST",
+    headers: { authorization: req.headers.get("authorization") || "", "content-type": "application/json" },
+    body: "{}",
+  }));
+}

@@ -1,3 +1,11 @@
 {
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "crons": [
+    { "path": "/api/cron/dispatch?slot=morning", "schedule": "0 11 * * *" },
+    { "path": "/api/cron/dispatch?slot=midday", "schedule": "0 12 * * *" },
+    { "path": "/api/newsletter/send?frequency=daily", "schedule": "0 13 * * *" },
+    { "path": "/api/newsletter/send?frequency=weekly", "schedule": "0 13 * * 1" },
+    { "path": "/api/cron/dispatch?slot=afternoon", "schedule": "0 14 * * *" },
+    { "path": "/api/email/lifecycle", "schedule": "11 14 * * *" }
+  ]
 }

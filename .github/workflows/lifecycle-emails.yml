@@ -5,8 +5,7 @@ name: Lifecycle emails
 #
 # Copy approved by Benjamin 2026-10-14; daily sending on.
 on:
-  schedule:
-    - cron: "11 14 * * *"   # daily, 14:11 UTC (9:11 CT)
+  # schedule moved to Vercel Cron (vercel.json) on 2026-10-15; GitHub's timer was unreliable.
   workflow_dispatch:
     inputs:
       dryRun:

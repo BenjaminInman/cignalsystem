@@ -5,9 +5,7 @@ name: send-newsletter
 #   daily  -> every day at 12:30 UTC (~7-8am ET)
 #   weekly -> Mondays at 12:30 UTC
 on:
-  schedule:
-    - cron: "30 12 * * *"    # daily brief
-    - cron: "30 12 * * 1"    # weekly summary (Mondays)
+  # schedule moved to Vercel Cron (vercel.json) on 2026-10-15; GitHub's timer was unreliable.
   workflow_dispatch:
     inputs:
       frequency:

@@ -97,3 +97,14 @@ export async function POST(req) {
 
   return Response.json({ ok: true, frequency, recipients: subs.length, articles: articles.length, sent: ok, failed });
 }
+
+// Vercel Cron calls GET (with Authorization: Bearer $CRON_SECRET).
+// /api/newsletter/send?frequency=daily|weekly
+export async function GET(req) {
+  const frequency = new URL(req.url).searchParams.get("frequency") === "weekly" ? "weekly" : "daily";
+  return POST(new Request(req.url, {
+    method: "POST",
+    headers: { authorization: req.headers.get("authorization") || "", "content-type": "application/json" },
+    body: JSON.stringify({ frequency }),
+  }));
+}
