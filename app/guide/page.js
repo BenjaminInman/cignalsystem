@@ -19,7 +19,7 @@ export default function GuidePage() {
       <p className="kicker mb-3">Terminal guide</p>
       <h1 className="headline text-4xl text-ink md:text-5xl">What every tab does, and when to use it.</h1>
       <p className="mt-4 max-w-2xl leading-relaxed text-muted">
-        The Terminal menu at the top of every page holds the whole system. Here&apos;s a four-minute narrated tour, followed by a plain-English summary of each tab.
+        The Terminal menu at the top of every page holds the whole system. Here&apos;s a five-minute narrated tour, followed by a plain-English summary of each tab.
       </p>
 
       {HAS_VIDEO && (<div className="mt-8 overflow-hidden rounded-xl border border-[var(--line)] bg-bg2">
