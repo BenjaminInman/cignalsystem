@@ -295,6 +295,10 @@ def extract_facts(article, allowed_slugs, focus):
             if r.status_code == 429 or r.status_code >= 500:
                 time.sleep(5 * (attempt + 1))
                 continue
+            if r.status_code >= 400:
+                # Log the API's own reason (bad model, low credit, bad key) -
+                # a bare "400 Bad Request" hid a month-long outage.
+                log(f"  API {r.status_code}: {r.text[:300]}")
             r.raise_for_status()
             blocks = r.json().get("content", [])
             for b in blocks:
@@ -321,7 +325,12 @@ def clean_date(s):
 
 def persist(conn, article, extraction, allowed_slugs):
     with conn.cursor() as cur:
-        if not extraction or not extraction.get("relevant", True):
+        if extraction is None:
+            # Extraction FAILED (API error), which is not the same as "not
+            # relevant". Store nothing so the next run retries it; marking it
+            # 'skipped' would drop the story permanently (content_hash dedupe).
+            return 0
+        if not extraction.get("relevant", True):
             cur.execute(
                 "insert into news_articles "
                 "(source_id, url, title, published_at, content_hash, status) "

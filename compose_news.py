@@ -328,6 +328,8 @@ def compose(facts):
             r = requests.post(ANTHROPIC_URL, headers=headers, json=payload, timeout=120)
             if r.status_code == 429 or r.status_code >= 500:
                 time.sleep(5 * (attempt + 1)); continue
+            if r.status_code >= 400:
+                log(f"  API {r.status_code}: {r.text[:300]}")
             r.raise_for_status()
             for b in r.json().get("content", []):
                 if b.get("type") == "tool_use" and b.get("name") == "record_article":
