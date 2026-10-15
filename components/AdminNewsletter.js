@@ -5,8 +5,24 @@ import { Mail, Download, Eye } from "lucide-react";
 
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—");
 
-export default function AdminNewsletter({ subscribers = [], sends = [] }) {
+const ACCOUNT_LABEL = { none: "No account", free: "Free", pro: "Pro" };
+const ACCOUNT_STYLE = { none: "bg-[#E8B04B]/10 text-[#E8B04B]", free: "bg-signal/10 text-signal", pro: "bg-up/10 text-up" };
+
+export default function AdminNewsletter({ subscribers: raw = [], sends = [], users = [] }) {
   const [filter, setFilter] = useState("all");
+  const [aud, setAud] = useState("none"); // which reader version the preview buttons show
+
+  // Cross-check each subscriber against member accounts by email. The send
+  // route does the same match, so this shows which closing pitch each reader
+  // gets: free-account invite (no account), Pro upgrade (free), or none (Pro).
+  const subscribers = useMemo(() => {
+    const byEmail = new Map(users.map((u) => [String(u.email || "").toLowerCase(), u]));
+    return raw.map((s) => {
+      const u = byEmail.get(String(s.email).toLowerCase());
+      const account = !u ? "none" : u.is_admin || ["pro", "cignal_plus"].includes(u.tier) ? "pro" : "free";
+      return { ...s, account };
+    });
+  }, [raw, users]);
 
   const counts = useMemo(() => {
     const active = subscribers.filter((s) => s.status === "active");
@@ -15,19 +31,22 @@ export default function AdminNewsletter({ subscribers = [], sends = [] }) {
       daily: active.filter((s) => s.frequency === "daily").length,
       weekly: active.filter((s) => s.frequency === "weekly").length,
       unsubscribed: subscribers.filter((s) => s.status === "unsubscribed").length,
+      none: active.filter((s) => s.account === "none").length,
+      free: active.filter((s) => s.account === "free").length,
     };
   }, [subscribers]);
 
   const rows = useMemo(() => {
     if (filter === "all") return subscribers;
     if (filter === "unsubscribed") return subscribers.filter((s) => s.status === "unsubscribed");
+    if (filter === "none" || filter === "free") return subscribers.filter((s) => s.status === "active" && s.account === filter);
     return subscribers.filter((s) => s.status === "active" && s.frequency === filter);
   }, [subscribers, filter]);
 
   const exportCsv = () => {
-    const head = "email,name,frequency,status,signed_up,last_sent\n";
+    const head = "email,name,account,frequency,status,signed_up,last_sent\n";
     const body = rows
-      .map((s) => [s.email, s.name || "", s.frequency, s.status, s.created_at || "", s.last_sent_at || ""].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
+      .map((s) => [s.email, s.name || "", ACCOUNT_LABEL[s.account], s.frequency, s.status, s.created_at || "", s.last_sent_at || ""].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
       .join("\n");
     const url = URL.createObjectURL(new Blob([head + body], { type: "text/csv" }));
     const a = document.createElement("a");
@@ -52,10 +71,20 @@ export default function AdminNewsletter({ subscribers = [], sends = [] }) {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-        <a href="/api/newsletter/preview?frequency=daily" target="_blank" rel="noreferrer" className="mono inline-flex items-center gap-2 rounded-full border border-[var(--line)] px-4 py-2 text-[11px] tracking-[0.12em] text-muted transition-colors hover:border-signal/40 hover:text-ink">
+        <select
+          value={aud}
+          onChange={(e) => setAud(e.target.value)}
+          aria-label="Preview as"
+          className="mono rounded-full border border-[var(--line)] bg-bg px-3 py-2 text-[11px] tracking-[0.08em] text-muted"
+        >
+          <option value="none">AS: NO ACCOUNT</option>
+          <option value="free">AS: FREE MEMBER</option>
+          <option value="pro">AS: PRO MEMBER</option>
+        </select>
+        <a href={`/api/newsletter/preview?frequency=daily&audience=${aud}`} target="_blank" rel="noreferrer" className="mono inline-flex items-center gap-2 rounded-full border border-[var(--line)] px-4 py-2 text-[11px] tracking-[0.12em] text-muted transition-colors hover:border-signal/40 hover:text-ink">
           <Eye size={13} /> PREVIEW DAILY
         </a>
-        <a href="/api/newsletter/preview?frequency=weekly" target="_blank" rel="noreferrer" className="mono inline-flex items-center gap-2 rounded-full border border-[var(--line)] px-4 py-2 text-[11px] tracking-[0.12em] text-muted transition-colors hover:border-signal/40 hover:text-ink">
+        <a href={`/api/newsletter/preview?frequency=weekly&audience=${aud}`} target="_blank" rel="noreferrer" className="mono inline-flex items-center gap-2 rounded-full border border-[var(--line)] px-4 py-2 text-[11px] tracking-[0.12em] text-muted transition-colors hover:border-signal/40 hover:text-ink">
           <Eye size={13} /> PREVIEW WEEKLY
         </a>
         <button onClick={exportCsv} disabled={!rows.length} className="mono inline-flex items-center gap-2 rounded-full border border-[var(--line)] px-4 py-2 text-[11px] tracking-[0.12em] text-muted transition-colors hover:border-signal/40 hover:text-ink disabled:opacity-40">
@@ -64,11 +93,13 @@ export default function AdminNewsletter({ subscribers = [], sends = [] }) {
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {[
           ["Total", counts.total, "all"],
           ["Daily", counts.daily, "daily"],
           ["Weekly", counts.weekly, "weekly"],
+          ["No account", counts.none, "none"],
+          ["Free, not Pro", counts.free, "free"],
           ["Unsubscribed", counts.unsubscribed, "unsubscribed"],
         ].map(([label, n, key]) => (
           <button
@@ -89,7 +120,7 @@ export default function AdminNewsletter({ subscribers = [], sends = [] }) {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-[var(--line)]">
-                {["Email", "Name", "Frequency", "Status", "Signed up", "Last sent"].map((h) => (
+                {["Email", "Name", "Account", "Frequency", "Status", "Signed up", "Last sent"].map((h) => (
                   <th key={h} className="mono whitespace-nowrap px-3 py-2 text-[10px] tracking-[0.14em] text-muted">{h.toUpperCase()}</th>
                 ))}
               </tr>
@@ -99,6 +130,11 @@ export default function AdminNewsletter({ subscribers = [], sends = [] }) {
                 <tr key={s.email} className="border-b border-[var(--line)]/60">
                   <td className="px-3 py-2.5 text-ink">{s.email}</td>
                   <td className="px-3 py-2.5 text-muted">{s.name || "—"}</td>
+                  <td className="px-3 py-2.5">
+                    <span className={`mono whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] tracking-[0.1em] ${ACCOUNT_STYLE[s.account]}`}>
+                      {ACCOUNT_LABEL[s.account].toUpperCase()}
+                    </span>
+                  </td>
                   <td className="mono px-3 py-2.5 text-[12px] text-muted">{s.frequency}</td>
                   <td className="px-3 py-2.5">
                     <span className={`mono rounded-full px-2 py-0.5 text-[10px] tracking-[0.1em] ${s.status === "active" ? "bg-up/10 text-up" : "bg-muted/10 text-muted"}`}>

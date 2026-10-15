@@ -189,7 +189,7 @@ export default async function AdminPage() {
       <AdminDataCoverage coverage={coverage} />
       <AdminUsers initialUsers={users || []} />
       <AdminTraining initialApps={apps || []} />
-      <AdminNewsletter subscribers={subs || []} sends={sends || []} />
+      <AdminNewsletter subscribers={subs || []} sends={sends || []} users={users || []} />
     </>
   );
 }
