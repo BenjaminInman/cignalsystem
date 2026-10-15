@@ -2,11 +2,7 @@ name: Ingest ZORI
 
 # Runs itself — no manual download/upload, ever.
 on:
-  schedule:
-    # ZORI CSVs update monthly. Run mid-month (16th, 13:00 UTC) to catch the
-    # new release, plus a retry a week later in case it's late.
-    - cron: "0 13 16 * *"
-    - cron: "0 13 23 * *"
+  # schedule moved to Vercel Cron (app/api/cron/dispatch) on 2026-10-15; GitHub's timer was unreliable.
   workflow_dispatch: {}   # lets you trigger a run by hand from the Actions tab
 
 jobs:

@@ -3,8 +3,7 @@ name: ingest-news
 # Daily news fact-engine. Cadence is intentionally conservative to start;
 # bump the cron once we've watched a few runs and know the per-run volume.
 on:
-  schedule:
-    - cron: "0 11 * * *"   # 11:00 UTC daily (~6-7am ET, after morning releases post)
+  # schedule moved to Vercel Cron (app/api/cron/dispatch) on 2026-10-15; GitHub's timer was unreliable.
   workflow_dispatch: {}     # manual trigger for testing/backfill
 
 concurrency:

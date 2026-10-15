@@ -4,9 +4,7 @@ name: Ingest QCEW
 # the publication months (Mar/Jun/Sep/Dec) to catch the newest quarter, with a
 # retry a week later in case it's late. Backfills the last 3 years each run.
 on:
-  schedule:
-    - cron: "0 14 15 3,6,9,12 *"
-    - cron: "0 14 22 3,6,9,12 *"
+  # schedule moved to Vercel Cron (app/api/cron/dispatch) on 2026-10-15; GitHub's timer was unreliable.
   workflow_dispatch: {}
 
 jobs:

@@ -5,9 +5,7 @@ name: Ingest Census PEP (metro migration)
 # April retry. The script walks back vintages until one is reachable, so a late
 # release degrades to "no new data" rather than a failure.
 on:
-  schedule:
-    - cron: "0 15 27 3 *"   # Mar 27
-    - cron: "0 15 24 4 *"   # Apr 24 retry
+  # schedule moved to Vercel Cron (app/api/cron/dispatch) on 2026-10-15; GitHub's timer was unreliable.
   workflow_dispatch: {}
 
 jobs:

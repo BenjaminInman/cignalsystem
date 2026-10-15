@@ -6,9 +6,7 @@ name: Ingest UMich Sentiment
 # the 4th in case a release slipped. The script re-reads full history every run
 # and writes only what changed, so an extra run is harmless.
 on:
-  schedule:
-    - cron: "0 14 1 * *"
-    - cron: "0 14 4 * *"
+  # schedule moved to Vercel Cron (app/api/cron/dispatch) on 2026-10-15; GitHub's timer was unreliable.
   workflow_dispatch: {}
 
 jobs:

@@ -4,8 +4,7 @@ name: compose-news
 # ingest-news so the day's facts are already in the table. Nothing publishes:
 # every draft lands with status='draft' and its gate result attached.
 on:
-  schedule:
-    - cron: "30 11 * * *"   # 11:30 UTC daily, after ingest-news at 11:00
+  # schedule moved to Vercel Cron (app/api/cron/dispatch) on 2026-10-15; GitHub's timer was unreliable.
   workflow_dispatch: {}     # manual trigger for testing
 
 concurrency:

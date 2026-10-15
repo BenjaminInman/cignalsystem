@@ -1,8 +1,7 @@
 name: Ingest Permits
 
 on:
-  schedule:
-    - cron: "0 15 20 * *"   # BPS metro annual refreshes ~yearly; monthly check is cheap
+  # schedule moved to Vercel Cron (app/api/cron/dispatch) on 2026-10-15; GitHub's timer was unreliable.
   workflow_dispatch: {}
 
 jobs:

@@ -1,7 +1,6 @@
 name: Ingest BEA (Regional Price Parities)
 on:
-  schedule:
-    - cron: '0 16 12 * *'   # monthly; no-ops until BEA's annual (≈Dec) RPP refresh + revisions
+  # schedule moved to Vercel Cron (app/api/cron/dispatch) on 2026-10-15; GitHub's timer was unreliable.
   workflow_dispatch: {}
 jobs:
   ingest:

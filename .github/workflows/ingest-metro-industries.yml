@@ -1,8 +1,7 @@
 name: Ingest metro industry employment (BLS CES)
 on:
   # BLS publishes metro CES around the third week of each month.
-  schedule:
-    - cron: '0 16 22 * *'
+  # schedule moved to Vercel Cron (app/api/cron/dispatch) on 2026-10-15; GitHub's timer was unreliable.
   workflow_dispatch: {}
 jobs:
   ingest:

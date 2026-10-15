@@ -5,9 +5,7 @@ name: Ingest GSE (Fannie/Freddie multifamily)
 # Runs mid-month (filings for the prior month post early-to-mid month) with a
 # late-month retry.
 on:
-  schedule:
-    - cron: "0 14 15 * *"   # 15th, 14:00 UTC
-    - cron: "0 14 25 * *"   # 25th retry
+  # schedule moved to Vercel Cron (app/api/cron/dispatch) on 2026-10-15; GitHub's timer was unreliable.
   workflow_dispatch: {}
 
 jobs:

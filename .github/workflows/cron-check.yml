@@ -1,0 +1,25 @@
+name: cron-check
+
+# Manual test of the Vercel scheduler endpoints (they need CRON_SECRET, which
+# lives here and in Vercel). slot=check verifies the GitHub token without
+# starting anything; morning|midday|afternoon run that slot for real.
+on:
+  workflow_dispatch:
+    inputs:
+      slot:
+        description: "check | morning | midday | afternoon"
+        required: true
+        default: "check"
+
+jobs:
+  call:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SLOT: ${{ inputs.slot }}
+        run: |
+          CODE=$(curl -s -o out.json -w "%{http_code}" -H "Authorization: Bearer ${CRON_SECRET}" "https://www.cignalsystem.com/api/cron/dispatch?slot=${SLOT}")
+          cat out.json; echo
+          [ "$CODE" = "200" ] || { echo "::error::HTTP $CODE"; exit 1; }

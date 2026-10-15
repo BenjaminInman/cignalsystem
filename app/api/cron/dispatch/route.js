@@ -80,6 +80,15 @@ export async function GET(req) {
   if (!CRON_SECRET || req.headers.get("authorization") !== `Bearer ${CRON_SECRET}`)
     return Response.json({ error: "unauthorized" }, { status: 401 });
   const slot = new URL(req.url).searchParams.get("slot") || "";
+  if (slot === "check") {
+    // Health check: proves the token is present and can see this repo's
+    // workflows, without starting anything.
+    if (!TOKEN) return Response.json({ ok: false, error: "GITHUB_DISPATCH_TOKEN is not set in Vercel" }, { status: 500 });
+    const r = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows?per_page=1`, {
+      headers: { Authorization: `Bearer ${TOKEN}`, Accept: "application/vnd.github+json" }, cache: "no-store",
+    });
+    return Response.json({ ok: r.ok, status: r.status, today: { morning: workflowsFor("morning"), midday: workflowsFor("midday"), afternoon: workflowsFor("afternoon") } }, { status: r.ok ? 200 : 502 });
+  }
   if (!DAILY[slot]) return Response.json({ error: `unknown slot "${slot}"` }, { status: 400 });
   const workflows = workflowsFor(slot);
   if (!TOKEN)

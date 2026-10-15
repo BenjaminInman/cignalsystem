@@ -4,10 +4,7 @@ name: Ingest Apartment List
 # around month-end. Run early in the month with a retry; insert-if-changed makes
 # re-runs no-ops.
 on:
-  schedule:
-    - cron: "0 14 3 * *"
-    - cron: "0 14 10 * *"
-    - cron: "0 14 20 * *"
+  # schedule moved to Vercel Cron (app/api/cron/dispatch) on 2026-10-15; GitHub's timer was unreliable.
   workflow_dispatch: {}
 
 jobs:

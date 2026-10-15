@@ -1,8 +1,7 @@
 name: Ingest Census tracts + OZ 2.0 eligibility
 on:
   # ACS 5-year publishes each December; this no-ops until a new vintage lands.
-  schedule:
-    - cron: '0 15 20 12 *'
+  # schedule moved to Vercel Cron (app/api/cron/dispatch) on 2026-10-15; GitHub's timer was unreliable.
   workflow_dispatch: {}
 jobs:
   ingest:

@@ -2,9 +2,7 @@ name: Ingest LIHTC designations + HMDA
 on:
   # HUD publishes QCT/DDA each autumn (effective Jan 1); HMDA lands each spring.
   # Two runs a year covers both; no-ops when nothing changed.
-  schedule:
-    - cron: '0 15 15 10 *'
-    - cron: '0 15 15 4 *'
+  # schedule moved to Vercel Cron (app/api/cron/dispatch) on 2026-10-15; GitHub's timer was unreliable.
   workflow_dispatch: {}
 jobs:
   ingest:

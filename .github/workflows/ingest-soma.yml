@@ -1,9 +1,6 @@
 name: Ingest Census SOMA (absorption)
 on:
-  schedule:
-    # ~a week after each quarterly SOMA release (first week of Mar/Jun/Sep/Dec);
-    # no-ops until a new completion quarter appears.
-    - cron: '0 14 12 3,6,9,12 *'
+  # schedule moved to Vercel Cron (app/api/cron/dispatch) on 2026-10-15; GitHub's timer was unreliable.
   workflow_dispatch: {}
 jobs:
   ingest:

@@ -19,9 +19,7 @@ name: Ingest Databento (equity EOD)
 # a safety net so the tab is fresh before the US business day is underway. If the
 # 11:00 run proves sufficient, the second can be dropped.
 on:
-  schedule:
-    - cron: "0 11 * * *"   # 11:00 UTC (~6-7am ET), every day
-    - cron: "0 14 * * *"   # 14:00 UTC (~9-10am ET) safety net — see note
+  # schedule moved to Vercel Cron (app/api/cron/dispatch) on 2026-10-15; GitHub's timer was unreliable.
   workflow_dispatch: {}
 
 jobs:
