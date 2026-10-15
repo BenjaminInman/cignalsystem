@@ -256,7 +256,7 @@ export default async function Hub() {
             <div className="card p-6">
               <p className="kicker mb-3">Leading vs. trailing</p>
               <p className="leading-relaxed text-ink/90">
-                Most investors react to trailing data: last quarter&apos;s vacancy, last year&apos;s rent growth. Cignal keeps leading
+                Most investors react to trailing data: last quarter&apos;s or last month&apos;s vacancy, last quarter&apos;s or last month&apos;s rent growth. Cignal keeps leading
                 indicators separate from trailing ones and never blends them, so the early warning isn&apos;t washed out by the lagging consensus.
               </p>
             </div>
