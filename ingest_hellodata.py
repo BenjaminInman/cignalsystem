@@ -261,6 +261,16 @@ def run_one(conn, mode, url, obs_date=None, release=None, refresh=True, segment=
 
             if "as_of_month" in df.columns:
                 df["_date"] = df["as_of_month"].map(month_start)
+                # Drop the month still in progress. A pull on Nov 2 returns a
+                # "November" built on two days of listings (Nashville read $1,608
+                # vs $1,550 for October) - noise that would sit at the newest,
+                # most-watched point of every chart until the next refresh.
+                # Only completed months are published.
+                cur_month = dt.date.today().replace(day=1).isoformat()
+                partial = df["_date"] >= cur_month
+                if partial.any():
+                    print(f"  dropping {int(partial.sum())} row(s) for the in-progress month {cur_month}")
+                    df = df[~partial].copy()
                 print(f"  history: {df['_date'].nunique()} months "
                       f"({df['_date'].min()} -> {df['_date'].max()})")
             else:
