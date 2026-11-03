@@ -27,10 +27,6 @@ on:
         description: "pending batch size (fire only)"
         required: false
         default: "25"
-      fire_mode:
-        description: "zip | metro | both (fire only)"
-        required: false
-        default: "both"
       fire_metros:
         description: "specific metro codes, comma-sep (bypasses pending)"
         required: false
@@ -43,6 +39,10 @@ on:
         description: "1 = continuous loop, 0 = single pass (fire only)"
         required: false
         default: "0"
+      metro_segments:
+        description: "segments that also get metro-grain exports, e.g. aff,stu,sen (blank = all)"
+        required: false
+        default: ""
       refresh_month:
         description: "monthly refresh: re-fire metros lacking this month, YYYY-MM-01 (fire only; blank = backfill)"
         required: false
@@ -79,6 +79,7 @@ jobs:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           HD_FIRE_LIMIT: ${{ github.event.inputs.fire_limit || '25' }}
           HD_FIRE_MODE: "both"
+          HD_METRO_SEGMENTS: ${{ github.event.inputs.metro_segments || '' }}
           HD_FIRE_METROS: ${{ github.event.inputs.fire_metros || '' }}
           HD_FIRE_SEGMENTS: ${{ github.event_name == 'schedule' && 'mkt,aff,stu,sen' || (github.event.inputs.fire_segments || '') }}
           HD_FIRE_LOOP: ${{ github.event_name == 'schedule' && '1' || (github.event.inputs.fire_loop || '0') }}
@@ -105,6 +106,7 @@ jobs:
           HD_CHUNK_SEGMENT: ${{ github.event.inputs.chunk_segment || 'mkt' }}
           HD_CHUNK_METROS: ${{ github.event.inputs.chunk_metros || '' }}
           HD_CHUNK: "60"
+          HD_METRO_SEGMENTS: ${{ github.event.inputs.metro_segments || '' }}
         run: python fire_hellodata_chunked.py
 
   coverage:

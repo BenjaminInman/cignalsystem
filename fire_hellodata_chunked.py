@@ -56,6 +56,8 @@ SEG_FILTERS = {
     "stu": [MF, _eq("is_student", True)],
     "sen": [MF, _eq("is_senior", True)],
 }
+_ms = (os.environ.get("HD_METRO_SEGMENTS") or "").strip()
+METRO_SEGS = {x.strip() for x in _ms.split(",") if x.strip()} if _ms else None
 CHUNK = int(os.environ.get("HD_CHUNK") or "60")
 NAP = float(os.environ.get("HD_SLEEP") or "4")
 BACKOFF = int(os.environ.get("HD_BACKOFF") or "90")
@@ -160,6 +162,9 @@ def main():
             time.sleep(NAP)
 
         # Metro-grain series: one row per month, tiny, no chunking needed.
+        # Skipped for segments HelloData no longer completes at metro grain.
+        if METRO_SEGS is not None and (SEG or "all") not in METRO_SEGS:
+            continue
         st, j = fire_with_backoff(
             key,
             f"cignal_metro_{code}{SUF}",

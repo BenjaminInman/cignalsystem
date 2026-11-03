@@ -21,10 +21,13 @@ const TOKEN = process.env.GITHUB_DISPATCH_TOKEN;
 
 // Daily slots (UTC). One hour apart so ingest-news lands before compose-news,
 // and compose before the 13:00 newsletter, even if a cron drifts within its hour.
+// hellodata-pipeline.yml with no inputs runs its default job, "drain": it loads
+// whatever HelloData has delivered. GitHub's own 15-minute drain timer was
+// firing only a few times a day, so deliveries sat unloaded for hours.
 const DAILY = {
-  morning: ["ingest-news.yml", "ingest-databento.yml"],          // 11:00
-  midday: ["compose-news.yml", "ingest-fred.yml"],               // 12:00
-  afternoon: ["ingest-fred.yml", "ingest-databento.yml"],        // 14:00
+  morning: ["ingest-news.yml", "ingest-databento.yml", "hellodata-pipeline.yml"],   // 11:00
+  midday: ["compose-news.yml", "ingest-fred.yml", "hellodata-pipeline.yml"],        // 12:00
+  afternoon: ["ingest-fred.yml", "ingest-databento.yml", "hellodata-pipeline.yml"], // 14:00
 };
 
 // Monthly / quarterly / annual jobs, checked in the afternoon slot.

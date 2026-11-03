@@ -184,6 +184,14 @@ def fire(key, name, scopes, filters, webhook, limit=500000):
     return r.status_code, j
 
 
+# Segments that also get a metro-grain export. Nov 2026: HelloData stopped
+# completing metro-grain exports for the two largest series (all-in, mkt) -
+# accepted with 201, never delivered, and the hung jobs clog the 10-slot cap.
+# ZIP grain for the same series completes in minutes. Blank = every segment.
+_ms = (os.environ.get("HD_METRO_SEGMENTS") or "").strip()
+METRO_SEGS = {x.strip() for x in _ms.split(",") if x.strip()} if _ms else None
+
+
 def fire_batch(conn2, key, webhook, metros, which, seg_list, nap, skip_zip=frozenset()):
     """Fire one pass over `metros`. Returns (fired, capped). `capped` is True if
     HelloData's 10-concurrent-export cap was hit and could not be cleared with
@@ -200,6 +208,8 @@ def fire_batch(conn2, key, webhook, metros, which, seg_list, nap, skip_zip=froze
         for seg in seg_list:
             seg_filters = SEGMENT_FILTERS[seg] if seg else [MF, AFF]
             for grain, scopes in grains:
+                if grain == "metro" and METRO_SEGS is not None and (seg or "all") not in METRO_SEGS:
+                    continue  # metro-grain export disabled for this segment
                 jname = f"cignal_{grain}_{code}" + (f"_{seg}" if seg else "")
                 filters = [mkt] + seg_filters
                 st, j = fire(key, jname, scopes, filters, webhook)
