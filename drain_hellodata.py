@@ -136,6 +136,35 @@ def main():
     # hd_analytics already refuses to serve it, and keeping it only trips the
     # integrity check on every subsequent run. Small and self-correcting: the
     # next coverage refresh will bring the ZIP back legitimately.
+    with conn.cursor() as cur:
+        cur.execute("SET statement_timeout = 0")
+        cur.execute("""
+            DELETE FROM observations o USING indicators i, regions r
+             WHERE i.id = o.indicator_id AND r.id = o.region_id
+               AND i.source = 'HelloData' AND r.region_type = 'zip'
+               AND NOT EXISTS (SELECT 1 FROM hd_region_coverage c
+                                WHERE c.region_id = r.id)""")
+        if cur.rowcount:
+            print(f"disclosure: purged {cur.rowcount} row(s) for ZIPs with no coverage row")
+
+    # ---- HelloData is latest-wins (deliberate exception) --------------------
+    # Everywhere else in this warehouse revision-0 first prints are permanent,
+    # because for FRED/Census/BEA the first print is what the market actually
+    # knew at the time - the revision is itself an event worth studying.
+    #
+    # HelloData is not that kind of source. It is a continuously re-scraped
+    # listings aggregate with no publication calendar, so the "first print" for a
+    # backfilled 2023 month is not what anyone knew in 2023 - it is just whichever
+    # export happened to run first. Preserving it canonises an artifact of our
+    # ingestion order.
+    #
+    # Observed: ZIP 48167 first printed flat at $1,799 for five consecutive
+    # months (a cell built on very few listings); the later export moved
+    # $1,655 -> $1,648 -> $1,623 -> $1,569, which is what a real rent series does.
+    #
+    # Decision (Benjamin, 2026-08-01): treat the newest HelloData value as true.
+    # Scope is HelloData ONLY - every other source keeps first-print-wins.
+    #
     # Runs per indicator with no statement timeout: a full national refresh
     # restates ~400k cells, and one statement over the whole table timed out
     # (Nov 2026). Any row with a HIGHER revision for the same cell is dropped
