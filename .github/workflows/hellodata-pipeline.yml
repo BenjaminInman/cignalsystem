@@ -50,7 +50,7 @@ on:
       drain_limit:
         description: "deliveries to ingest (drain only)"
         required: false
-        default: "300"
+        default: "150"
   schedule:
     # Segmented NATIONAL backfill. The fire loop runs ~5.8h each start; a fresh
     # start every 6h makes it effectively continuous. Drain sweeps every 15 min.
@@ -133,7 +133,7 @@ jobs:
           HD_REFRESH_MONTH: ${{ github.event.inputs.refresh_month }}
           HD_FIRE_SEGMENTS: ${{ github.event.inputs.fire_segments || 'all,mkt' }}
           HD_FIRE_METROS: ${{ github.event.inputs.fire_metros || '' }}
-          HD_MAX_PER_EXPORT: ${{ github.event.inputs.job == 'metro' && github.event.inputs.drain_limit != '300' && github.event.inputs.drain_limit || '5' }}
+          HD_MAX_PER_EXPORT: ${{ github.event.inputs.job == 'metro' && github.event.inputs.drain_limit != '150' && github.event.inputs.drain_limit || '5' }}
           HD_FIRE_MINUTES: "340"
         run: python fire_hellodata_metro.py
 
@@ -159,7 +159,7 @@ jobs:
       (github.event_name == 'schedule' && github.event.schedule == '*/15 * * * *')
       || (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'drain' || github.event.inputs.job == 'both'))
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 120
     concurrency:
       group: hellodata-drain
       cancel-in-progress: false
@@ -170,7 +170,7 @@ jobs:
       - run: pip install pandas requests psycopg2-binary
       - env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-          HD_DRAIN_LIMIT: ${{ github.event.inputs.drain_limit || '300' }}
+          HD_DRAIN_LIMIT: ${{ github.event.inputs.drain_limit || '150' }}
         run: python drain_hellodata.py
       - name: integrity checks
         env:
