@@ -56,7 +56,9 @@ on:
     # start every 6h makes it effectively continuous. Drain sweeps every 15 min.
     # When national is done pending_metros_seg returns empty and the loop exits
     # immediately each cycle (harmless) - delete these crons to switch it off.
-    - cron: "0 */6 * * *"     # start the segmented fire loop
+    # (The 6-hourly fire-loop cron was removed 2026-11-03: the backfill is done,
+    # and its scheduled runs joined the hellodata-fire concurrency group as
+    # "pending", silently replacing manually queued chunk/metro jobs.)
     - cron: "*/15 * * * *"    # drain + view refresh
 
 jobs:
