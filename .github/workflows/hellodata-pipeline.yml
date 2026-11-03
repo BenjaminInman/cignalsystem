@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "fire | drain | both | chunk | coverage"
+        description: "fire | drain | both | chunk | metro | coverage"
         required: true
         default: "drain"
       chunk_segment:
@@ -108,6 +108,32 @@ jobs:
           HD_CHUNK: "60"
           HD_METRO_SEGMENTS: ${{ github.event.inputs.metro_segments || '' }}
         run: python fire_hellodata_chunked.py
+
+  metro:
+    # Metro-grain series fired with metrics grouped by metro size (see
+    # fire_hellodata_metro.py). Uses fire_segments, fire_metros, refresh_month;
+    # drain_limit doubles as the max-metrics-per-export cap for retry passes.
+    if: >-
+      github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'metro'
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    concurrency:
+      group: hellodata-fire
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install requests psycopg2-binary
+      - env:
+          HELLODATA_API_KEY: ${{ secrets.HELLODATA_API_KEY }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          HD_REFRESH_MONTH: ${{ github.event.inputs.refresh_month }}
+          HD_FIRE_SEGMENTS: ${{ github.event.inputs.fire_segments || 'all,mkt' }}
+          HD_FIRE_METROS: ${{ github.event.inputs.fire_metros || '' }}
+          HD_MAX_PER_EXPORT: ${{ github.event.inputs.job == 'metro' && github.event.inputs.drain_limit != '300' && github.event.inputs.drain_limit || '5' }}
+          HD_FIRE_MINUTES: "340"
+        run: python fire_hellodata_metro.py
 
   coverage:
     if: >-
