@@ -15,7 +15,10 @@ metrics grouped by metro size, the same tiering used in August:
     units <  HD_MID    (default 400k)   2-3 metrics per export
     larger                              one metric per export
 
-A metric is pending for a metro until it has an observation at HD_REFRESH_MONTH,
+A metric is pending for a metro until it has a NATIVE observation at
+HD_REFRESH_MONTH. Rows built by hd_derive_metro_rollups() (units-weighted from
+ZIPs, gap-filling) carry release_date NULL and do not count as done - a native
+export replaces them via latest-wins.
 so re-running only fires what is still missing. HD_MAX_PER_EXPORT caps the group
 size for a retry pass (e.g. 1 to split everything that failed).
 
@@ -99,7 +102,8 @@ def main():
             suffix = f"_{seg}" if seg else ""
             with conn.cursor() as cur:
                 cur.execute("""SELECT i.slug FROM observations o JOIN indicators i ON i.id=o.indicator_id
-                                WHERE o.region_id=%s AND o.obs_date=%s::date AND i.slug = ANY(%s)""",
+                                WHERE o.region_id=%s AND o.obs_date=%s::date AND i.slug = ANY(%s)
+                                  AND o.release_date IS NOT NULL""",
                             (rid, month, [s + suffix for _, s in METRICS]))
                 have = {r[0] for r in cur.fetchall()}
             missing = [m for m, s in METRICS if s + suffix not in have]
