@@ -408,3 +408,68 @@ this way.
 
 Re-run the crosswalk whenever HelloData refreshes its market list; never derive
 a label from `regions.name` again.
+
+## November 2026 refresh — what changed and what we learned
+
+Refresh of the latest month (October 2026) for every labelled metro and its ZIPs,
+all five series (all-in, mkt, aff, stu, sen). Run Nov 2–4, 2026.
+
+### Access
+- The original key was **revoked** (401 "This API key has been revoked").
+- A "Partner · HELLODATA" key (`HLDT_…`) is **not** an API key for Dataset Export
+  ("Invalid API key"). Use a standard key from Organization → APIs & Services.
+- A valid new key still returned `Organization does not have access to this
+  action: QueryBuilder` until HelloData re-enabled **Query Builder / Dataset Export
+  API access** for the org (took ~8 days). The in-app invoice showing the Query
+  Builder Add-On active did not mean API access was on.
+- Changing the key means updating three places: GitHub secret
+  `HELLODATA_API_KEY`, Vercel env `HELLODATA_API_KEY` (+ redeploy), and
+  `hd_config.webhook_token` = sha256(key). A signed self-test POST to the webhook
+  shows `verified:true` in the Vercel runtime log when Vercel has the right key.
+
+### Limits (re-measured)
+- Concurrency cap is now reported as **100 concurrent export requests**. Exports
+  that never deliver **keep holding slots** for hours, throttling everything else.
+- **ZIP grain** for every segment delivers in minutes (Columbus mkt: 2,354 rows, ~3 min).
+- **Metro grain for all-in and mkt with five metrics** is accepted (201) and never
+  delivered — even for mid-size metros (Columbus, 235k units). One metric per
+  export delivers. aff/stu/sen metro grain (smaller universe) still works with
+  five metrics.
+- So metro all/mkt now go through `fire_hellodata_metro.py` (`job=metro`), which
+  groups metrics by metro size: < 120k units → 5 per export, < 400k → 3, larger
+  → 1. Only metrics without a **native** value for the refresh month are fired;
+  `drain_limit=1` on a metro job forces one metric per export for a retry pass.
+- `fire_hellodata.py` takes `metro_segments` (e.g. `aff,stu,sen`) so the main loop
+  fires metro grain only for segments that still work at metro level.
+- Oversized metros (> 500k units) still go through `fire_hellodata_chunked.py`
+  (ZIP lists of 60). Philadelphia (37980) was missing from `ziplists.json` and was
+  added (248 ZIPs, from `zip_cbsa_crosswalk` ∩ `hd_region_coverage`).
+
+### Data rules added
+- **Completed months only.** The ingester drops the in-progress month: a Nov 2 pull
+  returned a two-day "November" (Nashville $1,608 vs $1,550 for October).
+- **Derived vs native metro values.** `hd_derive_metro_rollups()` (units-weighted
+  from ZIPs, gap-filling) now writes `release_date = NULL`; native exports carry a
+  date. Native values replace derived ones via latest-wins.
+
+### Pipeline fixes
+- Drain latest-wins promotion runs **per indicator, no statement timeout**, and
+  first drops any row with a higher revision for the same cell (a cell restated
+  twice collided on `observations_series_uq`). A national refresh restates
+  ~400k cells.
+- Drain does **150 deliveries per run** (manual runs used 600), 120-min timeout.
+- The disclosure purge (ZIP pricing with no coverage row) is kept — it was briefly
+  dropped by mistake in 98b6642 and restored in 82760ee.
+- The 6-hourly `fire` cron was **removed**: its scheduled runs joined the
+  `hellodata-fire` concurrency group as "pending" and silently replaced queued
+  chunk/metro jobs. Only one run can be pending per group — queue the next step
+  only after the current one starts.
+- GitHub's `*/15` drain cron fires only a few times a day; the Vercel cron
+  dispatcher (`/api/cron/dispatch`) now also starts a drain at 11:00, 12:00 and
+  14:00 UTC.
+
+### Cost note
+A full refresh is roughly 4,000+ exports (391 metros × ZIP grain × 5 segments,
+metro grain for aff/stu/sen, metric-batched metro exports for all/mkt, 60-ZIP
+chunks for the 9 giants, plus retries). The billing unit (per export / per row /
+flat) is still unconfirmed with HelloData.
