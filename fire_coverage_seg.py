@@ -6,7 +6,8 @@ requirement and its ~500-780k unit size ceiling - the whole country returns in
 one export per segment. Feeds hd_segment_coverage, which gates per-segment
 publishing (>=3 properties, no single property >50% of units).
 
-Env: HELLODATA_API_KEY, [HD_COV_SEGMENTS=mkt,aff,stu,sen]
+Env: HELLODATA_API_KEY, [HD_COV_SEGMENTS=all,mkt,aff,stu,sen]
+"all" is the all-in universe and refreshes hd_region_coverage.
 """
 import os, sys, json, time, requests
 
@@ -15,6 +16,8 @@ WEBHOOK = os.environ.get("WEBHOOK_URL", "https://www.cignalsystem.com/api/hellod
 MF = {"column": "number_units", "filter": {"greaterThanOrEqualTo": 50}}
 def _eq(c, v): return {"column": c, "filter": {"equals": v}}
 SEG_FILTERS = {
+    # all-in universe (50+ units, non-affordable) -> hd_region_coverage
+    "all": [MF, _eq("is_affordable", False)],
     "mkt": [MF, _eq("is_affordable", False), _eq("is_student", False), _eq("is_senior", False)],
     "aff": [MF, _eq("is_affordable", True)],
     "stu": [MF, _eq("is_student", True)],
@@ -38,9 +41,9 @@ def fire(key, name, filters):
 def main():
     key = os.environ.get("HELLODATA_API_KEY")
     if not key: sys.exit("ERROR: need HELLODATA_API_KEY")
-    segs = [s.strip() for s in (os.environ.get("HD_COV_SEGMENTS") or "mkt,aff,stu,sen").split(",") if s.strip()]
+    segs = [s.strip() for s in (os.environ.get("HD_COV_SEGMENTS") or "all,mkt,aff,stu,sen").split(",") if s.strip()]
     for seg in segs:
-        name = f"cignal_coverage_{seg}"
+        name = "cignal_coverage" if seg == "all" else f"cignal_coverage_{seg}"
         st, j = fire(key, name, SEG_FILTERS[seg])
         tries = 0
         while st == 429 and tries < 8:

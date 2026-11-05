@@ -333,6 +333,23 @@ def run_one(conn, mode, url, obs_date=None, release=None, refresh=True, segment=
                         publishable=excluded.publishable, as_of=excluded.as_of,
                         updated_at=now();
                 """, {"d": obs_date})
+            # A national coverage export is the full current stock. A ZIP that
+            # dropped out of it (no 50+ unit properties in this universe any
+            # more) must not keep an old "publishable" verdict from a past pull.
+            # Guarded by size so a partial/targeted coverage file never
+            # unpublishes the rest of the country.
+            if len(rows) >= 5000:
+                tbl, extra = ("hd_segment_coverage", "AND c.segment = %(seg)s") if segment \
+                             else ("hd_region_coverage", "")
+                cur.execute(f"""
+                    UPDATE {tbl} c SET publishable = false, properties = 0, units = 0,
+                           max_property_units = 0, as_of = %(d)s, updated_at = now()
+                     WHERE c.publishable {extra}
+                       AND NOT EXISTS (SELECT 1 FROM _hd_cov s JOIN regions r
+                                        ON r.region_type='zip' AND r.code=s.code
+                                       WHERE r.id = c.region_id)""", {"d": obs_date, "seg": segment})
+                if cur.rowcount:
+                    print(f"  coverage: {cur.rowcount:,} zip(s) no longer in the export -> unpublished")
             npub = sum(1 for r in rows if r[4])
             print(f"  coverage: {len(rows):,} zips -> {npub:,} publishable, "
                   f"{len(rows)-npub:,} suppressed (floor {MIN_PROPERTIES} props / "
