@@ -473,3 +473,18 @@ A full refresh is roughly 4,000+ exports (391 metros × ZIP grain × 5 segments,
 metro grain for aff/stu/sen, metric-batched metro exports for all/mkt, 60-ZIP
 chunks for the 9 giants, plus retries). The billing unit (per export / per row /
 flat) is still unconfirmed with HelloData.
+
+### Monthly procedure (decided Nov 4, 2026 — accuracy first)
+Run on the **3rd–5th** of each month for the month just completed
+(`refresh_month` = first of that month). In order:
+1. `job=coverage` (all five universes) → drain. Disclosure verdicts use current
+   counts; ZIPs that dropped out of the national file are unpublished.
+2. `job=fire`, `fire_loop=1`, `fire_segments=all,mkt,aff,stu,sen`,
+   `metro_segments=aff,stu,sen`, `refresh_month=…` (ZIP grain everywhere).
+3. `job=chunk` for the giants **plus Phoenix 38060, Denver 19740, Austin 12420**
+   (their all-in ZIP exports exceed the ceiling unchunked), `chunk_segment=all,mkt,aff,stu,sen`,
+   `metro_segments=aff,stu,sen`.
+4. `job=metro`, `fire_segments=all,mkt`; then again with `drain_limit=1`.
+5. Drain until pending = 0; compare month vs prior month ZIP counts per metro
+   among publishable ZIPs and re-fire any metro that fell short.
+Queue each step only after the previous one is running (one pending per group).
